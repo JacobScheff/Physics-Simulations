@@ -1,16 +1,18 @@
 import pygame
 import sys
 import time
+import math
 
 screenSize = (600, 300)
 
 class Ball:
-    def __init__(self, x, y, vx, vy, radius):
+    def __init__(self, x, y, v, a, radius):
         self.x = x
         self.y = y
-        self.vx = vx
-        self.vy = vy
-        self.v = (self.vx ** 2 + self.vy ** 2) ** 0.5
+        self.v = v
+        self.a = a # Angle in degrees
+        self.vx = self.v * math.cos(math.radians(self.a))
+        self.vy = self.v * math.sin(math.radians(self.a))
         self.radius = radius
         # Mass is the area of the ball
         self.mass = self.radius ** 2 * 3.14
@@ -27,6 +29,8 @@ class Ball:
         if self.y < self.radius or self.y > screenSize[1] - self.radius:
             self.vy *= -1
 
+        self.a = math.degrees(math.atan2(self.vy, self.vx))
+
     def checkCollision(self, other):
         if (self.x - other.x) ** 2 + (self.y - other.y) ** 2 <= (self.radius + other.radius) ** 2:
             return True
@@ -35,15 +39,17 @@ class Ball:
     
     def collide(self, other):
         if self.checkCollision(other):
-            originalVx = self.vx
-            originalVy = self.vy
-            self.vx = (self.mass - other.mass) / (self.mass + other.mass) * self.vx + 2 * other.mass / (self.mass + other.mass) * other.vx
-            self.vy = (self.mass - other.mass) / (self.mass + other.mass) * self.vy + 2 * other.mass / (self.mass + other.mass) * other.vy
-            other.vx = 2 * self.mass / (self.mass + other.mass) * originalVx + (other.mass - self.mass) / (self.mass + other.mass) * other.vx
-            other.vy = 2 * self.mass / (self.mass + other.mass) * originalVy + (other.mass - self.mass) / (self.mass + other.mass) * other.vy
-            self.v = (self.vx ** 2 + self.vy ** 2) ** 0.5
-            other.v = (other.vx ** 2 + other.vy ** 2) ** 0.5
-
+            # originalVx = self.vx
+            # originalVy = self.vy
+            contactAngle = math.degrees(math.atan2(other.y - self.y, other.x - self.x))
+            self.vx = self.v * math.cos(math.radians(self.a - contactAngle)) * (self.mass - other.mass) / (self.mass + other.mass) * math.cos(math.radians(contactAngle)) + self.v * math.sin(math.radians(self.a - contactAngle)) * math.cos(math.radians(contactAngle + 90))
+            self.vy = self.v * math.cos(math.radians(self.a - contactAngle)) * (self.mass - other.mass) / (self.mass + other.mass) * math.sin(math.radians(contactAngle)) + self.v * math.sin(math.radians(self.a - contactAngle)) * math.sin(math.radians(contactAngle + 90))
+            other.vx = other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) / (other.mass + self.mass) * math.cos(math.radians(contactAngle)) + other.v * math.sin(math.radians(other.a - contactAngle)) * math.cos(math.radians(contactAngle + 90))
+            other.vy = other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) / (other.mass + self.mass) * math.sin(math.radians(contactAngle)) + other.v * math.sin(math.radians(other.a - contactAngle)) * math.sin(math.radians(contactAngle + 90))
+            self.a = math.degrees(math.atan2(self.vy, self.vx))
+            other.a = math.degrees(math.atan2(other.vy, other.vx))
+            self.v = math.sqrt(self.vx ** 2 + self.vy ** 2)
+            other.v = math.sqrt(other.vx ** 2 + other.vy ** 2)
 
 pygame.init()
 screen = pygame.display.set_mode(screenSize)

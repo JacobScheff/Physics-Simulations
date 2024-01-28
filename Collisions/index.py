@@ -34,17 +34,19 @@ class Ball:
     
     def collide(self, other):
         if self.checkCollision(other):
+            originalVx = self.vx
+            originalVy = self.vy
             self.vx = (self.mass - other.mass) / (self.mass + other.mass) * self.vx + 2 * other.mass / (self.mass + other.mass) * other.vx
             self.vy = (self.mass - other.mass) / (self.mass + other.mass) * self.vy + 2 * other.mass / (self.mass + other.mass) * other.vy
-            other.vx = 2 * self.mass / (self.mass + other.mass) * self.vx + (other.mass - self.mass) / (self.mass + other.mass) * other.vx
-            other.vy = 2 * self.mass / (self.mass + other.mass) * self.vy + (other.mass - self.mass) / (self.mass + other.mass) * other.vy
+            other.vx = 2 * self.mass / (self.mass + other.mass) * originalVx + (other.mass - self.mass) / (self.mass + other.mass) * other.vx
+            other.vy = 2 * self.mass / (self.mass + other.mass) * originalVy + (other.mass - self.mass) / (self.mass + other.mass) * other.vy
 
 pygame.init()
 screen = pygame.display.set_mode(screenSize)
-pygame.display.set_caption("Bouncing Ball")
+pygame.display.set_caption("Ball Collisions")
 clock = pygame.time.Clock()
 
-balls = [Ball(100, 100, 1, 1, 10), Ball(200, 200, 2, 2, 40)]
+balls = [Ball(100, 100, 1, 0, 20), Ball(400, 100, -1, 0, 20)]
 
 
 while True:

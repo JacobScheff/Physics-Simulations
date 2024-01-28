@@ -11,6 +11,8 @@ class Ball:
         self.vx = vx
         self.vy = vy
         self.radius = radius
+        # Mass is the area of the ball
+        self.mass = self.radius ** 2 * 3.14
 
     def draw(self, screen):
         pygame.draw.circle(screen, (255, 255, 255), (self.x, self.y), self.radius)
@@ -32,17 +34,17 @@ class Ball:
     
     def collide(self, other):
         if self.checkCollision(other):
-            self.vx *= -1
-            self.vy *= -1
-            other.vx *= -1
-            other.vy *= -1
+            self.vx = (self.mass - other.mass) / (self.mass + other.mass) * self.vx + 2 * other.mass / (self.mass + other.mass) * other.vx
+            self.vy = (self.mass - other.mass) / (self.mass + other.mass) * self.vy + 2 * other.mass / (self.mass + other.mass) * other.vy
+            other.vx = 2 * self.mass / (self.mass + other.mass) * self.vx + (other.mass - self.mass) / (self.mass + other.mass) * other.vx
+            other.vy = 2 * self.mass / (self.mass + other.mass) * self.vy + (other.mass - self.mass) / (self.mass + other.mass) * other.vy
 
 pygame.init()
 screen = pygame.display.set_mode(screenSize)
 pygame.display.set_caption("Bouncing Ball")
 clock = pygame.time.Clock()
 
-balls = [Ball(100, 100, 1, 1, 10), Ball(200, 200, 2, 2, 20), Ball(300, 200, 3, 3, 30), Ball(500, 200, 4, 4, 40)]
+balls = [Ball(100, 100, 1, 1, 10), Ball(200, 200, 2, 2, 40)]
 
 
 while True:

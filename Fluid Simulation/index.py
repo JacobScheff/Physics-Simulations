@@ -5,8 +5,6 @@ import math
 
 screenSize = (1200, 600)
 ballRadius = 10
-horizontalAmount = 1
-verticalAmount = 20
 fps = 240
 
 class Ball:
@@ -36,13 +34,13 @@ screen = pygame.display.set_mode(screenSize)
 pygame.display.set_caption("Fluid Simulation")
 clock = pygame.time.Clock()
 
-# balls = [Ball((screenSize[0] - ballRadius * 2) * i / (horizontalAmount - 1) + ballRadius, (screenSize[1] - ballRadius * 2) * j / (verticalAmount - 1) + ballRadius, 0, 0) for i in range(horizontalAmount) for j in range(verticalAmount)]
 balls = []
-for i in range(horizontalAmount):
-    for j in range(verticalAmount):
-        padding = 100
-        y = (screenSize[1] - padding - ballRadius * 2) * j / (verticalAmount - 1) + ballRadius - (padding / 2)
-        balls.append(Ball(20, y, 0, 0))
+ballPadding = 30
+xCount = 20
+yCount = 10
+for x in range(xCount):
+    for y in range(yCount):
+        balls.append(Ball(ballPadding + x * (screenSize[0] - ballPadding * 2) / (xCount - 1), ballPadding + y * (screenSize[1] - ballPadding * 2) / (yCount - 1), 0, 0))
 
 while True:
     for event in pygame.event.get():

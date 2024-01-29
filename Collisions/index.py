@@ -20,9 +20,9 @@ class Ball:
     def draw(self, screen):
         pygame.draw.circle(screen, (255, 255, 255), (self.x, self.y), self.radius)
 
-    def move(self):
-        self.x += self.vx
-        self.y += self.vy
+    def move(self, dt):
+        self.x += self.vx * dt
+        self.y += self.vy * dt
 
         if self.x < self.radius or self.x > screenSize[0] - self.radius:
             self.vx *= -1
@@ -39,6 +39,7 @@ class Ball:
     
     def collide(self, other):
         if self.checkCollision(other):
+            # Apply direct collision
             originalVx = self.vx
             originalVy = self.vy
             contactAngle = math.degrees(math.atan2(other.y - self.y, other.x - self.x))
@@ -53,16 +54,27 @@ class Ball:
             self.v = math.sqrt(self.vx ** 2 + self.vy ** 2)
             other.v = math.sqrt(other.vx ** 2 + other.vy ** 2)
 
+            # Apply repulsion force if the balls are inside of each other
+            # force = (self.radius + other.radius) / math.sqrt((self.x - other.x) ** 2 + (self.y - other.y) ** 2) - 1
+            # forceMultiplier = 0.1
+            # if force > 0:
+            #     self.vx += force * math.cos(math.radians(contactAngle)) * forceMultiplier
+            #     self.vy += force * math.sin(math.radians(contactAngle)) * forceMultiplier
+            #     other.vx -= force * math.cos(math.radians(contactAngle)) * forceMultiplier
+            #     other.vy -= force * math.sin(math.radians(contactAngle)) * forceMultiplier
+            
+
 pygame.init()
 screen = pygame.display.set_mode(screenSize)
 pygame.display.set_caption("Ball Collisions")
 clock = pygame.time.Clock()
 
 ballSize = 20
-horizontalAmount = 20
-verticalAmount = 10
+horizontalAmount = 5
+verticalAmount = 3
+fps = 1000
 balls = [Ball((screenSize[0] - ballSize * 2) * i / horizontalAmount + ballSize, (screenSize[1] - ballSize * 2) * j / verticalAmount + ballSize, 0, 0, ballSize) for i in range(horizontalAmount) for j in range(verticalAmount)]
-balls.append(Ball(1160, 560, 500, 135, 20))
+balls.append(Ball(1160, 560, 750, -135, 20))
 
 while True:
     for event in pygame.event.get():
@@ -72,7 +84,7 @@ while True:
     screen.fill((0, 0, 0))
 
     for ball in balls:
-        ball.move()
+        ball.move(1 / fps)
         ball.draw(screen)
 
     for i in range(len(balls)):
@@ -80,4 +92,4 @@ while True:
             balls[i].collide(balls[j])
 
     pygame.display.flip()
-    clock.tick(100)
+    clock.tick(fps)

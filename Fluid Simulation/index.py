@@ -8,6 +8,7 @@ ballRadius = 10
 fps = 200
 gravity = 160
 collisionMultiplier = 0.8
+desnityRadius = 40
 
 class Ball:
     def __init__(self, x, y, vx, vy):
@@ -33,6 +34,7 @@ class Ball:
         # Move the ball
         self.x += self.vx * dt
         self.y += self.vy * dt
+
             
 pygame.init()
 screen = pygame.display.set_mode(screenSize)
@@ -47,6 +49,7 @@ for x in range(xCount):
     for y in range(yCount):
         balls.append(Ball(ballPadding + x * (screenSize[0] - ballPadding * 2) / (xCount - 1), ballPadding + y * (screenSize[1] - ballPadding * 2) / (yCount - 1), 0, 0))
 
+densityTimer = 0
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -58,5 +61,14 @@ while True:
         ball.move(1 / fps)
         ball.draw(screen)
 
+    if(densityTimer > 1):
+        densityTimer = 0
+        density = 0
+        for ball in balls:
+            if(math.sqrt((ball.x - pygame.mouse.get_pos()[0]) ** 2 + (ball.y - pygame.mouse.get_pos()[1]) ** 2) < desnityRadius):
+                density += 1
+        print(density)
+
     pygame.display.flip()
     clock.tick(fps)
+    densityTimer += 1 / fps

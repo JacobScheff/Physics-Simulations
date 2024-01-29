@@ -3,11 +3,11 @@ import sys
 import time
 import math
 
-screenSize = (1200, 600)
-ballRadius = 2
+screenSize = (400, 200)
+ballRadius = 4
 fps = 200
-gravity = 160
-# gravity = 0
+# gravity = 160
+gravity = 0
 collisionMultiplier = 0.8
 desnityRadius = 40
 
@@ -39,7 +39,7 @@ class Ball:
     def applyForce(self, other):
         # Apply a repulsive force between the two balls
         distance = math.sqrt((self.x - other.x) ** 2 + (self.y - other.y) ** 2)
-        forceMultiplier = 1
+        forceMultiplier = 2
         forceMagnitude = forceMultiplier * (((self.radius + other.radius) / distance) ** 2)
         # Apply the force so that they are pushed away from each other using trigonometry
         self.vx += forceMagnitude * math.cos(math.atan2(self.y - other.y, self.x - other.x))
@@ -54,9 +54,9 @@ pygame.display.set_caption("Fluid Simulation")
 clock = pygame.time.Clock()
 
 balls = []
-ballPadding = 2
-xCount = 100
-yCount = 50
+ballPadding = 60
+xCount = 20
+yCount = 10
 for x in range(xCount):
     for y in range(yCount):
         balls.append(Ball(ballPadding + x * (screenSize[0] - ballPadding * 2) / (xCount - 1), ballPadding + y * (screenSize[1] - ballPadding * 2) / (yCount - 1), 0, 0))

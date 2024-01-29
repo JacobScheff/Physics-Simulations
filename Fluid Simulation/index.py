@@ -5,7 +5,9 @@ import math
 
 screenSize = (1200, 600)
 ballRadius = 10
-fps = 240
+fps = 200
+gravity = 160
+collisionMultiplier = 0.8
 
 class Ball:
     def __init__(self, x, y, vx, vy):
@@ -19,11 +21,14 @@ class Ball:
         pygame.draw.circle(screen, (255, 255, 255), (self.x, self.y), ballRadius)
 
     def move(self, dt):
+        # Apply gravity
+        self.vy += gravity * dt
+
         # If the ball is going to hit the wall, reverse the velocity
         if self.x < self.radius or self.x > screenSize[0] - self.radius:
-            self.vx *= -1
+            self.vx *= -collisionMultiplier
         if self.y < self.radius or self.y > screenSize[1] - self.radius:
-            self.vy *= -1
+            self.vy *= -collisionMultiplier
 
         # Move the ball
         self.x += self.vx * dt

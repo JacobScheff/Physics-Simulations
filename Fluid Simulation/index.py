@@ -2,13 +2,15 @@ import pygame
 import sys
 import time
 import math
+import numpy as np
 
 screenSize = (400, 200)
 ballRadius = 4
-fps = 200
+fps = 20
 # gravity = 160
 gravity = 0
 collisionMultiplier = 0.8
+friction = 0.99
 desnityRadius = 40
 
 class Ball:
@@ -36,16 +38,23 @@ class Ball:
         self.x += self.vx * dt
         self.y += self.vy * dt
 
+        # Apply friction
+        self.vx *= friction
+        self.vy *= friction
+
     def applyForce(self, other):
         # Apply a repulsive force between the two balls
-        distance = math.sqrt((self.x - other.x) ** 2 + (self.y - other.y) ** 2)
+        distance = ((self.x - other.x) ** 2 + (self.y - other.y) ** 2) ** 0.5
         forceMultiplier = 2
         forceMagnitude = forceMultiplier * (((self.radius + other.radius) / distance) ** 2)
-        # Apply the force so that they are pushed away from each other using trigonometry
-        self.vx += forceMagnitude * math.cos(math.atan2(self.y - other.y, self.x - other.x))
-        self.vy += forceMagnitude * math.sin(math.atan2(self.y - other.y, self.x - other.x))
-        other.vx -= forceMagnitude * math.cos(math.atan2(self.y - other.y, self.x - other.x))
-        other.vy -= forceMagnitude * math.sin(math.atan2(self.y - other.y, self.x - other.x))
+        # Apply the force so that they are pushed away
+        angle = math.atan2(self.y - other.y, self.x - other.x)
+        angleSin = math.sin(angle)
+        angleCos = math.cos(angle)
+        self.vx += forceMagnitude * angleCos
+        self.vy += forceMagnitude * angleSin
+        other.vx -= forceMagnitude * angleCos
+        other.vy -= forceMagnitude * angleSin
 
             
 pygame.init()
@@ -76,12 +85,18 @@ while True:
 
     screen.fill((0, 0, 0))
 
-    for ball in balls:
-        ball.move(1 / fps)
-        for other in balls:
-            if ball != other:
-                ball.applyForce(other)
-        ball.draw(screen)
+    for i in range(len(balls)):
+        balls[i].move(1 / fps)
+        for j in range(i + 1, len(balls)):
+            balls[i].applyForce(balls[j])
+        balls[i].draw(screen)
+
+    # for ball in balls:
+    #     ball.move(1 / fps)
+    #     for other in balls:
+    #         if ball != other:
+    #             ball.applyForce(other)
+    #     ball.draw(screen)
 
     # Draw a circle around the mouse showing density
     # pygame.draw.circle(screen, (255, 255, 255), pygame.mouse.get_pos(), desnityRadius, 1)
@@ -98,4 +113,5 @@ while True:
 
     pygame.display.flip()
     clock.tick(fps)
+    print(clock.get_fps())
     # densityTimer += 1 / fps

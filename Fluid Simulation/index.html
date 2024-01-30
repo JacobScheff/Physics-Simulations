@@ -58,7 +58,7 @@
         applyForce(other) {
             // Apply a repulsive force between the two balls
             let distance = Math.sqrt(Math.pow(this.x - other.x, 2) + Math.pow(this.y - other.y, 2))
-            let forceMultiplier = 0.0064
+            let forceMultiplier = 0.008
             let forceMagnitude = forceMultiplier * Math.pow(((this.radius + other.radius) / distance), 2)
             // Apply the force so that they are pushed away from each other using trigonometry
             let angle = Math.atan2(this.y - other.y, this.x - other.x)
@@ -88,12 +88,25 @@
 
             for (let i = 0; i < balls.length; i++) {
                 balls[i].move(1 / fps)
+                let density = 0
                 for (let j = 0; j < balls.length; j++) {
+                    let distance = Math.sqrt(Math.pow(balls[i].x - balls[j].x, 2) + Math.pow(balls[i].y - balls[j].y, 2))
                     if (i != j) {
+                        if (distance < 100) {
+                            density++
+                        }
+                        // NOTE: Distance is calculated above and then in function, possibly put distance in as parameter
                         balls[i].applyForce(balls[j])
                     }
+
                 }
                 balls[i].draw()
+                // Draw a transparent circle to show density
+                ctx.beginPath()
+                ctx.arc(balls[i].x, balls[i].y, density * 2, 0, Math.PI * 2)
+                ctx.fillStyle = "rgba(255, 255, 255, 0.1)"
+                ctx.fill()
+                ctx.closePath()
             }
 
         }, 1000 / fps)

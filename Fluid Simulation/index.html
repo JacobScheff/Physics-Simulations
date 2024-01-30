@@ -10,9 +10,11 @@
     let xCount = 20
     let yCount = 20
     let fps = 150
+    let forceMultiplier = 0.0065
     // gravity = 640
     let gravity = 0
-    collisionMultiplier = 0.8
+    let collisionMultiplier = 1.15
+    let friction = 0.999
 
     class Ball {
         constructor(x, y, vx, vy) {
@@ -53,12 +55,15 @@
             // Move the ball
             this.x += this.vx * dt
             this.y += this.vy * dt
+
+            // Apply friction
+            this.vx *= friction
+            this.vy *= friction
         }
 
         applyForce(other) {
             // Apply a repulsive force between the two balls
             let distance = Math.sqrt(Math.pow(this.x - other.x, 2) + Math.pow(this.y - other.y, 2))
-            let forceMultiplier = 0.008
             let forceMagnitude = forceMultiplier * Math.pow(((this.radius + other.radius) / distance), 2)
             // Apply the force so that they are pushed away from each other using trigonometry
             let angle = Math.atan2(this.y - other.y, this.x - other.x)

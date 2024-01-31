@@ -4,10 +4,10 @@ import time
 import math
 
 screenSize = (1200, 600)
-ballSize = 20
-horizontalAmount = 5
-verticalAmount = 3
-fps = 1000
+ballSize = 5
+horizontalAmount = 20
+verticalAmount = 12
+fps = 30
 
 class Ball:
     def __init__(self, x, y, v, a, radius):
@@ -68,6 +68,8 @@ class Ball:
                 self.y -= (self.radius + other.radius - distance) * math.sin(math.radians(contactAngle))
                 other.x += (self.radius + other.radius - distance) * math.cos(math.radians(contactAngle))
                 other.y += (self.radius + other.radius - distance) * math.sin(math.radians(contactAngle))
+            return True
+        return False
             
 
 pygame.init()
@@ -78,6 +80,7 @@ clock = pygame.time.Clock()
 balls = [Ball((screenSize[0] - ballSize * 2) * i / horizontalAmount + ballSize, (screenSize[1] - ballSize * 2) * j / verticalAmount + ballSize, 0, 0, ballSize) for i in range(horizontalAmount) for j in range(verticalAmount)]
 balls.append(Ball(1160, 560, 750, -135, 20))
 
+fpsTimer = time.time()
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -90,8 +93,15 @@ while True:
         ball.draw(screen)
 
     for i in range(len(balls)):
-        for j in range(i + 1, len(balls)):
-            balls[i].collide(balls[j])
+        toSkip = []
+        for j in range(len(balls)):
+            if j not in toSkip and i != j:
+                skip = balls[i].collide(balls[j])
+                if skip:
+                    toSkip.append(j)
 
     pygame.display.flip()
     clock.tick(fps)
+    if time.time() - fpsTimer >= 1:
+        print(clock.get_fps())
+        fpsTimer = time.time()

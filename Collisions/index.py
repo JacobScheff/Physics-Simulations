@@ -38,25 +38,26 @@ class Ball:
             self.vy = -abs(self.vy)
 
         self.a = math.degrees(math.atan2(self.vy, self.vx))
-
-    def checkCollision(self, other):
-        if (self.x - other.x) ** 2 + (self.y - other.y) ** 2 <= (self.radius + other.radius) ** 2:
-            return True
-        else:
-            return False
     
     def collide(self, other):
-        if self.checkCollision(other):
-            distance = ((self.x - other.x) ** 2 + (self.y - other.y) ** 2) ** 0.5
+        distance = ((self.x - other.x) ** 2 + (self.y - other.y) ** 2) ** 0.5
+        if distance <= self.radius + other.radius:
             originalVx = self.vx
             originalVy = self.vy
             contactAngle = math.degrees(math.atan2(other.y - self.y, other.x - self.x))
+            contactAngleRad = math.radians(contactAngle)
+            contactAngleCos = math.cos(contactAngleRad)
+            contactAngleSin = math.sin(contactAngleRad)
+            contactAngle90 = contactAngle + 90
+            contactAngle90Rad = math.radians(contactAngle90)
+            contactAngle90Cos = math.cos(contactAngle90Rad)
+            contactAngle90Sin = math.sin(contactAngle90Rad)
 
             # Apply direct collision
-            self.vx = (self.v * math.cos(math.radians(self.a - contactAngle)) * (self.mass - other.mass) + 2 * other.mass * other.v * math.cos(math.radians(other.a - contactAngle))) / (self.mass + other.mass) * math.cos(math.radians(contactAngle)) + self.v * math.sin(math.radians(self.a - contactAngle)) * math.cos(math.radians(contactAngle + 90))
-            self.vy = (self.v * math.cos(math.radians(self.a - contactAngle)) * (self.mass - other.mass) + 2 * other.mass * other.v * math.cos(math.radians(other.a - contactAngle))) / (self.mass + other.mass) * math.sin(math.radians(contactAngle)) + self.v * math.sin(math.radians(self.a - contactAngle)) * math.sin(math.radians(contactAngle + 90))
-            other.vx = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVx * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * math.cos(math.radians(contactAngle)) + other.v * math.sin(math.radians(other.a - contactAngle)) * math.cos(math.radians(contactAngle + 90))
-            other.vy = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVy * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * math.sin(math.radians(contactAngle)) + other.v * math.sin(math.radians(other.a - contactAngle)) * math.sin(math.radians(contactAngle + 90))
+            self.vx = (self.v * math.cos(math.radians(self.a - contactAngle)) * (self.mass - other.mass) + 2 * other.mass * other.v * math.cos(math.radians(other.a - contactAngle))) / (self.mass + other.mass) * contactAngleCos + self.v * math.sin(math.radians(self.a - contactAngle)) * contactAngle90Cos
+            self.vy = (self.v * math.cos(math.radians(self.a - contactAngle)) * (self.mass - other.mass) + 2 * other.mass * other.v * math.cos(math.radians(other.a - contactAngle))) / (self.mass + other.mass) * contactAngleSin + self.v * math.sin(math.radians(self.a - contactAngle)) * contactAngle90Sin
+            other.vx = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVx * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * contactAngleCos + other.v * math.sin(math.radians(other.a - contactAngle)) * contactAngle90Cos
+            other.vy = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVy * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * contactAngleSin + other.v * math.sin(math.radians(other.a - contactAngle)) * contactAngle90Sin
             self.a = math.degrees(math.atan2(self.vy, self.vx))
             other.a = math.degrees(math.atan2(other.vy, other.vx))
             self.v = (self.vx ** 2 + self.vy ** 2) ** 0.5

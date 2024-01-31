@@ -4,10 +4,10 @@ import time
 import math
 
 screenSize = (1200, 600)
-ballSize = 5
-horizontalAmount = 20
-verticalAmount = 12
-fps = 30
+ballSize = 20
+horizontalAmount = 5
+verticalAmount = 3
+fps = 500
 
 class Ball:
     def __init__(self, x, y, v, a, radius):

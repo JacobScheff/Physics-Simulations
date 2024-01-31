@@ -8,6 +8,10 @@ ballSize = 20
 horizontalAmount = 5
 verticalAmount = 3
 fps = 500
+horizontalCells = 12
+verticalCells = 6
+# Accesed like this: x: 2, y: 4 balls[2][4]
+balls = [[[] for j in range(verticalCells)] for i in range(horizontalCells)]
 
 class Ball:
     def __init__(self, x, y, v, a, radius):
@@ -71,15 +75,22 @@ class Ball:
                 other.y += (self.radius + other.radius - distance) * math.sin(math.radians(contactAngle))
             return True
         return False
+
+def getCell(x, y):
+    x = min(max(x // (screenSize[0] / horizontalCells), 0), horizontalCells - 1)
+    y = min(max(y // (screenSize[1] / verticalCells), 0), verticalCells - 1)
+    return (x, y)
             
+# balls = [Ball((screenSize[0] - ballSize * 2) * i / horizontalAmount + ballSize, (screenSize[1] - ballSize * 2) * j / verticalAmount + ballSize, 0, 0, ballSize) for i in range(horizontalAmount) for j in range(verticalAmount)]
+# balls.append(Ball(1160, 560, 750, -135, 20))
+
+time.sleep(9999)
+
 
 pygame.init()
 screen = pygame.display.set_mode(screenSize)
 pygame.display.set_caption("Ball Collisions")
 clock = pygame.time.Clock()
-
-balls = [Ball((screenSize[0] - ballSize * 2) * i / horizontalAmount + ballSize, (screenSize[1] - ballSize * 2) * j / verticalAmount + ballSize, 0, 0, ballSize) for i in range(horizontalAmount) for j in range(verticalAmount)]
-balls.append(Ball(1160, 560, 750, -135, 20))
 
 fpsTimer = time.time()
 while True:

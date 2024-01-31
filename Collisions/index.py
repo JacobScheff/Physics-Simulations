@@ -77,12 +77,18 @@ class Ball:
         return False
 
 def getCell(x, y):
-    x = min(max(x // (screenSize[0] / horizontalCells), 0), horizontalCells - 1)
-    y = min(max(y // (screenSize[1] / verticalCells), 0), verticalCells - 1)
+    x = int(min(max(x // (screenSize[0] / horizontalCells), 0), horizontalCells - 1))
+    y = int(min(max(y // (screenSize[1] / verticalCells), 0), verticalCells - 1))
     return (x, y)
             
 # balls = [Ball((screenSize[0] - ballSize * 2) * i / horizontalAmount + ballSize, (screenSize[1] - ballSize * 2) * j / verticalAmount + ballSize, 0, 0, ballSize) for i in range(horizontalAmount) for j in range(verticalAmount)]
 # balls.append(Ball(1160, 560, 750, -135, 20))
+
+for i in range(horizontalAmount):
+    for j in range(verticalAmount):
+        ballPos = (screenSize[0] - ballSize * 2) * i / horizontalAmount + ballSize, (screenSize[1] - ballSize * 2) * j / verticalAmount + ballSize
+        cell = getCell(ballPos[0], ballPos[1])
+        balls[cell[0]][cell[1]].append(Ball(ballPos[0], ballPos[1], 0, 0, ballSize))
 
 time.sleep(9999)
 

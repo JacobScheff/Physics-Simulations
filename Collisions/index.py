@@ -29,19 +29,39 @@ class Ball:
         pygame.draw.circle(screen, (255, 255, 255), (self.x, self.y), self.radius)
 
     def move(self, dt):
+        # Get the current cell
+        currentCell = getCell(self.x, self.y)
+
+        # Move the ball
         self.x += self.vx * dt
         self.y += self.vy * dt
 
+        # Apply border collision
+        velocityChanged = False
         if self.x < self.radius:
             self.vx = abs(self.vx)
+            velocityChanged = True
         elif self.x > screenSize[0] - self.radius:
             self.vx = -abs(self.vx)
+            velocityChanged = True
         if self.y < self.radius:
             self.vy = abs(self.vy)
+            velocityChanged = True
         elif self.y > screenSize[1] - self.radius:
             self.vy = -abs(self.vy)
+            velocityChanged = True
 
-        self.a = math.degrees(math.atan2(self.vy, self.vx))
+        # Calculate the new angle if the velocity changed from a border collision
+        if velocityChanged:
+            self.a = math.degrees(math.atan2(self.vy, self.vx))
+
+        # If the cell changed, remove the ball from the previous cell and add it to the new one
+        newCell = getCell(self.x, self.y)
+        if currentCell != newCell:
+            balls[currentCell[0]][currentCell[1]].remove(self)
+            balls[newCell[0]][newCell[1]].append(self)
+
+
     
     def collide(self, other):
         distance = ((self.x - other.x) ** 2 + (self.y - other.y) ** 2) ** 0.5
@@ -82,14 +102,15 @@ def getCell(x, y):
     return (x, y)
             
 # balls = [Ball((screenSize[0] - ballSize * 2) * i / horizontalAmount + ballSize, (screenSize[1] - ballSize * 2) * j / verticalAmount + ballSize, 0, 0, ballSize) for i in range(horizontalAmount) for j in range(verticalAmount)]
-# balls.append(Ball(1160, 560, 750, -135, 20))
 
 for i in range(horizontalAmount):
     for j in range(verticalAmount):
         ballPos = (screenSize[0] - ballSize * 2) * i / horizontalAmount + ballSize, (screenSize[1] - ballSize * 2) * j / verticalAmount + ballSize
         cell = getCell(ballPos[0], ballPos[1])
         balls[cell[0]][cell[1]].append(Ball(ballPos[0], ballPos[1], 0, 0, ballSize))
-
+movingBall = Ball(1160, 560, 750, -135, 20)
+movingBallCell = getCell(movingBall.x, movingBall.y)
+balls[movingBallCell[0]][movingBallCell[1]].append(movingBall)
 
 pygame.init()
 screen = pygame.display.set_mode(screenSize)
@@ -104,9 +125,11 @@ while True:
 
     screen.fill((0, 0, 0))
 
-    for ball in balls:
-        ball.move(1 / fps)
-        ball.draw(screen)
+    for xCells in balls:
+        for yCells in xCells:
+            for ball in yCells:
+                ball.draw(screen)
+                ball.move(1 / fps)
 
     # for i in range(len(balls)):
     #     toSkip = []

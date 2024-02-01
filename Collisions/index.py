@@ -4,12 +4,12 @@ import time
 import math
 
 screenSize = (1200, 600)
-ballSize = 4
-horizontalAmount = 25
-verticalAmount = 15
-fps = 200
-horizontalCells = 12
-verticalCells = 6
+ballSize = 2
+horizontalAmount = 50
+verticalAmount = 30
+fps = 65
+horizontalCells = 48
+verticalCells = 24
 # Accesed like this: x: 2, y: 4 balls[2][4]
 balls = [[[] for j in range(verticalCells)] for i in range(horizontalCells)]
 
@@ -86,11 +86,23 @@ class Ball:
             other.v = (other.vx ** 2 + other.vy ** 2)  ** 0.5
 
             # If the balls are overlapping, move them apart
+            selfCurrentCell = getCell(self.x, self.y)
+            otherCurrentCell = getCell(other.x, other.y)
             if distance < self.radius + other.radius:
-                self.x -= (self.radius + other.radius - distance) * math.cos(math.radians(contactAngle))
-                self.y -= (self.radius + other.radius - distance) * math.sin(math.radians(contactAngle))
-                other.x += (self.radius + other.radius - distance) * math.cos(math.radians(contactAngle))
-                other.y += (self.radius + other.radius - distance) * math.sin(math.radians(contactAngle))
+                distanceToMove = (self.radius + other.radius - distance) / 2
+                # bigger mass == less movement
+                self.x -= distanceToMove * math.cos(math.radians(contactAngle)) * other.mass / (self.mass + other.mass)
+                self.y -= distanceToMove * math.sin(math.radians(contactAngle)) * other.mass / (self.mass + other.mass)
+                other.x += distanceToMove * math.cos(math.radians(contactAngle)) * self.mass / (self.mass + other.mass)
+                other.y += distanceToMove * math.sin(math.radians(contactAngle)) * self.mass / (self.mass + other.mass)
+            selfNewCell = getCell(self.x, self.y)
+            otherNewCell = getCell(other.x, other.y)
+            if selfCurrentCell != selfNewCell:
+                balls[selfCurrentCell[0]][selfCurrentCell[1]].remove(self)
+                balls[selfNewCell[0]][selfNewCell[1]].append(self)
+            if otherCurrentCell != otherNewCell:
+                balls[otherCurrentCell[0]][otherCurrentCell[1]].remove(other)
+                balls[otherNewCell[0]][otherNewCell[1]].append(other)
             return True
         return False
 

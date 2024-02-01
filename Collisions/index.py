@@ -131,13 +131,16 @@ while True:
                 ball.draw(screen)
                 ball.move(1 / fps)
 
-    # for i in range(len(balls)):
-    #     toSkip = []
-    #     for j in range(len(balls)):
-    #         if j not in toSkip and i != j:
-    #             skip = balls[i].collide(balls[j])
-    #             if skip:
-    #                 toSkip.append(j)
+    for x in range(horizontalCells):
+        for y in range(verticalCells):
+            for ball in balls[x][y]:
+                # Check for collisions with the balls in the same cell or the adjacent cells
+                for i in range(-1, 2):
+                    for j in range(-1, 2):
+                        if x + i >= 0 and x + i < horizontalCells and y + j >= 0 and y + j < verticalCells:
+                            for otherBall in balls[x + i][y + j]:
+                                if ball != otherBall:
+                                    ball.collide(otherBall)
 
     pygame.display.flip()
     clock.tick(fps)

@@ -12,7 +12,8 @@ fps = 65
 horizontalCells = 48
 verticalCells = 24
 # gravity = 200
-repulsion = 1
+repulsionRadius = 100
+repulsionForce = 50
 # Accesed like this: x: 2, y: 4 balls[2][4]
 balls = [[[] for j in range(verticalCells)] for i in range(horizontalCells)]
 
@@ -115,6 +116,16 @@ class Ball:
                 balls[otherNewCell[0]][otherNewCell[1]].append(other)
             return True
         return False
+    
+    def applyRepulsionForce(self, other):
+        distance = ((self.x - other.x) ** 2 + (self.y - other.y) ** 2) ** 0.5
+        if distance < repulsionRadius:
+            force = repulsionForce * (repulsionRadius - distance)
+            angle = math.degrees(math.atan2(other.y - self.y, other.x - self.x))
+            self.vx -= force * math.cos(math.radians(angle)) / self.mass
+            self.vy -= force * math.sin(math.radians(angle)) / self.mass
+            other.vx += force * math.cos(math.radians(angle)) / other.mass
+            other.vy += force * math.sin(math.radians(angle)) / other.mass
 
 def getCell(x, y):
     x = int(min(max(x // (screenSize[0] / horizontalCells), 0), horizontalCells - 1))
@@ -165,6 +176,7 @@ while True:
                             for otherBall in balls[x + i][y + j]:
                                 if ball != otherBall:
                                     ball.collide(otherBall)
+                                    ball.applyRepulsionForce(otherBall)
 
     pygame.display.flip()
     clock.tick(fps)

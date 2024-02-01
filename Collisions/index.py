@@ -90,8 +90,6 @@ for i in range(horizontalAmount):
         cell = getCell(ballPos[0], ballPos[1])
         balls[cell[0]][cell[1]].append(Ball(ballPos[0], ballPos[1], 0, 0, ballSize))
 
-time.sleep(9999)
-
 
 pygame.init()
 screen = pygame.display.set_mode(screenSize)
@@ -110,13 +108,13 @@ while True:
         ball.move(1 / fps)
         ball.draw(screen)
 
-    for i in range(len(balls)):
-        toSkip = []
-        for j in range(len(balls)):
-            if j not in toSkip and i != j:
-                skip = balls[i].collide(balls[j])
-                if skip:
-                    toSkip.append(j)
+    # for i in range(len(balls)):
+    #     toSkip = []
+    #     for j in range(len(balls)):
+    #         if j not in toSkip and i != j:
+    #             skip = balls[i].collide(balls[j])
+    #             if skip:
+    #                 toSkip.append(j)
 
     pygame.display.flip()
     clock.tick(fps)

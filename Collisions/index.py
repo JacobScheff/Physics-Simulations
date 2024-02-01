@@ -4,10 +4,10 @@ import time
 import math
 
 screenSize = (1200, 600)
-ballSize = 20
-horizontalAmount = 5
-verticalAmount = 3
-fps = 500
+ballSize = 4
+horizontalAmount = 25
+verticalAmount = 15
+fps = 200
 horizontalCells = 12
 verticalCells = 6
 # Accesed like this: x: 2, y: 4 balls[2][4]
@@ -60,8 +60,6 @@ class Ball:
         if currentCell != newCell:
             balls[currentCell[0]][currentCell[1]].remove(self)
             balls[newCell[0]][newCell[1]].append(self)
-
-
     
     def collide(self, other):
         distance = ((self.x - other.x) ** 2 + (self.y - other.y) ** 2) ** 0.5

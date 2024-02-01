@@ -2,14 +2,16 @@ import pygame
 import sys
 import time
 import math
+import random
 
 screenSize = (1200, 600)
-ballSize = 2
-horizontalAmount = 50
-verticalAmount = 30
+ballSize = 3
+horizontalAmount = 20
+verticalAmount = 12
 fps = 65
 horizontalCells = 48
 verticalCells = 24
+gravity = 200
 # Accesed like this: x: 2, y: 4 balls[2][4]
 balls = [[[] for j in range(verticalCells)] for i in range(horizontalCells)]
 
@@ -32,6 +34,9 @@ class Ball:
         # Get the current cell
         currentCell = getCell(self.x, self.y)
 
+        # Apply gravity
+        self.vy += gravity * dt
+
         # Move the ball
         self.x += self.vx * dt
         self.y += self.vy * dt
@@ -40,15 +45,19 @@ class Ball:
         velocityChanged = False
         if self.x < self.radius:
             self.vx = abs(self.vx)
+            self.x = self.radius
             velocityChanged = True
         elif self.x > screenSize[0] - self.radius:
             self.vx = -abs(self.vx)
+            self.x = screenSize[0] - self.radius
             velocityChanged = True
         if self.y < self.radius:
             self.vy = abs(self.vy)
+            self.y = self.radius
             velocityChanged = True
         elif self.y > screenSize[1] - self.radius:
             self.vy = -abs(self.vy)
+            self.y = screenSize[1] - self.radius
             velocityChanged = True
 
         # Calculate the new angle if the velocity changed from a border collision
@@ -117,10 +126,13 @@ for i in range(horizontalAmount):
     for j in range(verticalAmount):
         ballPos = (screenSize[0] - ballSize * 2) * i / horizontalAmount + ballSize, (screenSize[1] - ballSize * 2) * j / verticalAmount + ballSize
         cell = getCell(ballPos[0], ballPos[1])
-        balls[cell[0]][cell[1]].append(Ball(ballPos[0], ballPos[1], 0, 0, ballSize))
-movingBall = Ball(1160, 560, 750, -135, 20)
-movingBallCell = getCell(movingBall.x, movingBall.y)
-balls[movingBallCell[0]][movingBallCell[1]].append(movingBall)
+        # random small velocity and horzintal angle
+        v = random.randint(0, 50)
+        a = random.randint(0, 1) * 180
+        balls[cell[0]][cell[1]].append(Ball(ballPos[0], ballPos[1], v, a, ballSize))
+# movingBall = Ball(1160, 560, 750, -135, 20)
+# movingBallCell = getCell(movingBall.x, movingBall.y)
+# balls[movingBallCell[0]][movingBallCell[1]].append(movingBall)
 
 pygame.init()
 screen = pygame.display.set_mode(screenSize)

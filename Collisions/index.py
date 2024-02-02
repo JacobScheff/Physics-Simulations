@@ -12,8 +12,8 @@ fps = 65
 horizontalCells = 48
 verticalCells = 24
 # gravity = 200
-repulsionRadius = 100
-repulsionForce = 50
+repulsionRadius = 500
+repulsionForce = 25
 # Accesed like this: x: 2, y: 4 balls[2][4]
 balls = [[[] for j in range(verticalCells)] for i in range(horizontalCells)]
 
@@ -143,7 +143,7 @@ for i in range(horizontalAmount):
         # a = random.randint(0, 1) * 180
         # balls[cell[0]][cell[1]].append(Ball(ballPos[0], ballPos[1], v, a, ballSize))
         balls[cell[0]][cell[1]].append(Ball(ballPos[0], ballPos[1], 0, 0, ballSize))
-movingBall = Ball(1160, 560, 750, -135, 20)
+movingBall = Ball(1160, 560, 250, -135, 20)
 movingBallCell = getCell(movingBall.x, movingBall.y)
 balls[movingBallCell[0]][movingBallCell[1]].append(movingBall)
 

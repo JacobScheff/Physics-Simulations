@@ -12,8 +12,6 @@ fps = 65
 horizontalCells = 48
 verticalCells = 24
 # gravity = 200
-repulsionRadius = 500
-repulsionForce = 25
 # Accesed like this: x: 2, y: 4 balls[2][4]
 balls = [[[] for j in range(verticalCells)] for i in range(horizontalCells)]
 
@@ -116,16 +114,6 @@ class Ball:
                 balls[otherNewCell[0]][otherNewCell[1]].append(other)
             return True
         return False
-    
-    def applyRepulsionForce(self, other):
-        distance = ((self.x - other.x) ** 2 + (self.y - other.y) ** 2) ** 0.5
-        if distance < repulsionRadius:
-            force = repulsionForce * (repulsionRadius - distance)
-            angle = math.degrees(math.atan2(other.y - self.y, other.x - self.x))
-            self.vx -= force * math.cos(math.radians(angle)) / self.mass
-            self.vy -= force * math.sin(math.radians(angle)) / self.mass
-            other.vx += force * math.cos(math.radians(angle)) / other.mass
-            other.vy += force * math.sin(math.radians(angle)) / other.mass
 
 def getCell(x, y):
     x = int(min(max(x // (screenSize[0] / horizontalCells), 0), horizontalCells - 1))
@@ -170,13 +158,16 @@ while True:
         for y in range(verticalCells):
             for ball in balls[x][y]:
                 # Check for collisions with the balls in the same cell or the adjacent cells
+                cellCountTest = 0
                 for i in range(-1, 2):
                     for j in range(-1, 2):
                         if x + i >= 0 and x + i < horizontalCells and y + j >= 0 and y + j < verticalCells:
+                            cellCountTest += 1
                             for otherBall in balls[x + i][y + j]:
                                 if ball != otherBall:
                                     ball.collide(otherBall)
-                                    ball.applyRepulsionForce(otherBall)
+                if(cellCountTest > 9):
+                    print("Error! Extra cells were searched! Amount searched: " + cellCountTest)
 
     pygame.display.flip()
     clock.tick(fps)

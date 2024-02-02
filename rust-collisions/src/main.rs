@@ -9,6 +9,9 @@ fn main() {
     let horizontal_cells: i32 = 48;
     let vertical_cells: i32 = 24;
     // let gravity: i32 = 200;
+    
+    // Initialize the window
+
 
     println!("Hello, world!");
 }

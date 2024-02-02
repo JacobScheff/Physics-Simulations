@@ -79,7 +79,7 @@ impl Ball {
         return (current_cell, new_cell);
     }
 
-    pub fn collide(&mut self, other: &mut Ball, screen_size_x: i32, screen_size_y: i32, horizontal_cells: i32, vertical_cells: i32) {
+    pub fn collide(&mut self, other: &mut Ball, screen_size_x: i32, screen_size_y: i32, horizontal_cells: i32, vertical_cells: i32) -> ((i32, i32), (i32, i32), (i32, i32), (i32, i32)) {
         let distance = ((self.x - other.x).powi(2) + (self.y - other.y).powi(2)).sqrt();
         if distance <= self.radius + other.radius {
             let originalVx = self.vx;
@@ -89,15 +89,6 @@ impl Ball {
             let contactAngleSin = contactAngle.to_radians().sin();
             let contactAngle90Cos = -contactAngleSin;
             let contactAngle90Sin = contactAngleCos;
-
-            // self.vx = (self.v * math.cos(math.radians(self.a - contactAngle)) * (self.mass - other.mass) + 2 * other.mass * other.v * math.cos(math.radians(other.a - contactAngle))) / (self.mass + other.mass) * contactAngleCos + self.v * math.sin(math.radians(self.a - contactAngle)) * contactAngle90Cos
-            // self.vy = (self.v * math.cos(math.radians(self.a - contactAngle)) * (self.mass - other.mass) + 2 * other.mass * other.v * math.cos(math.radians(other.a - contactAngle))) / (self.mass + other.mass) * contactAngleSin + self.v * math.sin(math.radians(self.a - contactAngle)) * contactAngle90Sin
-            // other.vx = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVx * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * contactAngleCos + other.v * math.sin(math.radians(other.a - contactAngle)) * contactAngle90Cos
-            // other.vy = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVy * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * contactAngleSin + other.v * math.sin(math.radians(other.a - contactAngle)) * contactAngle90Sin
-            // self.a = math.degrees(math.atan2(self.vy, self.vx))
-            // other.a = math.degrees(math.atan2(other.vy, other.vx))
-            // self.v = (self.vx ** 2 + self.vy ** 2) ** 0.5
-            // other.v = (other.vx ** 2 + other.vy ** 2)  ** 0.5
 
             // Apply direct collision
             self.vx = (self.v * (self.a - contactAngle).to_radians().cos() * (self.mass - other.mass) + 2.0 * other.mass * other.v * (other.a - contactAngle).to_radians().cos()) / (self.mass + other.mass) * contactAngleCos + self.v * (self.a - contactAngle).to_radians().sin() * contactAngle90Cos;
@@ -122,7 +113,8 @@ impl Ball {
             let selfNewCell = self.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
             let otherNewCell = other.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
             
-            // return (selfCurrentCell, selfNewCell, otherCurrentCell, otherNewCell);
+            return (selfCurrentCell, selfNewCell, otherCurrentCell, otherNewCell);
         }
+        return ((-1, -1), (-1, -1), (-1, -1), (-1, -1));
     }
 }

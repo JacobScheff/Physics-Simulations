@@ -80,10 +80,13 @@ class Ball:
             contactAngleRad = math.radians(contactAngle)
             contactAngleCos = math.cos(contactAngleRad)
             contactAngleSin = math.sin(contactAngleRad)
-            contactAngle90 = contactAngle + 90
-            contactAngle90Rad = math.radians(contactAngle90)
-            contactAngle90Cos = math.cos(contactAngle90Rad)
-            contactAngle90Sin = math.sin(contactAngle90Rad)
+            # cos(x + 90) = -sin(x)
+            # sin(x + 90) = cos(x)
+            # contactAngle90 = contactAngle + 90
+            # contactAngle90Rad = math.radians(contactAngle90)
+            # contactAngle90Cos = math.cos(contactAngle90Rad)
+            # contactAngle90Sin = math.sin(contactAngle90Rad)
+            print(contactAngle + 90)
 
             # Apply direct collision
             self.vx = (self.v * math.cos(math.radians(self.a - contactAngle)) * (self.mass - other.mass) + 2 * other.mass * other.v * math.cos(math.radians(other.a - contactAngle))) / (self.mass + other.mass) * contactAngleCos + self.v * math.sin(math.radians(self.a - contactAngle)) * contactAngle90Cos

@@ -27,9 +27,9 @@ impl Ball {
         }
     }
 
-    pub fn get_cell(&self, screenSizeX: i32, screenSizeY: i32, horizontalCells: i32, verticalCells: i32) -> (i32, i32) {
-        let x = (self.x / (screenSizeX as f64 / horizontalCells as f64)).min(0.0).max(horizontalCells as f64 - 1.0) as i32;
-        let y = (self.y / (screenSizeY as f64 / verticalCells as f64)).min(0.0).max(verticalCells as f64 - 1.0) as i32;
+    pub fn get_cell(&self, screen_size_x: i32, screen_size_y: i32, horizontal_cells: i32, vertical_cells: i32) -> (i32, i32) {
+        let x = (self.x / (screen_size_x as f64 / horizontal_cells as f64)).min(0.0).max(horizontal_cells as f64 - 1.0) as i32;
+        let y = (self.y / (screen_size_y as f64 / vertical_cells as f64)).min(0.0).max(vertical_cells as f64 - 1.0) as i32;
         (x, y)
     }
 
@@ -47,28 +47,28 @@ impl Ball {
 
         // Apply border collision
         // NOTE: -self.vx.abs() may return positive value
-        let mut velocityChanged = false;
+        let mut velocity_changed = false;
         if self.x - self.radius < 0.0 {
             self.x = self.radius;
             self.vx = self.vx.abs();
-            velocityChanged = true;
+            velocity_changed = true;
         } else if self.x + self.radius > screen_size_x as f64 {
             self.x = screen_size_x as f64 - self.radius;
             self.vx = -self.vx.abs();
-            velocityChanged = true;
+            velocity_changed = true;
         }
         if self.y - self.radius < 0.0 {
             self.y = self.radius;
             self.vy = self.vy.abs();
-            velocityChanged = true;
+            velocity_changed = true;
         } else if self.y + self.radius > screen_size_y as f64 {
             self.y = screen_size_y as f64 - self.radius;
             self.vy = -self.vy;
-            velocityChanged = true;
+            velocity_changed = true;
         }
 
         // Calculate the new angle if the velocity changed from a border collision
-        if velocityChanged {
+        if velocity_changed {
             self.a = self.vy.atan2(self.vx).to_degrees();
         }
 
@@ -82,38 +82,38 @@ impl Ball {
     pub fn collide(&mut self, other: &mut Ball, screen_size_x: i32, screen_size_y: i32, horizontal_cells: i32, vertical_cells: i32) -> ((i32, i32), (i32, i32), (i32, i32), (i32, i32)) {
         let distance = ((self.x - other.x).powi(2) + (self.y - other.y).powi(2)).sqrt();
         if distance <= self.radius + other.radius {
-            let originalVx = self.vx;
-            let originalVy = self.vy;
-            let contactAngle = (other.y - self.y).atan2(other.x - self.x).to_degrees();
-            let contactAngleCos = contactAngle.to_radians().cos();
-            let contactAngleSin = contactAngle.to_radians().sin();
-            let contactAngle90Cos = -contactAngleSin;
-            let contactAngle90Sin = contactAngleCos;
+            let original_vx = self.vx;
+            let original_vy = self.vy;
+            let contact_angle = (other.y - self.y).atan2(other.x - self.x).to_degrees();
+            let contact_angle_cos = contact_angle.to_radians().cos();
+            let contact_angle_sin = contact_angle.to_radians().sin();
+            let contact_angle90_cos = -contact_angle_sin;
+            let contact_angle90_sin = contact_angle_sin;
 
             // Apply direct collision
-            self.vx = (self.v * (self.a - contactAngle).to_radians().cos() * (self.mass - other.mass) + 2.0 * other.mass * other.v * (other.a - contactAngle).to_radians().cos()) / (self.mass + other.mass) * contactAngleCos + self.v * (self.a - contactAngle).to_radians().sin() * contactAngle90Cos;
-            self.vy = (self.v * (self.a - contactAngle).to_radians().cos() * (self.mass - other.mass) + 2.0 * other.mass * other.v * (other.a - contactAngle).to_radians().cos()) / (self.mass + other.mass) * contactAngleSin + self.v * (self.a - contactAngle).to_radians().sin() * contactAngle90Sin;
-            other.vx = (other.v * (other.a - contactAngle).to_radians().cos() * (other.mass - self.mass) + 2.0 * self.mass * originalVx * (self.a - contactAngle).to_radians().cos()) / (self.mass + other.mass) * contactAngleCos + other.v * (other.a - contactAngle).to_radians().sin() * contactAngle90Cos;
-            other.vy = (other.v * (other.a - contactAngle).to_radians().cos() * (other.mass - self.mass) + 2.0 * self.mass * originalVy * (self.a - contactAngle).to_radians().cos()) / (self.mass + other.mass) * contactAngleSin + other.v * (other.a - contactAngle).to_radians().sin() * contactAngle90Sin;
+            self.vx = (self.v * (self.a - contact_angle).to_radians().cos() * (self.mass - other.mass) + 2.0 * other.mass * other.v * (other.a - contact_angle).to_radians().cos()) / (self.mass + other.mass) * contact_angle_cos + self.v * (self.a - contact_angle).to_radians().sin() * contact_angle90_cos;
+            self.vy = (self.v * (self.a - contact_angle).to_radians().cos() * (self.mass - other.mass) + 2.0 * other.mass * other.v * (other.a - contact_angle).to_radians().cos()) / (self.mass + other.mass) * contact_angle_sin + self.v * (self.a - contact_angle).to_radians().sin() * contact_angle90_sin;
+            other.vx = (other.v * (other.a - contact_angle).to_radians().cos() * (other.mass - self.mass) + 2.0 * self.mass * original_vx * (self.a - contact_angle).to_radians().cos()) / (self.mass + other.mass) * contact_angle_cos + other.v * (other.a - contact_angle).to_radians().sin() * contact_angle90_cos;
+            other.vy = (other.v * (other.a - contact_angle).to_radians().cos() * (other.mass - self.mass) + 2.0 * self.mass * original_vy * (self.a - contact_angle).to_radians().cos()) / (self.mass + other.mass) * contact_angle_sin + other.v * (other.a - contact_angle).to_radians().sin() * contact_angle90_sin;
             self.a = self.vy.atan2(self.vx).to_degrees();
             other.a = other.vy.atan2(other.vx).to_degrees();
             self.v = (self.vx.powi(2) + self.vy.powi(2)).sqrt();
             other.v = (other.vx.powi(2) + other.vy.powi(2)).sqrt();
 
             // If the balls are overlapping, move them apart
-            let selfCurrentCell = self.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
-            let otherCurrentCell = other.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
+            let self_current_cell = self.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
+            let other_current_cell = other.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
             if distance < self.radius + other.radius {
-                let distanceToMove = (self.radius + other.radius - distance);
-                self.x -= distanceToMove * contactAngle.to_radians().cos() * other.mass / (self.mass + other.mass);
-                self.y -= distanceToMove * contactAngle.to_radians().sin() * other.mass / (self.mass + other.mass);
-                other.x += distanceToMove * contactAngle.to_radians().cos() * self.mass / (self.mass + other.mass);
-                other.y += distanceToMove * contactAngle.to_radians().sin() * self.mass / (self.mass + other.mass);
+                let distance_to_move = self.radius + other.radius - distance;
+                self.x -= distance_to_move * contact_angle.to_radians().cos() * other.mass / (self.mass + other.mass);
+                self.y -= distance_to_move * contact_angle.to_radians().sin() * other.mass / (self.mass + other.mass);
+                other.x += distance_to_move * contact_angle.to_radians().cos() * self.mass / (self.mass + other.mass);
+                other.y += distance_to_move * contact_angle.to_radians().sin() * self.mass / (self.mass + other.mass);
             }
-            let selfNewCell = self.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
-            let otherNewCell = other.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
+            let self_new_cell = self.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
+            let other_new_cell = other.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
             
-            return (selfCurrentCell, selfNewCell, otherCurrentCell, otherNewCell);
+            return (self_current_cell, self_new_cell, other_current_cell, other_new_cell);
         }
         return ((-1, -1), (-1, -1), (-1, -1), (-1, -1));
     }

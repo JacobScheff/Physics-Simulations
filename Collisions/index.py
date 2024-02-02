@@ -5,10 +5,10 @@ import math
 import random
 
 screenSize = (1200, 600)
-ballSize = 6
-horizontalAmount = 20
-verticalAmount = 15
-fps = 65
+ballSize = 12
+horizontalAmount = 10
+verticalAmount = 5
+fps = 400
 horizontalCells = 48
 verticalCells = 24
 # gravity = 200
@@ -82,11 +82,8 @@ class Ball:
             contactAngleSin = math.sin(contactAngleRad)
             # cos(x + 90) = -sin(x)
             # sin(x + 90) = cos(x)
-            # contactAngle90 = contactAngle + 90
-            # contactAngle90Rad = math.radians(contactAngle90)
-            # contactAngle90Cos = math.cos(contactAngle90Rad)
-            # contactAngle90Sin = math.sin(contactAngle90Rad)
-            print(contactAngle + 90)
+            contactAngle90Cos = -contactAngleSin
+            contactAngle90Sin = contactAngleCos
 
             # Apply direct collision
             self.vx = (self.v * math.cos(math.radians(self.a - contactAngle)) * (self.mass - other.mass) + 2 * other.mass * other.v * math.cos(math.radians(other.a - contactAngle))) / (self.mass + other.mass) * contactAngleCos + self.v * math.sin(math.radians(self.a - contactAngle)) * contactAngle90Cos

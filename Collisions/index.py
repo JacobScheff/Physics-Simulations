@@ -5,9 +5,9 @@ import math
 import random
 
 screenSize = (1200, 600)
-ballSize = 12
-horizontalAmount = 10
-verticalAmount = 6
+ballSize = 6
+horizontalAmount = 40
+verticalAmount = 30
 fps = 65
 horizontalCells = 48
 verticalCells = 24
@@ -131,7 +131,7 @@ for i in range(horizontalAmount):
         # a = random.randint(0, 1) * 180
         # balls[cell[0]][cell[1]].append(Ball(ballPos[0], ballPos[1], v, a, ballSize))
         balls[cell[0]][cell[1]].append(Ball(ballPos[0], ballPos[1], 0, 0, ballSize))
-movingBall = Ball(1160, 560, 250, -135, 20)
+movingBall = Ball(1160, 560, 750, -135, 20)
 movingBallCell = getCell(movingBall.x, movingBall.y)
 balls[movingBallCell[0]][movingBallCell[1]].append(movingBall)
 

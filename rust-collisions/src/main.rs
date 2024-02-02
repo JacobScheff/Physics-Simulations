@@ -1,4 +1,5 @@
 mod ball;
+extern crate sdl2;
 
 fn main() {
     let screen_size: (i32, i32) = (1200, 600);
@@ -10,8 +11,9 @@ fn main() {
     let vertical_cells: i32 = 24;
     // let gravity: i32 = 200;
     
-    // Initialize the window
-
+    // Initialize a window to draw on
+    // https://nercury.github.io/rust/opengl/tutorial/2018/02/08/opengl-in-rust-from-scratch-01-window.html
+    let _sdl = sdl2::init().unwrap();
 
     println!("Hello, world!");
 }

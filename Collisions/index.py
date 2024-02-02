@@ -6,8 +6,8 @@ import random
 
 screenSize = (1200, 600)
 ballSize = 6
-horizontalAmount = 40
-verticalAmount = 30
+horizontalAmount = 20
+verticalAmount = 15
 fps = 65
 horizontalCells = 48
 verticalCells = 24
@@ -36,6 +36,7 @@ class Ball:
 
         # Apply gravity
         # self.vy += gravity * dt
+        # self.v = (self.vx ** 2 + self.vy ** 2) ** 0.5
 
         # Move the ball
         self.x += self.vx * dt
@@ -141,6 +142,7 @@ pygame.display.set_caption("Ball Collisions")
 clock = pygame.time.Clock()
 
 fpsTimer = time.time()
+lastSpeed = 1
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -172,5 +174,11 @@ while True:
     pygame.display.flip()
     clock.tick(fps)
     if time.time() - fpsTimer >= 1:
-        print(clock.get_fps())
+        totalSpeed = 0
+        for xCells in balls:
+            for yCells in xCells:
+                for ball in yCells:
+                    totalSpeed += ball.v * ball.v * ball.mass * 0.5
+        print(clock.get_fps(), totalSpeed, totalSpeed / lastSpeed)
+        lastSpeed = totalSpeed
         fpsTimer = time.time()

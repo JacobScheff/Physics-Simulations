@@ -112,7 +112,17 @@ impl Ball {
             // If the balls are overlapping, move them apart
             let selfCurrentCell = self.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
             let otherCurrentCell = other.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
+            if distance < self.radius + other.radius {
+                let distanceToMove = (self.radius + other.radius - distance);
+                self.x -= distanceToMove * contactAngle.to_radians().cos() * other.mass / (self.mass + other.mass);
+                self.y -= distanceToMove * contactAngle.to_radians().sin() * other.mass / (self.mass + other.mass);
+                other.x += distanceToMove * contactAngle.to_radians().cos() * self.mass / (self.mass + other.mass);
+                other.y += distanceToMove * contactAngle.to_radians().sin() * self.mass / (self.mass + other.mass);
+            }
+            let selfNewCell = self.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
+            let otherNewCell = other.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
             
+            // return (selfCurrentCell, selfNewCell, otherCurrentCell, otherNewCell);
         }
     }
 }

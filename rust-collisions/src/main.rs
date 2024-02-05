@@ -75,14 +75,20 @@ fn main() {
                                         let mut ball = balls[x as usize][y as usize][i].clone();
                                         let mut other_ball = balls[(x + j) as usize][(y + k) as usize][l].clone();
                                         let (current_cell, new_cell, other_current_cell, other_new_cell) = ball.collide(&mut other_ball, screen_size.0, screen_size.1, horizontal_cells, vertical_cells);
-                                        // Update the cells if the ball moved to a different cell
+                                        // Update the cells if the ball moved to a different cell or update the ball's state
                                         if current_cell != new_cell {
                                             balls[current_cell.0 as usize][current_cell.1 as usize].retain(|b| b.get_id() != ball.get_id());
                                             balls[new_cell.0 as usize][new_cell.1 as usize].push(ball);
                                         }
+                                        else {
+                                            balls[current_cell.0 as usize][current_cell.1 as usize][i] = ball;
+                                        }
                                         if other_current_cell != other_new_cell {
                                             balls[other_current_cell.0 as usize][other_current_cell.1 as usize].retain(|b| b.get_id() != other_ball.get_id());
                                             balls[other_new_cell.0 as usize][other_new_cell.1 as usize].push(other_ball);
+                                        }
+                                        else {
+                                            balls[other_current_cell.0 as usize][other_current_cell.1 as usize][l] = other_ball;
                                         }
                                     }
                                 }

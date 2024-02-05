@@ -60,6 +60,28 @@ fn main() {
         }
 
         // Collision check the balls
+        for x in 0..horizontal_cells {
+            for y in 0..vertical_cells {
+                // Iterate over the balls in the cell
+                for i in 0..balls[x as usize][y as usize].len() {
+                    // Iterate over the balls in the same cell or the adjacent cells
+                    for j in -1..2 {
+                        for k in -1..2 {
+                            if x + j >= 0 && x + j < horizontal_cells && y + k >= 0 && y + k < vertical_cells {
+                                for l in 0..balls[(x + j) as usize][(y + k) as usize].len() {
+                                    if i != l && j != 0 && k != 0{
+                                        let ball1 = &mut balls[x as usize][y as usize][i];
+                                        let ball2 = &mut balls[(x + j) as usize][(y + k) as usize][l];
+                                        
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // for x in 0..horizontal_cells {
         //     for y in 0..vertical_cells {
         //         for &mut ball in balls[x as usize][y as usize] {

@@ -1,7 +1,3 @@
-pub fn to_radians(degrees: i32) -> f64 {
-    (degrees as f64) * std::f64::consts::PI / 180.0
-}
-
 pub struct Ball {
     x: f64,
     y: f64,
@@ -120,7 +116,7 @@ impl Ball {
         return ((-1, -1), (-1, -1), (-1, -1), (-1, -1));
     }
 
-    pub fn getId(&self) -> i32 {
+    pub fn get_id(&self) -> i32 {
         self.id
     }
 }

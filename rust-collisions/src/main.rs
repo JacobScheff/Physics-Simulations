@@ -49,13 +49,17 @@ fn main() {
         // Move the balls
         for x in 0..horizontal_cells {
             for y in 0..vertical_cells {
-                for ball in &mut balls[x as usize][y as usize] {
+                for i in 0..balls[x as usize][y as usize].len() {
+                    let mut ball = balls[x as usize][y as usize][i].clone();
                     let (current_cell, new_cell) = ball.move_ball(screen_size.0, screen_size.1, horizontal_cells, vertical_cells, 0.0, dt);
                     // Update the cells if the ball moved to a different cell
-                    // if current_cell != new_cell {
-                    //     balls[current_cell.0 as usize][current_cell.1 as usize].retain(|b| b.get_id() != ball.get_id());
-                    //     balls[new_cell.0 as usize][new_cell.1 as usize].push(ball.clone());
-                    // }
+                    if current_cell != new_cell {
+                        balls[current_cell.0 as usize][current_cell.1 as usize].retain(|b| b.get_id() != ball.get_id());
+                        balls[new_cell.0 as usize][new_cell.1 as usize].push(ball);
+                    }
+                    else {
+                        balls[current_cell.0 as usize][current_cell.1 as usize][i] = ball;
+                    }
                 }
             }
         }

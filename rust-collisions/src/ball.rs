@@ -11,10 +11,11 @@ pub struct Ball {
     vy: f64,
     radius: f64,
     mass: f64,
+    id: i32,
 }
 
 impl Ball {
-    pub fn new(x: f64, y: f64, v: f64, a: f64, radius: f64) -> Ball {
+    pub fn new(x: f64, y: f64, v: f64, a: f64, radius: f64, id: i32) -> Ball {
         Ball {
             x,
             y,
@@ -24,6 +25,7 @@ impl Ball {
             vy: v * a.to_radians().sin(),
             radius,
             mass: radius * radius * std::f64::consts::PI,
+            id: id,
         }
     }
 
@@ -116,5 +118,9 @@ impl Ball {
             return (self_current_cell, self_new_cell, other_current_cell, other_new_cell);
         }
         return ((-1, -1), (-1, -1), (-1, -1), (-1, -1));
+    }
+
+    pub fn getId(&self) -> i32 {
+        self.id
     }
 }

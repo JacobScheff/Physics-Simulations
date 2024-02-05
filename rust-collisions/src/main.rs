@@ -7,10 +7,10 @@ mod ball;
 #[macroquad::main("BasicShapes")]
 async fn main() {
     let screen_size: (i32, i32) = (1000, 600);
-    let ball_size = 12;
-    let horizontal_amount: i32 = 8;
-    let vertical_amount: i32 = 6;
-    let fps: i32 = 90;
+    let ball_size = 6;
+    let horizontal_amount: i32 = 16;
+    let vertical_amount: i32 = 12;
+    let fps: i32 = 120;
     let horizontal_cells: i32 = 48;
     let vertical_cells: i32 = 24;
     // let gravity: i32 = 200;

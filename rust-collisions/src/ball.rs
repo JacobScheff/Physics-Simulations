@@ -119,4 +119,18 @@ impl Ball {
     pub fn get_id(&self) -> i32 {
         self.id
     }
+
+    pub fn clone(&self) -> Ball {
+        Ball {
+            x: self.x,
+            y: self.y,
+            v: self.v,
+            a: self.a,
+            vx: self.vx,
+            vy: self.vy,
+            radius: self.radius,
+            mass: self.mass,
+            id: self.id,
+        }
+    }
 }

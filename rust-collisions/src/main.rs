@@ -51,10 +51,11 @@ fn main() {
             for y in 0..vertical_cells {
                 for ball in &mut balls[x as usize][y as usize] {
                     let (current_cell, new_cell) = ball.move_ball(screen_size.0, screen_size.1, horizontal_cells, vertical_cells, 0.0, dt);
-                    if current_cell != new_cell {
-                        // balls[current_cell.0 as usize][current_cell.1 as usize].retain(|b| b != ball);
-                        // balls[new_cell.0 as usize][new_cell.1 as usize].push(ball.clone());
-                    }
+                    // Update the cells if the ball moved to a different cell
+                    // if current_cell != new_cell {
+                    //     balls[current_cell.0 as usize][current_cell.1 as usize].retain(|b| b.get_id() != ball.get_id());
+                    //     balls[new_cell.0 as usize][new_cell.1 as usize].push(ball.clone());
+                    // }
                 }
             }
         }
@@ -70,9 +71,19 @@ fn main() {
                             if x + j >= 0 && x + j < horizontal_cells && y + k >= 0 && y + k < vertical_cells {
                                 for l in 0..balls[(x + j) as usize][(y + k) as usize].len() {
                                     if i != l && j != 0 && k != 0{
-                                        let ball1 = &mut balls[x as usize][y as usize][i];
-                                        let ball2 = &mut balls[(x + j) as usize][(y + k) as usize][l];
-                                        
+                                        // Create a copy of the balls to avoid borrowing issues
+                                        let mut ball = balls[x as usize][y as usize][i].clone();
+                                        let mut other_ball = balls[(x + j) as usize][(y + k) as usize][l].clone();
+                                        let (current_cell, new_cell, other_current_cell, other_new_cell) = ball.collide(&mut other_ball, screen_size.0, screen_size.1, horizontal_cells, vertical_cells);
+                                        // Update the cells if the ball moved to a different cell
+                                        if current_cell != new_cell {
+                                            balls[current_cell.0 as usize][current_cell.1 as usize].retain(|b| b.get_id() != ball.get_id());
+                                            balls[new_cell.0 as usize][new_cell.1 as usize].push(ball);
+                                        }
+                                        if other_current_cell != other_new_cell {
+                                            balls[other_current_cell.0 as usize][other_current_cell.1 as usize].retain(|b| b.get_id() != other_ball.get_id());
+                                            balls[other_new_cell.0 as usize][other_new_cell.1 as usize].push(other_ball);
+                                        }
                                     }
                                 }
                             }

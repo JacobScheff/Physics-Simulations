@@ -1,1 +1,1 @@
-C:\Users\jacob\Documents\VSC\Physcis\ Simulations\rust-collisions\target\debug\Rust-Collisions.exe: C:\Users\jacob\Documents\VSC\Physcis\ Simulations\rust-collisions\src\ball.rs C:\Users\jacob\Documents\VSC\Physcis\ Simulations\rust-collisions\src\main.rs
+/Users/jacobscheff/Documents/VSC\ Code/Physics-Simulations/rust-collisions/target/debug/Rust-Collisions: /Users/jacobscheff/Documents/VSC\ Code/Physics-Simulations/rust-collisions/src/ball.rs /Users/jacobscheff/Documents/VSC\ Code/Physics-Simulations/rust-collisions/src/main.rs

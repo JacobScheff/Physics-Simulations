@@ -1,8 +1,10 @@
+use macroquad::prelude::*;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 mod ball;
 
-fn main() {
+#[macroquad::main("BasicShapes")]
+async fn main() {
     let screen_size: (i32, i32) = (1200, 600);
     let ball_size = 6;
     let horizontal_amount: i32 = 20;

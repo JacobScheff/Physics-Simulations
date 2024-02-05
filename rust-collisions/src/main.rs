@@ -6,10 +6,10 @@ mod ball;
 #[macroquad::main("BasicShapes")]
 async fn main() {
     let screen_size: (i32, i32) = (1200, 600);
-    let ball_size = 6;
-    let horizontal_amount: i32 = 20;
-    let vertical_amount: i32 = 15;
-    let fps: i32 = 30;
+    let ball_size = 12;
+    let horizontal_amount: i32 = 4;
+    let vertical_amount: i32 = 3;
+    let fps: i32 = 60;
     let horizontal_cells: i32 = 48;
     let vertical_cells: i32 = 24;
     // let gravity: i32 = 200;
@@ -43,16 +43,16 @@ async fn main() {
 
     // Add a ball that moves
     // 1160, 560, 750, -135, 20, 9999999
-    // let movingBall = ball::Ball::new(
-    //     500.0,
-    //     560.0,
-    //     750.0,
-    //     -135.0,
-    //     20 as f64,
-    //     9999999,
-    // );
-    // let cell = movingBall.get_cell(screen_size.0, screen_size.1, horizontal_cells, vertical_cells);
-    // balls[cell.0 as usize][cell.1 as usize].push(movingBall);
+    let movingBall = ball::Ball::new(
+        700.0,
+        560.0,
+        150.0,
+        -135.0,
+        20 as f64,
+        9999999,
+    );
+    let cell = movingBall.get_cell(screen_size.0, screen_size.1, horizontal_cells, vertical_cells);
+    balls[cell.0 as usize][cell.1 as usize].push(movingBall);
 
     // Never ending loop that runs at fps
     let mut last_time = Instant::now();
@@ -98,7 +98,7 @@ async fn main() {
                 // Iterate over the balls in the cell
                 let mut i = 0;
                 loop {
-                    if(balls[x as usize][y as usize].len() == 0){
+                    if balls[x as usize][y as usize].len() == 0 {
                         break;
                     }
                     // Iterate over the balls in the same cell or the adjacent cells

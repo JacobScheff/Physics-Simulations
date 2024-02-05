@@ -9,7 +9,7 @@ async fn main() {
     let ball_size = 6;
     let horizontal_amount: i32 = 20;
     let vertical_amount: i32 = 15;
-    let fps: i32 = 1;
+    let fps: i32 = 30;
     let horizontal_cells: i32 = 48;
     let vertical_cells: i32 = 24;
     // let gravity: i32 = 200;
@@ -92,8 +92,6 @@ async fn main() {
 
         next_frame().await;
 
-        println!("def");
-
         // Collision check the balls
         for x in 0..horizontal_cells {
             for y in 0..vertical_cells {
@@ -109,7 +107,8 @@ async fn main() {
                             if x + j >= 0 && x + j < horizontal_cells && y + k >= 0 && y + k < vertical_cells {
                                 let mut l = 0;
                                 loop{
-                                    if balls[(x + j) as usize][(y + k) as usize].len() == 0 {
+                                    // Check if the loop should end
+                                    if balls[(x + j) as usize][(y + k) as usize].len() == 0 || l >= balls[(x + j) as usize][(y + k) as usize].len() {
                                         break;
                                     }
                                     // Create a copy of the balls to avoid borrowing issues
@@ -140,9 +139,6 @@ async fn main() {
 
                                     // Update loop state
                                     l += 1;
-                                    if l >= balls[(x + j) as usize][(y + k) as usize].len() {
-                                        break;
-                                    }
                                 }
                             }
                         }
@@ -154,8 +150,8 @@ async fn main() {
                 }
             }
         }
-        println!("before sleep");
 
+        println!("FPS: {}", 1.0 / dt);
         sleep(Duration::from_millis(1000 / fps as u64));
     }
 }

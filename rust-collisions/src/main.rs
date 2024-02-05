@@ -41,6 +41,19 @@ async fn main() {
         }
     }
 
+    // Add a ball that moves
+    // 1160, 560, 750, -135, 20, 9999999
+    // let movingBall = ball::Ball::new(
+    //     500.0,
+    //     560.0,
+    //     750.0,
+    //     -135.0,
+    //     20 as f64,
+    //     9999999,
+    // );
+    // let cell = movingBall.get_cell(screen_size.0, screen_size.1, horizontal_cells, vertical_cells);
+    // balls[cell.0 as usize][cell.1 as usize].push(movingBall);
+
     // Never ending loop that runs at fps
     let mut last_time = Instant::now();
     loop {
@@ -136,33 +149,6 @@ async fn main() {
                 }
             }
         }
-
-        // for x in 0..horizontal_cells {
-        //     for y in 0..vertical_cells {
-        //         for &mut ball in balls[x as usize][y as usize] {
-        //             // Check for collisions with the balls in the same cell or the adjacent cells
-        //             for i in -1..2 {
-        //                 for j in -1..2 {
-        //                     if x + i >= 0 && x + i < horizontal_cells && y + j >= 0 && y + j < vertical_cells {
-        //                         for &mut other_ball in balls[(x + i) as usize][(y + j) as usize] {
-        //                             if ball.getId() != other_ball.getId() {
-        //                                 let (current_cell, new_cell, other_current_cell, other_new_cell) = ball.collide(other_ball, screen_size.0, screen_size.1, horizontal_cells, vertical_cells);
-        //                                 if current_cell != new_cell {
-        //                                     // balls[current_cell.0 as usize][current_cell.1 as usize].retain(|b| b != ball);
-        //                                     // balls[new_cell.0 as usize][new_cell.1 as usize].push(ball.clone());
-        //                                 }
-        //                                 if other_current_cell != other_new_cell {
-        //                                     // balls[other_current_cell.0 as usize][other_current_cell.1 as usize].retain(|b| b != other_ball);
-        //                                     // balls[other_new_cell.0 as usize][other_new_cell.1 as usize].push(other_ball.clone());
-        //                                 }
-        //                             }
-        //                         }
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
 
         sleep(Duration::from_millis(1000 / fps as u64));
     }

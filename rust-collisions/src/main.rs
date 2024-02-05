@@ -1,3 +1,4 @@
+use macroquad::miniquad::window::set_window_size;
 use macroquad::prelude::*;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
@@ -5,14 +6,17 @@ mod ball;
 
 #[macroquad::main("BasicShapes")]
 async fn main() {
-    let screen_size: (i32, i32) = (1200, 600);
-    let ball_size = 12;
-    let horizontal_amount: i32 = 4;
-    let vertical_amount: i32 = 3;
-    let fps: i32 = 60;
+    let screen_size: (i32, i32) = (1000, 600);
+    let ball_size = 6;
+    let horizontal_amount: i32 = 20;
+    let vertical_amount: i32 = 15;
+    let fps: i32 = 90;
     let horizontal_cells: i32 = 48;
     let vertical_cells: i32 = 24;
     // let gravity: i32 = 200;
+
+    // Update the window size
+    request_new_screen_size(screen_size.0 as f32, screen_size.1 as f32);
     
     // Create the balls array
     let mut balls: Vec<Vec<Vec<ball::Ball>>> = Vec::new();
@@ -42,12 +46,11 @@ async fn main() {
     }
 
     // Add a ball that moves
-    // 1160, 560, 750, -135, 20, 9999999
     let movingBall = ball::Ball::new(
-        700.0,
-        560.0,
-        150.0,
-        -135.0,
+        1000.0,
+        500.0,
+        350.0,
+        -125.0,
         20 as f64,
         9999999,
     );

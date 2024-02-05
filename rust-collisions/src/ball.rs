@@ -78,7 +78,13 @@ impl Ball {
     }
 
     pub fn collide(&mut self, other: &mut Ball, screen_size_x: i32, screen_size_y: i32, horizontal_cells: i32, vertical_cells: i32) -> ((i32, i32), (i32, i32), (i32, i32), (i32, i32)) {
+        // Calculate the cells before the collision
+        let self_current_cell = self.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
+        let other_current_cell = other.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
+        
+        // Calculate the distance between the balls
         let distance = ((self.x - other.x).powi(2) + (self.y - other.y).powi(2)).sqrt();
+        // Apply collision if the balls are touching
         if distance <= self.radius + other.radius {
             let original_vx = self.vx;
             let original_vy = self.vy;
@@ -99,8 +105,6 @@ impl Ball {
             other.v = (other.vx.powi(2) + other.vy.powi(2)).sqrt();
 
             // If the balls are overlapping, move them apart
-            let self_current_cell = self.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
-            let other_current_cell = other.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
             if distance < self.radius + other.radius {
                 let distance_to_move = self.radius + other.radius - distance;
                 self.x -= distance_to_move * contact_angle.to_radians().cos() * other.mass / (self.mass + other.mass);
@@ -108,12 +112,10 @@ impl Ball {
                 other.x += distance_to_move * contact_angle.to_radians().cos() * self.mass / (self.mass + other.mass);
                 other.y += distance_to_move * contact_angle.to_radians().sin() * self.mass / (self.mass + other.mass);
             }
-            let self_new_cell = self.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
-            let other_new_cell = other.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
-            
-            return (self_current_cell, self_new_cell, other_current_cell, other_new_cell);
         }
-        return ((-1, -1), (-1, -1), (-1, -1), (-1, -1));
+        let self_new_cell = self.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
+        let other_new_cell = other.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
+        return (self_current_cell, self_new_cell, other_current_cell, other_new_cell);
     }
 
     pub fn get_id(&self) -> i32 {

@@ -92,6 +92,8 @@ async fn main() {
 
         next_frame().await;
 
+        println!("def");
+
         // Collision check the balls
         for x in 0..horizontal_cells {
             for y in 0..vertical_cells {
@@ -107,14 +109,15 @@ async fn main() {
                             if x + j >= 0 && x + j < horizontal_cells && y + k >= 0 && y + k < vertical_cells {
                                 let mut l = 0;
                                 loop{
-                                    if(balls[(x + j) as usize][(y + k) as usize].len() == 0){
+                                    if balls[(x + j) as usize][(y + k) as usize].len() == 0 {
                                         break;
                                     }
                                     // Create a copy of the balls to avoid borrowing issues
                                     let mut ball = balls[x as usize][y as usize][i].clone();
                                     let mut other_ball = balls[(x + j) as usize][(y + k) as usize][l].clone();
-                                    // Check ifthe balls are different
+                                    // Check if the balls are different
                                     if ball.get_id() == other_ball.get_id() {
+                                        l += 1;
                                         continue;
                                     }
                                     // Check for collisions
@@ -134,6 +137,8 @@ async fn main() {
                                     else {
                                         balls[other_current_cell.0 as usize][other_current_cell.1 as usize][l] = other_ball;
                                     }
+
+                                    // Update loop state
                                     l += 1;
                                     if l >= balls[(x + j) as usize][(y + k) as usize].len() {
                                         break;
@@ -149,6 +154,7 @@ async fn main() {
                 }
             }
         }
+        println!("before sleep");
 
         sleep(Duration::from_millis(1000 / fps as u64));
     }

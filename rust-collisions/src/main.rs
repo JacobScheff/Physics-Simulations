@@ -68,36 +68,55 @@ fn main() {
         for x in 0..horizontal_cells {
             for y in 0..vertical_cells {
                 // Iterate over the balls in the cell
-                for i in 0..balls[x as usize][y as usize].len() {
+                let mut i = 0;
+                loop {
+                    if(balls[x as usize][y as usize].len() == 0){
+                        break;
+                    }
                     // Iterate over the balls in the same cell or the adjacent cells
                     for j in -1..2 {
                         for k in -1..2 {
                             if x + j >= 0 && x + j < horizontal_cells && y + k >= 0 && y + k < vertical_cells {
-                                for l in 0..balls[(x + j) as usize][(y + k) as usize].len() {
-                                    if i != l && j != 0 && k != 0{
-                                        // Create a copy of the balls to avoid borrowing issues
-                                        let mut ball = balls[x as usize][y as usize][i].clone();
-                                        let mut other_ball = balls[(x + j) as usize][(y + k) as usize][l].clone();
-                                        let (current_cell, new_cell, other_current_cell, other_new_cell) = ball.collide(&mut other_ball, screen_size.0, screen_size.1, horizontal_cells, vertical_cells);
-                                        // Update the cells if the ball moved to a different cell or update the ball's state
-                                        if current_cell != new_cell {
-                                            balls[current_cell.0 as usize][current_cell.1 as usize].retain(|b| b.get_id() != ball.get_id());
-                                            balls[new_cell.0 as usize][new_cell.1 as usize].push(ball);
-                                        }
-                                        else {
-                                            balls[current_cell.0 as usize][current_cell.1 as usize][i] = ball;
-                                        }
-                                        if other_current_cell != other_new_cell {
-                                            balls[other_current_cell.0 as usize][other_current_cell.1 as usize].retain(|b| b.get_id() != other_ball.get_id());
-                                            balls[other_new_cell.0 as usize][other_new_cell.1 as usize].push(other_ball);
-                                        }
-                                        else {
-                                            balls[other_current_cell.0 as usize][other_current_cell.1 as usize][l] = other_ball;
-                                        }
+                                let mut l = 0;
+                                loop{
+                                    if(balls[(x + j) as usize][(y + k) as usize].len() == 0){
+                                        break;
+                                    }
+                                    // Create a copy of the balls to avoid borrowing issues
+                                    let mut ball = balls[x as usize][y as usize][i].clone();
+                                    let mut other_ball = balls[(x + j) as usize][(y + k) as usize][l].clone();
+                                    // Check ifthe balls are different
+                                    if ball.get_id() == other_ball.get_id() {
+                                        continue;
+                                    }
+                                    // Check for collisions
+                                    let (current_cell, new_cell, other_current_cell, other_new_cell) = ball.collide(&mut other_ball, screen_size.0, screen_size.1, horizontal_cells, vertical_cells);
+                                    // Update the cells if the ball moved to a different cell or update the ball's state
+                                    if current_cell != new_cell {
+                                        balls[current_cell.0 as usize][current_cell.1 as usize].retain(|b| b.get_id() != ball.get_id());
+                                        balls[new_cell.0 as usize][new_cell.1 as usize].push(ball);
+                                    }
+                                    else {
+                                        balls[current_cell.0 as usize][current_cell.1 as usize][i] = ball;
+                                    }
+                                    if other_current_cell != other_new_cell {
+                                        balls[other_current_cell.0 as usize][other_current_cell.1 as usize].retain(|b| b.get_id() != other_ball.get_id());
+                                        balls[other_new_cell.0 as usize][other_new_cell.1 as usize].push(other_ball);
+                                    }
+                                    else {
+                                        balls[other_current_cell.0 as usize][other_current_cell.1 as usize][l] = other_ball;
+                                    }
+                                    l += 1;
+                                    if l >= balls[(x + j) as usize][(y + k) as usize].len() {
+                                        break;
                                     }
                                 }
                             }
                         }
+                    }
+                    i += 1;
+                    if i >= balls[x as usize][y as usize].len() {
+                        break;
                     }
                 }
             }

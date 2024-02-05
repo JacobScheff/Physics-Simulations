@@ -120,6 +120,18 @@ impl Ball {
         self.id
     }
 
+    pub fn get_x(&self) -> f64 {
+        self.x
+    }
+
+    pub fn get_y(&self) -> f64 {
+        self.y
+    }
+
+    pub fn get_radius(&self) -> f64 {
+        self.radius
+    }
+
     pub fn clone(&self) -> Ball {
         Ball {
             x: self.x,

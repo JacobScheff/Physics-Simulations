@@ -9,7 +9,7 @@ async fn main() {
     let ball_size = 6;
     let horizontal_amount: i32 = 20;
     let vertical_amount: i32 = 15;
-    let fps: i32 = 65;
+    let fps: i32 = 1;
     let horizontal_cells: i32 = 48;
     let vertical_cells: i32 = 24;
     // let gravity: i32 = 200;
@@ -48,6 +48,9 @@ async fn main() {
         let dt = last_time.elapsed().as_secs_f64();
         last_time = Instant::now();
 
+        // Clear the screen
+        clear_background(BLACK);
+
         // Move the balls
         for x in 0..horizontal_cells {
             for y in 0..vertical_cells {
@@ -62,9 +65,19 @@ async fn main() {
                     else {
                         balls[current_cell.0 as usize][current_cell.1 as usize][i] = ball;
                     }
+                    // Draw the ball
+                    let ballDislay = balls[current_cell.0 as usize][current_cell.1 as usize][i].clone();
+                    draw_circle(
+                        ballDislay.get_x() as f32,
+                        ballDislay.get_y() as f32,
+                        ballDislay.get_radius() as f32,
+                        WHITE,
+                    );
                 }
             }
         }
+
+        next_frame().await;
 
         // Collision check the balls
         for x in 0..horizontal_cells {

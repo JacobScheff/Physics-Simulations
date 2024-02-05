@@ -92,7 +92,7 @@ impl Ball {
             let contact_angle_cos = contact_angle.to_radians().cos();
             let contact_angle_sin = contact_angle.to_radians().sin();
             let contact_angle90_cos = -contact_angle_sin;
-            let contact_angle90_sin = contact_angle_sin;
+            let contact_angle90_sin = contact_angle_cos;
 
             // Apply direct collision
             self.vx = (self.v * (self.a - contact_angle).to_radians().cos() * (self.mass - other.mass) + 2.0 * other.mass * other.v * (other.a - contact_angle).to_radians().cos()) / (self.mass + other.mass) * contact_angle_cos + self.v * (self.a - contact_angle).to_radians().sin() * contact_angle90_cos;

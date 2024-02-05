@@ -8,8 +8,8 @@ mod ball;
 async fn main() {
     let screen_size: (i32, i32) = (1000, 600);
     let ball_size = 12;
-    let horizontal_amount: i32 = 4;
-    let vertical_amount: i32 = 3;
+    let horizontal_amount: i32 = 8;
+    let vertical_amount: i32 = 6;
     let fps: i32 = 90;
     let horizontal_cells: i32 = 48;
     let vertical_cells: i32 = 24;

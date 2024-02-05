@@ -83,7 +83,7 @@ impl Ball {
         let other_current_cell = other.get_cell(screen_size_x, screen_size_y, horizontal_cells, vertical_cells);
         
         // Calculate the distance between the balls
-        let distance = ((self.x - other.x).powi(2) + (self.y - other.y).powi(2)).sqrt();
+        let distance = ((self.x - other.x).powf(2.0) + (self.y - other.y).powf(2.0)).sqrt();
         // Apply collision if the balls are touching
         if distance <= self.radius + other.radius {
             let original_vx = self.vx;
@@ -101,8 +101,8 @@ impl Ball {
             other.vy = (other.v * (other.a - contact_angle).to_radians().cos() * (other.mass - self.mass) + 2.0 * self.mass * original_vy * (self.a - contact_angle).to_radians().cos()) / (self.mass + other.mass) * contact_angle_sin + other.v * (other.a - contact_angle).to_radians().sin() * contact_angle90_sin;
             self.a = self.vy.atan2(self.vx).to_degrees();
             other.a = other.vy.atan2(other.vx).to_degrees();
-            self.v = (self.vx.powi(2) + self.vy.powi(2)).sqrt();
-            other.v = (other.vx.powi(2) + other.vy.powi(2)).sqrt();
+            self.v = (self.vx.powf(2.0) + self.vy.powf(2.0)).sqrt();
+            other.v = (other.vx.powf(2.0) + other.vy.powf(2.0)).sqrt();
 
             // If the balls are overlapping, move them apart
             if distance < self.radius + other.radius {

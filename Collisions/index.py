@@ -6,12 +6,13 @@ import random
 
 screenSize = (1200, 600)
 ballSize = 10
-horizontalAmount = 50
-verticalAmount = 25
+horizontalAmount = 25
+verticalAmount = 12
 fps = 80
 horizontalCells = 24 # 48
 verticalCells = 12 # 24
-gravity = 200
+gravity = 0 # 200
+repulsionForce = 5000
 balls = []
 ballIndexKey = [[-1, -1]for i in range(horizontalCells * verticalCells)]
 
@@ -83,6 +84,15 @@ class Ball:
             self.vy = (self.v * math.cos(math.radians(self.a - contactAngle)) * (self.mass - other.mass) + 2 * other.mass * other.v * math.cos(math.radians(other.a - contactAngle))) / (self.mass + other.mass) * contactAngleSin + self.v * math.sin(math.radians(self.a - contactAngle)) * contactAngle90Sin
             other.vx = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVx * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * contactAngleCos + other.v * math.sin(math.radians(other.a - contactAngle)) * contactAngle90Cos
             other.vy = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVy * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * contactAngleSin + other.v * math.sin(math.radians(other.a - contactAngle)) * contactAngle90Sin
+
+            # Apply repulsion force
+            repulForce = repulsionForce * (self.radius + other.radius - distance)
+            self.vx -= repulForce * math.cos(contactAngleRad) / self.mass
+            self.vy -= repulForce * math.sin(contactAngleRad) / self.mass
+            other.vx += repulForce * math.cos(contactAngleRad) / other.mass
+            other.vy += repulForce * math.sin(contactAngleRad) / other.mass
+
+            # Update the velocity
             self.a = math.degrees(math.atan2(self.vy, self.vx))
             other.a = math.degrees(math.atan2(other.vy, other.vx))
             self.v = (self.vx ** 2 + self.vy ** 2) ** 0.5
@@ -116,9 +126,6 @@ pygame.init()
 screen = pygame.display.set_mode(screenSize)
 pygame.display.set_caption("Ball Collisions")
 clock = pygame.time.Clock()
-
-# Randomize the balls order
-random.shuffle(balls)
 
 # Use a binary search to get the first index of the ball with the target cell id
 def binarySearchBallIndexFirst(arr, targetCellId, start=0, end=len(balls) - 1):

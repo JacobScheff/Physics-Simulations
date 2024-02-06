@@ -6,11 +6,11 @@ import random
 
 screenSize = (1200, 600)
 ballSize = 12
-horizontalAmount = 10
-verticalAmount = 5
+horizontalAmount = 10 * 5
+verticalAmount = 5 * 5
 fps = 1000
-horizontalCells = 48
-verticalCells = 24
+horizontalCells = 24 # 48
+verticalCells = 12 # 24
 # gravity = 200
 # balls = [[[] for j in range(verticalCells)] for i in range(horizontalCells)]
 balls = []
@@ -123,14 +123,38 @@ clock = pygame.time.Clock()
 # Randomize the balls order
 random.shuffle(balls)
 
-
 def sortBalls():
-    amountOfCells = horizontalCells * verticalCells
-    for i in range(amountOfCells):
-        for j in range(i, -1, -1): # Loop
+    # Bubble sort the balls by their cell id
+    for i in range(len(balls)):
+        for j in range(len(balls) - 1):
+            if balls[j].getCellId() > balls[j + 1].getCellId():
+                temp = balls[j]
+                balls[j] = balls[j + 1]
+                balls[j + 1] = temp
 
+# Use a binary search to get the last index of the ball with the target cell id
+def binarySearchBallIndex(arr, targetCellId):
+    start = 0
+    end = len(arr) - 1
+    while start <= end:
+        mid = (start + end) // 2
+        if arr[mid].getCellId() == targetCellId:
+            # Get the last index with the same cell id
+            for i in range(mid, len(arr)):
+                if arr[i].getCellId() != targetCellId:
+                    return i - 1
+            return mid
+        elif arr[mid].getCellId() < targetCellId:
+            start = mid + 1
+        else:
+            end = mid - 1
+    return -1
+
+sortBalls()
 for i in range(len(balls)):
-    print(balls[i].getCellId())
+    print(str(i) + ":\t" + str(balls[i].getCellId()))
+
+print(binarySearchBallIndex(balls, 112))
 
 print("Done!")
 time.sleep(9999999)

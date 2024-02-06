@@ -124,6 +124,8 @@ for i in range(horizontalAmount):
         randomAngle = random.randint(0, 360)
         balls.append(Ball(ballPos[0], ballPos[1], randomVelocities, randomAngle, ballSize))
 
+balls.append(Ball(100, 100, 200, 45, 40))
+
 pygame.init()
 screen = pygame.display.set_mode(screenSize)
 pygame.display.set_caption("Ball Collisions")
@@ -202,10 +204,17 @@ while True:
 
     # Check for collisions in the current cell and the adjacent cells
     # NOTE: This seems incorrect
-    for i in range(horizontalCells * verticalCells):
-        for j in range(ballIndexKey[i][0], ballIndexKey[i][1] + 1):
-            for k in range(j + 1, ballIndexKey[i][1] + 1):
-                balls[j].collide(balls[k])
+    for cellX in range(horizontalCells):
+        for cellY in range(verticalCells):
+            cellId = cellX + cellY * horizontalCells
+            for ballIndex in range(ballIndexKey[cellId][0], ballIndexKey[cellId][1] + 1):
+                for j in range(-1, 2):
+                    for k in range(-1, 2):
+                        if cellX + j >= 0 and cellX + j < horizontalCells and cellY + k >= 0 and cellY + k < verticalCells:
+                            for otherBallIndex in range(ballIndexKey[cellX + j + (cellY + k) * horizontalCells][0], ballIndexKey[cellX + j + (cellY + k) * horizontalCells][1] + 1):
+                                if ballIndex == otherBallIndex and i == j and k == 0:
+                                    continue
+                                balls[ballIndex].collide(balls[otherBallIndex])
 
     # for x in range(horizontalCells):
     #     for y in range(verticalCells):

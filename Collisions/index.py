@@ -158,7 +158,7 @@ def binarySearchBallIndexLast(arr, targetCellId, start=0, end=len(balls) - 1):
             end = mid - 1
     return -1
 
-# Insertion sort the balls
+# Insertion sort the balls (possibly can use binary sort to make this even faster)
 def sortBalls():
     for i in range(1, len(balls)):
         key = balls[i]

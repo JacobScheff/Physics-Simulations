@@ -6,13 +6,13 @@ import random
 
 screenSize = (1200, 600)
 ballSize = 10
-horizontalAmount = 25
-verticalAmount = 12
+horizontalAmount = 25 // 2
+verticalAmount = 12 // 2
 fps = 80
 horizontalCells = 24 # 48
 verticalCells = 12 # 24
 gravity = 0 # 200
-repulsionForce = 5000
+repulsionForce = 25000000
 balls = []
 ballIndexKey = [[-1, -1]for i in range(horizontalCells * verticalCells)]
 
@@ -85,12 +85,12 @@ class Ball:
             other.vx = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVx * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * contactAngleCos + other.v * math.sin(math.radians(other.a - contactAngle)) * contactAngle90Cos
             other.vy = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVy * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * contactAngleSin + other.v * math.sin(math.radians(other.a - contactAngle)) * contactAngle90Sin
 
-            # Apply repulsion force
-            repulForce = repulsionForce * (self.radius + other.radius - distance)
-            self.vx -= repulForce * math.cos(contactAngleRad) / self.mass
-            self.vy -= repulForce * math.sin(contactAngleRad) / self.mass
-            other.vx += repulForce * math.cos(contactAngleRad) / other.mass
-            other.vy += repulForce * math.sin(contactAngleRad) / other.mass
+            # Apply repulsion force (probably cancels out. for example, a hitting b cancels b hitting a)
+            repulForce = ((self.radius + other.radius) ** 2) / (distance ** 0.5) * repulsionForce
+            self.vx += repulForce * math.cos(contactAngleRad) / self.mass
+            self.vy += repulForce * math.sin(contactAngleRad) / self.mass
+            self.vx -= repulForce * math.cos(contactAngleRad) / other.mass
+            self.vy -= repulForce * math.sin(contactAngleRad) / other.mass
 
             # Update the velocity
             self.a = math.degrees(math.atan2(self.vy, self.vx))
@@ -120,7 +120,9 @@ class Ball:
 for i in range(horizontalAmount):
     for j in range(verticalAmount):
         ballPos = (screenSize[0] - ballSize * 2) * i / horizontalAmount + ballSize, (screenSize[1] - ballSize * 2) * j / verticalAmount + ballSize
-        balls.append(Ball(ballPos[0], ballPos[1], 0, 0, ballSize))
+        randomVelocities = random.randint(0, 100)
+        randomAngle = random.randint(0, 360)
+        balls.append(Ball(ballPos[0], ballPos[1], randomVelocities, randomAngle, ballSize))
 
 pygame.init()
 screen = pygame.display.set_mode(screenSize)

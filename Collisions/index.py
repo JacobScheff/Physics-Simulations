@@ -5,13 +5,13 @@ import math
 import random
 
 screenSize = (1200, 600)
-ballSize = 12
-horizontalAmount = 10
-verticalAmount = 5
-fps = 1000
-horizontalCells = 12 # 48
-verticalCells = 6 # 24
-# gravity = 200
+ballSize = 10
+horizontalAmount = 50
+verticalAmount = 25
+fps = 80
+horizontalCells = 24 # 48
+verticalCells = 12 # 24
+gravity = 200
 balls = []
 ballIndexKey = [[-1, -1]for i in range(horizontalCells * verticalCells)]
 
@@ -32,8 +32,8 @@ class Ball:
 
     def move(self, dt):
         # Apply gravity
-        # self.vy += gravity * dt
-        # self.v = (self.vx ** 2 + self.vy ** 2) ** 0.5
+        self.vy += gravity * dt
+        self.v = (self.vx ** 2 + self.vy ** 2) ** 0.5
 
         # Move the ball
         self.x += self.vx * dt
@@ -111,8 +111,6 @@ for i in range(horizontalAmount):
     for j in range(verticalAmount):
         ballPos = (screenSize[0] - ballSize * 2) * i / horizontalAmount + ballSize, (screenSize[1] - ballSize * 2) * j / verticalAmount + ballSize
         balls.append(Ball(ballPos[0], ballPos[1], 0, 0, ballSize))
-movingBall = Ball(1160, 560, 250, -135, 20)
-balls.append(movingBall)
 
 pygame.init()
 screen = pygame.display.set_mode(screenSize)
@@ -185,10 +183,20 @@ while True:
 
     screen.fill((0, 0, 0))
 
+    # Sort the balls by cell id
     sortBalls()
+
+    # Move and draw the balls
     for ball in balls:
         ball.draw(screen)
         ball.move(1 / fps)
+
+    # Check for collisions in the current cell and the adjacent cells
+    # NOTE: This seems incorrect
+    for i in range(horizontalCells * verticalCells):
+        for j in range(ballIndexKey[i][0], ballIndexKey[i][1] + 1):
+            for k in range(j + 1, ballIndexKey[i][1] + 1):
+                balls[j].collide(balls[k])
 
     # for x in range(horizontalCells):
     #     for y in range(verticalCells):

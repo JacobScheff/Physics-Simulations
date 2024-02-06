@@ -6,15 +6,14 @@ import random
 
 screenSize = (1200, 600)
 ballSize = 12
-horizontalAmount = 10 * 5
-verticalAmount = 5 * 5
+horizontalAmount = 10
+verticalAmount = 5
 fps = 1000
 horizontalCells = 24 # 48
 verticalCells = 12 # 24
 # gravity = 200
-# balls = [[[] for j in range(verticalCells)] for i in range(horizontalCells)]
 balls = []
-ballIndexKey = [-1 for i in range(horizontalCells * verticalCells)]
+ballIndexKey = [[-1, -1]for i in range(horizontalCells * verticalCells)]
 
 class Ball:
     def __init__(self, x, y, v, a, radius):
@@ -123,38 +122,62 @@ clock = pygame.time.Clock()
 # Randomize the balls order
 random.shuffle(balls)
 
-def sortBalls():
-    # Bubble sort the balls by their cell id
-    for i in range(len(balls)):
-        for j in range(len(balls) - 1):
-            if balls[j].getCellId() > balls[j + 1].getCellId():
-                temp = balls[j]
-                balls[j] = balls[j + 1]
-                balls[j + 1] = temp
-
-# Use a binary search to get the last index of the ball with the target cell id
-def binarySearchBallIndex(arr, targetCellId):
-    start = 0
-    end = len(arr) - 1
+# Use a binary search to get the first index of the ball with the target cell id
+def binarySearchBallIndexFirst(arr, targetCellId, start=0, end=len(balls) - 1):
+    loops = 0
     while start <= end:
+        loops += 1
         mid = (start + end) // 2
         if arr[mid].getCellId() == targetCellId:
-            # Get the last index with the same cell id
-            for i in range(mid, len(arr)):
+            # Get the first index with the same cell id
+            for i in range(mid, -1, -1):
                 if arr[i].getCellId() != targetCellId:
-                    return i - 1
-            return mid
+                    return i + 1
+            return 0
         elif arr[mid].getCellId() < targetCellId:
             start = mid + 1
         else:
             end = mid - 1
     return -1
 
-sortBalls()
-for i in range(len(balls)):
-    print(str(i) + ":\t" + str(balls[i].getCellId()))
+# Use a binary search to get the last index of the ball with the target cell id
+def binarySearchBallIndexLast(arr, targetCellId, start=0, end=len(balls) - 1):
+    loops = 0
+    while start <= end:
+        loops += 1
+        mid = (start + end) // 2
+        if arr[mid].getCellId() == targetCellId:
+            # Get the last index with the same cell id
+            for i in range(mid, len(arr)):
+                if arr[i].getCellId() != targetCellId:
+                    return i - 1
+            return len(arr) - 1
+        elif arr[mid].getCellId() < targetCellId:
+            start = mid + 1
+        else:
+            end = mid - 1
+    return -1
 
-print(binarySearchBallIndex(balls, 112))
+# Insertion sort the balls
+def sortBalls():
+    for i in range(1, len(balls)):
+        key = balls[i]
+        keyId = key.getCellId()
+        j = i - 1
+        while j >= 0 and balls[j].getCellId() > keyId:
+            balls[j + 1] = balls[j]
+            j -= 1
+        balls[j + 1] = key
+    # Update the ball index key
+    startIndex = 0
+    for i in range(horizontalCells * verticalCells):
+        foundIndexStart = binarySearchBallIndexFirst(balls, i, start=startIndex)
+        foundIndexEnd = binarySearchBallIndexLast(balls, i, start=startIndex)
+        if foundIndexStart!= -1:
+            startIndex = foundIndexStart
+        ballIndexKey[i] = [foundIndexStart, foundIndexEnd]
+
+sortBalls()
 
 print("Done!")
 time.sleep(9999999)

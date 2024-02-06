@@ -85,12 +85,12 @@ class Ball:
             other.vx = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVx * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * contactAngleCos + other.v * math.sin(math.radians(other.a - contactAngle)) * contactAngle90Cos
             other.vy = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVy * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * contactAngleSin + other.v * math.sin(math.radians(other.a - contactAngle)) * contactAngle90Sin
 
-            # Apply repulsion force (probably cancels out. for example, a hitting b cancels b hitting a)
-            repulForce = ((self.radius + other.radius) ** 2) / (distance ** 0.5) * repulsionForce
-            self.vx += repulForce * math.cos(contactAngleRad) / self.mass
-            self.vy += repulForce * math.sin(contactAngleRad) / self.mass
-            self.vx -= repulForce * math.cos(contactAngleRad) / other.mass
-            self.vy -= repulForce * math.sin(contactAngleRad) / other.mass
+            # # Apply repulsion force (probably cancels out. for example, a hitting b cancels b hitting a)
+            # repulForce = ((self.radius + other.radius) ** 2) / (distance ** 0.5) * repulsionForce
+            # self.vx += repulForce * math.cos(contactAngleRad) / self.mass
+            # self.vy += repulForce * math.sin(contactAngleRad) / self.mass
+            # self.vx -= repulForce * math.cos(contactAngleRad) / other.mass
+            # self.vy -= repulForce * math.sin(contactAngleRad) / other.mass
 
             # Update the velocity
             self.a = math.degrees(math.atan2(self.vy, self.vx))

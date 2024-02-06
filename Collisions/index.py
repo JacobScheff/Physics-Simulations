@@ -111,8 +111,8 @@ for i in range(horizontalAmount):
     for j in range(verticalAmount):
         ballPos = (screenSize[0] - ballSize * 2) * i / horizontalAmount + ballSize, (screenSize[1] - ballSize * 2) * j / verticalAmount + ballSize
         balls.append(Ball(ballPos[0], ballPos[1], 0, 0, ballSize))
-# movingBall = Ball(1160, 560, 250, -135, 20)
-# balls.append(movingBall)
+movingBall = Ball(1160, 560, 250, -135, 20)
+balls.append(movingBall)
 
 pygame.init()
 screen = pygame.display.set_mode(screenSize)
@@ -177,11 +177,6 @@ def sortBalls():
             startIndex = foundIndexStart
         ballIndexKey[i] = [foundIndexStart, foundIndexEnd]
 
-sortBalls()
-
-print("Done!")
-time.sleep(9999999)
-
 fpsTimer = time.time()
 while True:
     for event in pygame.event.get():
@@ -190,11 +185,10 @@ while True:
 
     screen.fill((0, 0, 0))
 
-    # for xCells in balls:
-    #     for yCells in xCells:
-    #         for ball in yCells:
-    #             ball.draw(screen)
-    #             ball.move(1 / fps)
+    sortBalls()
+    for ball in balls:
+        ball.draw(screen)
+        ball.move(1 / fps)
 
     # for x in range(horizontalCells):
     #     for y in range(verticalCells):

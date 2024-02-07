@@ -6,9 +6,9 @@ import random
 
 screenSize = (1200, 600)
 ballSize = 10
-horizontalAmount = 25 // 2 * 0
-verticalAmount = 12 // 2 * 0
-fps = 80
+horizontalAmount = 25 * 0
+verticalAmount = 12 * 0
+fps = 25
 horizontalCells = 24 # 48
 verticalCells = 12 # 24
 gravity = 0 # 200
@@ -126,7 +126,7 @@ for i in range(horizontalAmount):
 
 balls.append(Ball(100, 100, 100, 0, 20))
 balls.append(Ball(600, 100, 100, 180, 20))
-# balls.append(Ball(100, 100, 200, 45, 40))
+# balls.append(Ball(100, 100, 8000, 45, 10))
 
 pygame.init()
 screen = pygame.display.set_mode(screenSize)

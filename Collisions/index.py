@@ -15,14 +15,67 @@ gravity = 0 # 200
 balls = []
 ballIndexKey = [[-1, -1]for i in range(horizontalCells * verticalCells)]
 
+class Vector:
+    def __init__(self, magnitude, angle):
+        self.magnitude = magnitude
+        self.angle = angle
+        self.x = self.magnitude * math.cos(math.radians(self.angle))
+        self.y = self.magnitude * math.sin(math.radians(self.angle))
+
+    def setX(self, x):
+        self.x = x
+        self.magnitude = (self.x ** 2 + self.y ** 2) ** 0.5
+        self.angle = math.degrees(math.atan2(self.y, self.x))
+
+    def setY(self, y):
+        self.y = y
+        self.magnitude = (self.x ** 2 + self.y ** 2) ** 0.5
+        self.angle = math.degrees(math.atan2(self.y, self.x))
+
+    def setMagnitude(self, magnitude):
+        self.magnitude = magnitude
+        self.x = self.magnitude * math.cos(math.radians(self.angle))
+        self.y = self.magnitude * math.sin(math.radians(self.angle))
+
+    def crossProduct(self, other):
+        return self.x * other.y - self.y * other.x
+    
+    def dotProduct(self, other):
+        return self.x * other.x + self.y * other.y
+    
+    def add(self, other):
+        return Vector(self.x + other.x, self.y + other.y)
+    
+    def subtract(self, other):
+        return Vector(self.x - other.x, self.y - other.y)
+    
+    def multiply(self, scalar):
+        return Vector(self.x * scalar, self.y * scalar)
+    
+    def divide(self, scalar):
+        return Vector(self.x / scalar, self.y / scalar)
+    
+    def magnitude(self):
+        return (self.x ** 2 + self.y ** 2) ** 0.5
+    
+    def normalize(self):
+        return self.divide(self.magnitude())
+    
+    def angle(self):
+        return math.degrees(math.atan2(self.y, self.x))
+    
+    def rotate(self, angle):
+        angleRad = math.radians(angle)
+        cosAngle = math.cos(angleRad)
+        sinAngle = math.sin(angleRad)
+        return Vector(self.x * cosAngle - self.y * sinAngle, self.x * sinAngle + self.y * cosAngle)
+
+
 class Ball:
-    def __init__(self, x, y, v, a, radius):
+    def __init__(self, x, y, vector, radius):
         self.x = x
         self.y = y
-        self.v = v
-        self.a = a # Angle in degrees
-        self.vx = self.v * math.cos(math.radians(self.a))
-        self.vy = self.v * math.sin(math.radians(self.a))
+        self.vector = vector
         self.radius = radius
         # Mass is the area of the ball
         self.mass = self.radius ** 2 * 3.14
@@ -32,63 +85,53 @@ class Ball:
 
     def move(self, dt):
         # Apply gravity
-        self.vy += gravity * dt
-        self.v = (self.vx ** 2 + self.vy ** 2) ** 0.5
+        self.vector.setY(self.vector.y + gravity * dt)
 
         # Move the ball
-        self.x += self.vx * dt
-        self.y += self.vy * dt
+        self.x += self.vector.x * dt
+        self.y += self.vector.y * dt
 
         # Apply border collision
         velocityChanged = False
         if self.x < self.radius:
-            self.vx = abs(self.vx)
+            self.vector.setX(abs(self.vector.x))
             self.x = self.radius
-            velocityChanged = True
         elif self.x > screenSize[0] - self.radius:
-            self.vx = -abs(self.vx)
+            self.vector.setX(-abs(self.vector.x))
             self.x = screenSize[0] - self.radius
-            velocityChanged = True
         if self.y < self.radius:
-            self.vy = abs(self.vy)
+            self.vector.setY(abs(self.vector.y))
             self.y = self.radius
-            velocityChanged = True
         elif self.y > screenSize[1] - self.radius:
-            self.vy = -abs(self.vy)
+            self.vector.setY(-abs(self.vector.y))
             self.y = screenSize[1] - self.radius
-            velocityChanged = True
-
-        # Calculate the new angle if the velocity changed from a border collision
-        if velocityChanged:
-            self.a = math.degrees(math.atan2(self.vy, self.vx))
-
-        # If the cell changed, remove the ball from the previous cell and add it to the new one
     
     def collide(self, other):
         distance = ((self.x - other.x) ** 2 + (self.y - other.y) ** 2) ** 0.5
         if distance <= self.radius + other.radius:
-            originalVx = self.vx
-            originalVy = self.vy
-            contactAngle = math.degrees(math.atan2(other.y - self.y, other.x - self.x))
-            contactAngleRad = math.radians(contactAngle)
-            contactAngleCos = math.cos(contactAngleRad)
-            contactAngleSin = math.sin(contactAngleRad)
-            # cos(x + 90) = -sin(x)
-            # sin(x + 90) = cos(x)
-            contactAngle90Cos = -contactAngleSin
-            contactAngle90Sin = contactAngleCos
+            originalVectorSelf = Vector(self.vector.magnitude, self.vector.angle)
+            originalPositionSelf = Vector(self.x, self.y)
 
-            # Apply direct collision using trigonometry
-            self.vx = (self.v * math.cos(math.radians(self.a - contactAngle)) * (self.mass - other.mass) + 2 * other.mass * other.v * math.cos(math.radians(other.a - contactAngle))) / (self.mass + other.mass) * contactAngleCos + self.v * math.sin(math.radians(self.a - contactAngle)) * contactAngle90Cos
-            self.vy = (self.v * math.cos(math.radians(self.a - contactAngle)) * (self.mass - other.mass) + 2 * other.mass * other.v * math.cos(math.radians(other.a - contactAngle))) / (self.mass + other.mass) * contactAngleSin + self.v * math.sin(math.radians(self.a - contactAngle)) * contactAngle90Sin
-            other.vx = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVx * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * contactAngleCos + other.v * math.sin(math.radians(other.a - contactAngle)) * contactAngle90Cos
-            other.vy = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVy * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * contactAngleSin + other.v * math.sin(math.radians(other.a - contactAngle)) * contactAngle90Sin
+            # contactAngle = math.degrees(math.atan2(other.y - self.y, other.x - self.x))
+            # contactAngleRad = math.radians(contactAngle)
+            # contactAngleCos = math.cos(contactAngleRad)
+            # contactAngleSin = math.sin(contactAngleRad)
+            # # cos(x + 90) = -sin(x)
+            # # sin(x + 90) = cos(x)
+            # contactAngle90Cos = -contactAngleSin
+            # contactAngle90Sin = contactAngleCos
 
-            # Update the velocity
-            self.a = math.degrees(math.atan2(self.vy, self.vx))
-            other.a = math.degrees(math.atan2(other.vy, other.vx))
-            self.v = (self.vx ** 2 + self.vy ** 2) ** 0.5
-            other.v = (other.vx ** 2 + other.vy ** 2)  ** 0.5
+            # # Apply direct collision using trigonometry
+            # self.vx = (self.v * math.cos(math.radians(self.a - contactAngle)) * (self.mass - other.mass) + 2 * other.mass * other.v * math.cos(math.radians(other.a - contactAngle))) / (self.mass + other.mass) * contactAngleCos + self.v * math.sin(math.radians(self.a - contactAngle)) * contactAngle90Cos
+            # self.vy = (self.v * math.cos(math.radians(self.a - contactAngle)) * (self.mass - other.mass) + 2 * other.mass * other.v * math.cos(math.radians(other.a - contactAngle))) / (self.mass + other.mass) * contactAngleSin + self.v * math.sin(math.radians(self.a - contactAngle)) * contactAngle90Sin
+            # other.vx = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVx * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * contactAngleCos + other.v * math.sin(math.radians(other.a - contactAngle)) * contactAngle90Cos
+            # other.vy = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVy * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * contactAngleSin + other.v * math.sin(math.radians(other.a - contactAngle)) * contactAngle90Sin
+
+            # # Update the velocity
+            # self.a = math.degrees(math.atan2(self.vy, self.vx))
+            # other.a = math.degrees(math.atan2(other.vy, other.vx))
+            # self.v = (self.vx ** 2 + self.vy ** 2) ** 0.5
+            # other.v = (other.vx ** 2 + other.vy ** 2)  ** 0.5
 
             # If the balls are overlapping, move them apart
             if distance < self.radius + other.radius:

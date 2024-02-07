@@ -110,12 +110,12 @@ class Ball:
         distance = ((self.x - other.x) ** 2 + (self.y - other.y) ** 2) ** 0.5
         if distance <= self.radius + other.radius:
             originalVectorSelf = Vector(self.vector.magnitude, self.vector.angle)
+            originalVectorOther = Vector(other.vector.magnitude, other.vector.angle)
             selfPosition = Vector(self.x, self.y)
             otherPosition = Vector(other.x, other.y)
-            originalVectorOther = Vector(other.vector.magnitude, other.vector.angle)
             totalMass = self.mass + other.mass
-            self.vector = self.vector.subtract(other.vector).dotProduct(selfPosition.subtract(otherPosition)).multiply(2 * other.mass / totalMass).divide(distance ** 2).dotProduct(selfPosition.subtract(otherPosition)).add(self.vector)
-            other.vector = other.vector.subtract(originalVectorSelf).dotProduct(otherPosition.subtract(selfPosition)).multiply(2 * self.mass / totalMass).divide(distance ** 2).dotProduct(otherPosition.subtract(selfPosition)).add(other.vector)
+            self.vector = originalVectorSelf.subtract(selfPosition.subtract(otherPosition).multiply(2 * other.mass / totalMass).multiply(originalVectorSelf.subtract(originalVectorOther).dotProduct(selfPosition.subtract(otherPosition))).divide(distance ** 2))
+            other.vector = originalVectorOther.subtract(otherPosition.subtract(selfPosition).multiply(2 * self.mass / totalMass).multiply(originalVectorOther.subtract(originalVectorSelf).dotProduct(otherPosition.subtract(selfPosition))).divide(distance ** 2))
 
             contactAngle = math.degrees(math.atan2(other.y - self.y, other.x - self.x))
 
@@ -252,6 +252,6 @@ while True:
     if time.time() - fpsTimer >= 1:
         totalKineticEnergy = 0
         for ball in balls:
-            totalKineticEnergy += ball.mass * ball.v * ball.v
+            totalKineticEnergy += ball.mass * ball.vector.magnitude ** 2
         print(str(clock.get_fps()) + "\t" + str(totalKineticEnergy))
         fpsTimer = time.time()

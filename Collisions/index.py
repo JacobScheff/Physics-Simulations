@@ -234,5 +234,8 @@ while True:
     pygame.display.flip()
     clock.tick(fps)
     if time.time() - fpsTimer >= 1:
-        print(clock.get_fps())
+        totalKineticEnergy = 0
+        for ball in balls:
+            totalKineticEnergy += ball.mass * ball.v * ball.v
+        print(str(clock.get_fps()) + "\t" + str(totalKineticEnergy))
         fpsTimer = time.time()

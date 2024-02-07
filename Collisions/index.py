@@ -12,7 +12,6 @@ fps = 25
 horizontalCells = 24 # 48
 verticalCells = 12 # 24
 gravity = 0 # 200
-repulsionForce = 25000000
 balls = []
 ballIndexKey = [[-1, -1]for i in range(horizontalCells * verticalCells)]
 
@@ -79,18 +78,11 @@ class Ball:
             contactAngle90Cos = -contactAngleSin
             contactAngle90Sin = contactAngleCos
 
-            # Apply direct collision
+            # Apply direct collision using trigonometry
             self.vx = (self.v * math.cos(math.radians(self.a - contactAngle)) * (self.mass - other.mass) + 2 * other.mass * other.v * math.cos(math.radians(other.a - contactAngle))) / (self.mass + other.mass) * contactAngleCos + self.v * math.sin(math.radians(self.a - contactAngle)) * contactAngle90Cos
             self.vy = (self.v * math.cos(math.radians(self.a - contactAngle)) * (self.mass - other.mass) + 2 * other.mass * other.v * math.cos(math.radians(other.a - contactAngle))) / (self.mass + other.mass) * contactAngleSin + self.v * math.sin(math.radians(self.a - contactAngle)) * contactAngle90Sin
             other.vx = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVx * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * contactAngleCos + other.v * math.sin(math.radians(other.a - contactAngle)) * contactAngle90Cos
             other.vy = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVy * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * contactAngleSin + other.v * math.sin(math.radians(other.a - contactAngle)) * contactAngle90Sin
-
-            # # Apply repulsion force (probably cancels out. for example, a hitting b cancels b hitting a)
-            # repulForce = ((self.radius + other.radius) ** 2) / (distance ** 0.5) * repulsionForce
-            # self.vx += repulForce * math.cos(contactAngleRad) / self.mass
-            # self.vy += repulForce * math.sin(contactAngleRad) / self.mass
-            # self.vx -= repulForce * math.cos(contactAngleRad) / other.mass
-            # self.vy -= repulForce * math.sin(contactAngleRad) / other.mass
 
             # Update the velocity
             self.a = math.degrees(math.atan2(self.vy, self.vx))
@@ -116,6 +108,11 @@ class Ball:
     
     def getCellId(self):
         return self.getCell()[0] + self.getCell()[1] * horizontalCells
+    
+# Get dot product of two vectors
+def dotProduct(v1, a1, v2, a2):
+    return v1 * v2 * math.cos(math.radians(a1 - a2))
+    
 
 for i in range(horizontalAmount):
     for j in range(verticalAmount):

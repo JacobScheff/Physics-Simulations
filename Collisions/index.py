@@ -39,7 +39,6 @@ class Ball:
         # Move the ball
         self.x += self.vx * dt
         self.y += self.vy * dt
-        print(str(self.vx) + "\t" + str(self.vy))
 
         # Apply border collision
         velocityChanged = False
@@ -125,7 +124,8 @@ for i in range(horizontalAmount):
         randomAngle = random.randint(0, 360)
         balls.append(Ball(ballPos[0], ballPos[1], randomVelocities, randomAngle, ballSize))
 
-balls.append(Ball(100, 100, 100, 80, 20))
+balls.append(Ball(100, 100, 100, 0, 20))
+balls.append(Ball(600, 100, 100, 180, 20))
 # balls.append(Ball(100, 100, 200, 45, 40))
 
 pygame.init()
@@ -205,7 +205,6 @@ while True:
         ball.move(1 / fps)
 
     # Check for collisions in the current cell and the adjacent cells
-    # NOTE: This seems incorrect
     for cellX in range(horizontalCells):
         for cellY in range(verticalCells):
             cellId = cellX + cellY * horizontalCells
@@ -215,23 +214,11 @@ while True:
                         if cellX + j >= 0 and cellX + j < horizontalCells and cellY + k >= 0 and cellY + k < verticalCells:
                             newCellId = cellX + j + (cellY + k) * horizontalCells
                             for otherBallIndex in range(ballIndexKey[newCellId][0], ballIndexKey[newCellId][1] + 1):
+                                # There are no balls in this cell
+                                if(ballIndex == -1 or otherBallIndex == -1):
+                                    continue
                                 if ballIndex != otherBallIndex:
                                     balls[ballIndex].collide(balls[otherBallIndex])
-
-    # for x in range(horizontalCells):
-    #     for y in range(verticalCells):
-    #         for ball in balls[x][y]:
-    #             # Check for collisions with the balls in the same cell or the adjacent cells
-    #             cellCountTest = 0
-    #             for i in range(-1, 2):
-    #                 for j in range(-1, 2):
-    #                     if x + i >= 0 and x + i < horizontalCells and y + j >= 0 and y + j < verticalCells:
-    #                         cellCountTest += 1
-    #                         for otherBall in balls[x + i][y + j]:
-    #                             if ball != otherBall:
-    #                                 ball.collide(otherBall)
-    #             if(cellCountTest > 9):
-    #                 print("Error! Extra cells were searched! Amount searched: " + cellCountTest)
 
     pygame.display.flip()
     clock.tick(fps)
@@ -239,5 +226,5 @@ while True:
         totalKineticEnergy = 0
         for ball in balls:
             totalKineticEnergy += ball.mass * ball.v * ball.v
-        # print(str(clock.get_fps()) + "\t" + str(totalKineticEnergy))
+        print(str(clock.get_fps()) + "\t" + str(totalKineticEnergy))
         fpsTimer = time.time()

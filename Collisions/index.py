@@ -211,10 +211,10 @@ while True:
                 for j in range(-1, 2):
                     for k in range(-1, 2):
                         if cellX + j >= 0 and cellX + j < horizontalCells and cellY + k >= 0 and cellY + k < verticalCells:
-                            for otherBallIndex in range(ballIndexKey[cellX + j + (cellY + k) * horizontalCells][0], ballIndexKey[cellX + j + (cellY + k) * horizontalCells][1] + 1):
-                                if ballIndex == otherBallIndex and i == j and k == 0:
-                                    continue
-                                balls[ballIndex].collide(balls[otherBallIndex])
+                            newCellId = cellX + j + (cellY + k) * horizontalCells
+                            for otherBallIndex in range(ballIndexKey[newCellId][0], ballIndexKey[newCellId][1] + 1):
+                                if ballIndex != otherBallIndex:
+                                    balls[ballIndex].collide(balls[otherBallIndex])
 
     # for x in range(horizontalCells):
     #     for y in range(verticalCells):

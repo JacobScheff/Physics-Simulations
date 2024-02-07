@@ -108,12 +108,15 @@ class Ball:
     
     def collide(self, other):
         distance = ((self.x - other.x) ** 2 + (self.y - other.y) ** 2) ** 0.5
+        if distance == 0:
+            distance = 0.0001
         if distance <= self.radius + other.radius:
             originalVectorSelf = Vector(self.vector.magnitude, self.vector.angle)
             originalVectorOther = Vector(other.vector.magnitude, other.vector.angle)
             selfPosition = Vector(self.x, self.y)
             otherPosition = Vector(other.x, other.y)
             totalMass = self.mass + other.mass
+
             self.vector = originalVectorSelf.subtract(selfPosition.subtract(otherPosition).multiply(2 * other.mass / totalMass).multiply(originalVectorSelf.subtract(originalVectorOther).dotProduct(selfPosition.subtract(otherPosition))).divide(distance ** 2))
             other.vector = originalVectorOther.subtract(otherPosition.subtract(selfPosition).multiply(2 * self.mass / totalMass).multiply(originalVectorOther.subtract(originalVectorSelf).dotProduct(otherPosition.subtract(selfPosition))).divide(distance ** 2))
 

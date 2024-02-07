@@ -6,8 +6,8 @@ import random
 
 screenSize = (1200, 600)
 ballSize = 10
-horizontalAmount = 25 // 2
-verticalAmount = 12 // 2
+horizontalAmount = 25 // 2 * 0
+verticalAmount = 12 // 2 * 0
 fps = 80
 horizontalCells = 24 # 48
 verticalCells = 12 # 24
@@ -39,6 +39,7 @@ class Ball:
         # Move the ball
         self.x += self.vx * dt
         self.y += self.vy * dt
+        print(str(self.vx) + "\t" + str(self.vy))
 
         # Apply border collision
         velocityChanged = False
@@ -124,7 +125,8 @@ for i in range(horizontalAmount):
         randomAngle = random.randint(0, 360)
         balls.append(Ball(ballPos[0], ballPos[1], randomVelocities, randomAngle, ballSize))
 
-balls.append(Ball(100, 100, 200, 45, 40))
+balls.append(Ball(100, 100, 100, 80, 20))
+# balls.append(Ball(100, 100, 200, 45, 40))
 
 pygame.init()
 screen = pygame.display.set_mode(screenSize)
@@ -237,5 +239,5 @@ while True:
         totalKineticEnergy = 0
         for ball in balls:
             totalKineticEnergy += ball.mass * ball.v * ball.v
-        print(str(clock.get_fps()) + "\t" + str(totalKineticEnergy))
+        # print(str(clock.get_fps()) + "\t" + str(totalKineticEnergy))
         fpsTimer = time.time()

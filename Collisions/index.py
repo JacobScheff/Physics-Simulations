@@ -6,8 +6,8 @@ import random
 
 screenSize = (1200, 600)
 ballSize = 10
-horizontalAmount = 25 * 0
-verticalAmount = 12 * 0
+horizontalAmount = 25 // 2
+verticalAmount = 12 // 2
 fps = 25
 horizontalCells = 24 # 48
 verticalCells = 12 # 24
@@ -110,37 +110,23 @@ class Ball:
         distance = ((self.x - other.x) ** 2 + (self.y - other.y) ** 2) ** 0.5
         if distance <= self.radius + other.radius:
             originalVectorSelf = Vector(self.vector.magnitude, self.vector.angle)
-            originalPositionSelf = Vector(self.x, self.y)
+            selfPosition = Vector(self.x, self.y)
+            otherPosition = Vector(other.x, other.y)
+            originalVectorOther = Vector(other.vector.magnitude, other.vector.angle)
+            totalMass = self.mass + other.mass
+            self.vector = self.vector.subtract(other.vector).dotProduct(selfPosition.subtract(otherPosition)).multiply(2 * other.mass / totalMass).divide(distance ** 2).dotProduct(selfPosition.subtract(otherPosition)).add(self.vector)
+            other.vector = other.vector.subtract(originalVectorSelf).dotProduct(otherPosition.subtract(selfPosition)).multiply(2 * self.mass / totalMass).divide(distance ** 2).dotProduct(otherPosition.subtract(selfPosition)).add(other.vector)
 
-            # contactAngle = math.degrees(math.atan2(other.y - self.y, other.x - self.x))
-            # contactAngleRad = math.radians(contactAngle)
-            # contactAngleCos = math.cos(contactAngleRad)
-            # contactAngleSin = math.sin(contactAngleRad)
-            # # cos(x + 90) = -sin(x)
-            # # sin(x + 90) = cos(x)
-            # contactAngle90Cos = -contactAngleSin
-            # contactAngle90Sin = contactAngleCos
-
-            # # Apply direct collision using trigonometry
-            # self.vx = (self.v * math.cos(math.radians(self.a - contactAngle)) * (self.mass - other.mass) + 2 * other.mass * other.v * math.cos(math.radians(other.a - contactAngle))) / (self.mass + other.mass) * contactAngleCos + self.v * math.sin(math.radians(self.a - contactAngle)) * contactAngle90Cos
-            # self.vy = (self.v * math.cos(math.radians(self.a - contactAngle)) * (self.mass - other.mass) + 2 * other.mass * other.v * math.cos(math.radians(other.a - contactAngle))) / (self.mass + other.mass) * contactAngleSin + self.v * math.sin(math.radians(self.a - contactAngle)) * contactAngle90Sin
-            # other.vx = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVx * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * contactAngleCos + other.v * math.sin(math.radians(other.a - contactAngle)) * contactAngle90Cos
-            # other.vy = (other.v * math.cos(math.radians(other.a - contactAngle)) * (other.mass - self.mass) + 2 * self.mass * originalVy * math.cos(math.radians(self.a - contactAngle))) / (self.mass + other.mass) * contactAngleSin + other.v * math.sin(math.radians(other.a - contactAngle)) * contactAngle90Sin
-
-            # # Update the velocity
-            # self.a = math.degrees(math.atan2(self.vy, self.vx))
-            # other.a = math.degrees(math.atan2(other.vy, other.vx))
-            # self.v = (self.vx ** 2 + self.vy ** 2) ** 0.5
-            # other.v = (other.vx ** 2 + other.vy ** 2)  ** 0.5
+            contactAngle = math.degrees(math.atan2(other.y - self.y, other.x - self.x))
 
             # If the balls are overlapping, move them apart
             if distance < self.radius + other.radius:
                 distanceToMove = (self.radius + other.radius - distance)
                 # bigger mass == less movement
-                self.x -= distanceToMove * math.cos(math.radians(contactAngle)) * other.mass / (self.mass + other.mass)
-                self.y -= distanceToMove * math.sin(math.radians(contactAngle)) * other.mass / (self.mass + other.mass)
-                other.x += distanceToMove * math.cos(math.radians(contactAngle)) * self.mass / (self.mass + other.mass)
-                other.y += distanceToMove * math.sin(math.radians(contactAngle)) * self.mass / (self.mass + other.mass)
+                self.x -= distanceToMove * math.cos(math.radians(contactAngle)) * other.mass / totalMass
+                self.y -= distanceToMove * math.sin(math.radians(contactAngle)) * other.mass / totalMass
+                other.x += distanceToMove * math.cos(math.radians(contactAngle)) * self.mass / totalMass
+                other.y += distanceToMove * math.sin(math.radians(contactAngle)) * self.mass / totalMass
             return True
         return False
     
@@ -162,10 +148,11 @@ for i in range(horizontalAmount):
         ballPos = (screenSize[0] - ballSize * 2) * i / horizontalAmount + ballSize, (screenSize[1] - ballSize * 2) * j / verticalAmount + ballSize
         randomVelocities = random.randint(0, 100)
         randomAngle = random.randint(0, 360)
-        balls.append(Ball(ballPos[0], ballPos[1], randomVelocities, randomAngle, ballSize))
+        randomVector = Vector(randomVelocities, randomAngle)
+        balls.append(Ball(ballPos[0], ballPos[1], randomVector, ballSize))
 
-balls.append(Ball(100, 100, 100, 0, 20))
-balls.append(Ball(600, 100, 100, 180, 20))
+# balls.append(Ball(100, 100, 100, 0, 20))
+# balls.append(Ball(600, 100, 100, 180, 20))
 # balls.append(Ball(100, 100, 8000, 45, 10))
 
 pygame.init()

@@ -3,107 +3,73 @@ import sys
 import time
 import math
 
-screenSize = (400, 200)
-ballRadius = 4
-fps = 27
-# gravity = 160
-gravity = 0
-collisionMultiplier = 0.8
-desnityRadius = 40
+screenSize = (1200, 600)
+ballRadius = 8
+fps = 100
+gravity = 160
+borderCollisionMultiplier = 0.9
 
-class Ball:
-    def __init__(self, x, y, vx, vy):
-        self.x = x
-        self.y = y
-        self.vx = vx
-        self.vy = vy
-        self.radius = ballRadius
+class Particle(pygame.sprite.Sprite):
+    # position and velocity is pygame.Vector2
+    def __init__(self, position, velocity, radius):
+        super().__init__()
+        self.position = position
+        self.velocity = velocity
+        self.radius = radius
+        self.color = (255, 255, 255)
+        self.image = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
+        self.rect = self.image.get_rect(center=position)
+        pygame.draw.circle(self.image, self.color, (radius, radius), radius)
 
-    def draw(self, screen):
-        pygame.draw.circle(screen, (255, 255, 255), (self.x, self.y), ballRadius)
+    def update(self, dt):
+        self.position += self.velocity * dt
+        self.velocity.y += gravity * dt
+        self.rect.center = self.position
+        if self.position.x - self.radius < 0:
+            self.position.x = self.radius
+            self.velocity.x *= -borderCollisionMultiplier
+        if self.position.x + self.radius > screenSize[0]:
+            self.position.x = screenSize[0] - self.radius
+            self.velocity.x *= -borderCollisionMultiplier
+        if self.position.y - self.radius < 0:
+            self.position.y = self.radius
+            self.velocity.y *= -borderCollisionMultiplier
+        if self.position.y + self.radius > screenSize[1]:
+            self.position.y = screenSize[1] - self.radius
+            self.velocity.y *= -borderCollisionMultiplier
 
-    def move(self, dt):
-        # Apply gravity
-        self.vy += gravity * dt
-        
-        # If the ball is going to hit the wall, reverse the velocity
-        if self.x < self.radius:
-            self.vx = abs(self.vx) * collisionMultiplier
-        if self.x > screenSize[0] - self.radius:
-            self.vx = -abs(self.vx) * collisionMultiplier
-        if self.y < self.radius:
-            self.vy = abs(self.vy) * collisionMultiplier
-        if self.y > screenSize[1] - self.radius:
-            self.vy = -abs(self.vy) * collisionMultiplier
+particles = []
+for i in range(10):
+    particles.append(Particle(pygame.Vector2(100 * i, 25 * i), pygame.Vector2(100, 100), ballRadius))
 
-        # Move the ball
-        self.x += self.vx * dt
-        self.y += self.vy * dt
-
-    def applyForce(self, other):
-        # Apply a repulsive force between the two balls
-        distance = ((self.x - other.x) ** 2 + (self.y - other.y) ** 2) ** 0.5
-        forceMultiplier = 2
-        forceMagnitude = forceMultiplier * (((self.radius + other.radius) / distance) ** 2)
-        # Apply the force so that they are pushed away from each other using trigonometry
-        angle = math.atan2(self.y - other.y, self.x - other.x)
-        angleSin = math.sin(angle)
-        angleCos = math.cos(angle)
-        self.vx += forceMagnitude * angleCos
-        self.vy += forceMagnitude * angleSin
-        other.vx -= forceMagnitude * angleCos
-        other.vy -= forceMagnitude * angleSin
-
-            
 pygame.init()
 screen = pygame.display.set_mode(screenSize)
-pygame.display.set_caption("Fluid Simulation")
 clock = pygame.time.Clock()
 
-balls = []
-ballPadding = 60
-xCount = 20
-yCount = 10
-for x in range(xCount):
-    for y in range(yCount):
-        balls.append(Ball(ballPadding + x * (screenSize[0] - ballPadding * 2) / (xCount - 1), ballPadding + y * (screenSize[1] - ballPadding * 2) / (yCount - 1), 0, 0))
-
-# densityTimer = 0
 while True:
+    dt = clock.tick(fps) / 1000
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
+            pygame.quit()
             sys.exit()
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_d:
-                desnityRadius += 10
-            if event.key == pygame.K_a:
-                desnityRadius -= 10
-                if desnityRadius < 0:
-                    desnityRadius = 0
+
+    for particle in particles:
+        particle.update(dt)
+
+    # Check for collision
+    for i in range(len(particles)):
+        for j in range(i+1, len(particles)):
+            distance = particles[i].position.distance_to(particles[j].position)
+            if distance < particles[i].radius + particles[j].radius:
+                normal = particles[i].position - particles[j].position
+                normal.normalize_ip()
+                relativeVelocity = particles[i].velocity - particles[j].velocity
+                dotProduct = relativeVelocity.dot(normal)
+                impulse = 2 * dotProduct / (1/particles[i].radius + 1/particles[j].radius)
+                particles[i].velocity -= impulse * normal / particles[i].radius
+                particles[j].velocity += impulse * normal / particles[j].radius
 
     screen.fill((0, 0, 0))
-
-    for ball in balls:
-        ball.move(1 / fps)
-        for other in balls:
-            if ball != other:
-                ball.applyForce(other)
-        ball.draw(screen)
-
-    # Draw a circle around the mouse showing density
-    # pygame.draw.circle(screen, (255, 255, 255), pygame.mouse.get_pos(), desnityRadius, 1)
-
-    # if(densityTimer > 1):
-    #     densityTimer = 0
-    #     density = 0
-    #     for ball in balls:
-    #         if(math.sqrt((ball.x - pygame.mouse.get_pos()[0]) ** 2 + (ball.y - pygame.mouse.get_pos()[1]) ** 2) < desnityRadius):
-    #             density += 1
-    #     # Divide by the area of the circle
-    #     density /= desnityRadius ** 2 * math.pi
-    #     print(density)
-
+    for particle in particles:
+        screen.blit(particle.image, particle.rect)
     pygame.display.flip()
-    clock.tick(fps)
-    print(clock.get_fps())
-    # densityTimer += 1 / fps

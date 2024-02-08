@@ -6,9 +6,9 @@ import random
 
 screenSize = (1200, 600)
 ballSize = 10
-horizontalAmount = 25 // 2
-verticalAmount = 12 // 2
-fps = 120
+horizontalAmount = 12
+verticalAmount = 6
+fps = 60
 horizontalCells = 24 # 48
 verticalCells = 12 # 24
 gravity = 0 # 200
@@ -120,16 +120,20 @@ class Ball:
             self.vector = originalVectorSelf.subtract(selfPosition.subtract(otherPosition).normalize().multiply(2 * other.mass / totalMass).multiply(originalVectorSelf.subtract(originalVectorOther).dotProduct(selfPosition.subtract(otherPosition))).divide(distance ** 2))
             other.vector = originalVectorOther.subtract(otherPosition.subtract(selfPosition).normalize().multiply(2 * self.mass / totalMass).multiply(originalVectorOther.subtract(originalVectorSelf).dotProduct(otherPosition.subtract(selfPosition))).divide(distance ** 2))
 
-            contactAngle = math.degrees(math.atan2(other.y - self.y, other.x - self.x))
-
             # If the balls are overlapping, move them apart
             if distance < self.radius + other.radius:
-                distanceToMove = (self.radius + other.radius - distance)
-                # bigger mass == less movement
-                self.x -= distanceToMove * math.cos(math.radians(contactAngle)) * other.mass / totalMass
-                self.y -= distanceToMove * math.sin(math.radians(contactAngle)) * other.mass / totalMass
-                other.x += distanceToMove * math.cos(math.radians(contactAngle)) * self.mass / totalMass
-                other.y += distanceToMove * math.sin(math.radians(contactAngle)) * self.mass / totalMass
+                # distanceToMove = (self.radius + other.radius - distance)
+                # # bigger mass == less movement
+                # self.x -= distanceToMove * math.cos(math.radians(contactAngle)) * other.mass / totalMass
+                # self.y -= distanceToMove * math.sin(math.radians(contactAngle)) * other.mass / totalMass
+                # other.x += distanceToMove * math.cos(math.radians(contactAngle)) * self.mass / totalMass
+                # other.y += distanceToMove * math.sin(math.radians(contactAngle)) * self.mass / totalMass
+                selfPositionOffset = self.vector.normalize().multiply((self.radius + other.radius - distance) * other.mass / totalMass)
+                selfPositionOffset = other.vector.normalize().multiply((self.radius + other.radius - distance) * self.mass / totalMass)
+                self.x += selfPositionOffset.x
+                self.y += selfPositionOffset.y
+                other.x -= selfPositionOffset.x
+                other.y -= selfPositionOffset.y
             
             return True
         return False
@@ -150,7 +154,7 @@ def dotProduct(v1, a1, v2, a2):
 for i in range(horizontalAmount):
     for j in range(verticalAmount):
         ballPos = (screenSize[0] - ballSize * 2) * i / horizontalAmount + ballSize, (screenSize[1] - ballSize * 2) * j / verticalAmount + ballSize
-        randomVelocities = random.randint(0, 200)
+        randomVelocities = random.randint(0, 100)
         randomAngle = random.randint(0, 360)
         randomVector = Vector(randomVelocities, randomAngle)
         # randomVector = Vector(0, 0)
@@ -158,7 +162,7 @@ for i in range(horizontalAmount):
 
 # balls.append(Ball(100, 100, Vector(200, 45), 20))
 # balls.append(Ball(800, 100, Vector(200, 135), 20))
-# balls.append(Ball(100, 100, 8000, 45, 10))
+# balls.append(Ball(1120, 500, Vector(800, 45), 40))
 
 pygame.init()
 screen = pygame.display.set_mode(screenSize)
@@ -237,7 +241,7 @@ while True:
         ball.move(1 / fps)
 
     # Check for collisions in the current cell and the adjacent cells
-    ballsAlreadyChecked = []
+    # ballsAlreadyChecked = []
     for cellX in range(horizontalCells):
         for cellY in range(verticalCells):
             cellId = cellX + cellY * horizontalCells
@@ -252,9 +256,9 @@ while True:
                                     continue
                                 if ballIndex != otherBallIndex:
                                     # Check if the balls have already been checked
-                                    if (ballIndex, otherBallIndex) in ballsAlreadyChecked or (otherBallIndex, ballIndex) in ballsAlreadyChecked:
-                                        continue
-                                    ballsAlreadyChecked.append((ballIndex, otherBallIndex))
+                                    # if (ballIndex, otherBallIndex) in ballsAlreadyChecked or (otherBallIndex, ballIndex) in ballsAlreadyChecked:
+                                    #     continue
+                                    # ballsAlreadyChecked.append((ballIndex, otherBallIndex))
                                     balls[ballIndex].collide(balls[otherBallIndex], ballIndex, otherBallIndex)
 
     pygame.display.flip()

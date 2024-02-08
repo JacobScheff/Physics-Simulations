@@ -110,7 +110,7 @@ class Ball:
         if distance == 0:
             # print("Distance is 0:\t" + str(ball1Index) + "\t" + str(ball2Index))
             return False
-        if distance <= self.radius + other.radius:
+        if distance < self.radius + other.radius:
             originalVectorSelf = Vector(self.vector.magnitude, self.vector.angle)
             originalVectorOther = Vector(other.vector.magnitude, other.vector.angle)
             selfPosition = Vector(self.x, self.y)
@@ -152,7 +152,7 @@ def dotProduct(v1, a1, v2, a2):
 for i in range(horizontalAmount):
     for j in range(verticalAmount):
         ballPos = (screenSize[0] - ballSize * 2) * i / horizontalAmount + ballSize, (screenSize[1] - ballSize * 2) * j / verticalAmount + ballSize
-        randomVelocities = random.randint(0, 100)
+        randomVelocities = random.randint(0, 200)
         randomAngle = random.randint(0, 360)
         randomVector = Vector(randomVelocities, randomAngle)
         # randomVector = Vector(0, 0)

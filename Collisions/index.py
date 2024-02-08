@@ -8,7 +8,7 @@ screenSize = (1200, 600)
 ballSize = 10
 horizontalAmount = 25 // 2
 verticalAmount = 12 // 2
-fps = 60
+fps = 120
 horizontalCells = 24 # 48
 verticalCells = 12 # 24
 gravity = 0 # 200
@@ -110,7 +110,7 @@ class Ball:
         if distance == 0:
             # print("Distance is 0:\t" + str(ball1Index) + "\t" + str(ball2Index))
             return False
-        if distance < self.radius + other.radius:
+        if distance <= self.radius + other.radius:
             originalVectorSelf = Vector(self.vector.magnitude, self.vector.angle)
             originalVectorOther = Vector(other.vector.magnitude, other.vector.angle)
             selfPosition = Vector(self.x, self.y)
@@ -119,9 +119,6 @@ class Ball:
 
             self.vector = originalVectorSelf.subtract(selfPosition.subtract(otherPosition).normalize().multiply(2 * other.mass / totalMass).multiply(originalVectorSelf.subtract(originalVectorOther).dotProduct(selfPosition.subtract(otherPosition))).divide(distance ** 2))
             other.vector = originalVectorOther.subtract(otherPosition.subtract(selfPosition).normalize().multiply(2 * self.mass / totalMass).multiply(originalVectorOther.subtract(originalVectorSelf).dotProduct(otherPosition.subtract(selfPosition))).divide(distance ** 2))
-
-            testingVector = selfPosition.subtract(otherPosition)
-            # print(testingVector.magnitude, testingVector.angle, distance)
 
             contactAngle = math.degrees(math.atan2(other.y - self.y, other.x - self.x))
 
@@ -133,6 +130,7 @@ class Ball:
                 self.y -= distanceToMove * math.sin(math.radians(contactAngle)) * other.mass / totalMass
                 other.x += distanceToMove * math.cos(math.radians(contactAngle)) * self.mass / totalMass
                 other.y += distanceToMove * math.sin(math.radians(contactAngle)) * self.mass / totalMass
+            
             return True
         return False
     

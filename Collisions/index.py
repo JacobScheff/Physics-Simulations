@@ -8,7 +8,7 @@ screenSize = (1200, 600)
 ballSize = 10
 horizontalAmount = 25 // 2
 verticalAmount = 12 // 2
-fps = 25
+fps = 60
 horizontalCells = 24 # 48
 verticalCells = 12 # 24
 gravity = 0 # 200
@@ -21,6 +21,9 @@ class Vector:
         self.angle = angle
         self.x = self.magnitude * math.cos(math.radians(self.angle))
         self.y = self.magnitude * math.sin(math.radians(self.angle))
+
+    def createVector(self, x, y):
+        return Vector((x ** 2 + y ** 2) ** 0.5, math.degrees(math.atan2(y, x)))
 
     def setX(self, x):
         self.x = x
@@ -44,31 +47,28 @@ class Vector:
         return self.x * other.x + self.y * other.y
     
     def add(self, other):
-        return Vector(self.x + other.x, self.y + other.y)
+        return self.createVector(self.x + other.x, self.y + other.y)
     
     def subtract(self, other):
-        return Vector(self.x - other.x, self.y - other.y)
+        return self.createVector(self.x - other.x, self.y - other.y)
     
     def multiply(self, scalar):
-        return Vector(self.x * scalar, self.y * scalar)
+        return self.createVector(self.x * scalar, self.y * scalar)
     
     def divide(self, scalar):
-        return Vector(self.x / scalar, self.y / scalar)
+        return self.createVector(self.x / scalar, self.y / scalar)
     
     def magnitude(self):
         return (self.x ** 2 + self.y ** 2) ** 0.5
     
     def normalize(self):
-        return self.divide(self.magnitude())
+        return self.divide(self.magnitude)
     
-    def angle(self):
-        return math.degrees(math.atan2(self.y, self.x))
-    
-    def rotate(self, angle):
-        angleRad = math.radians(angle)
-        cosAngle = math.cos(angleRad)
-        sinAngle = math.sin(angleRad)
-        return Vector(self.x * cosAngle - self.y * sinAngle, self.x * sinAngle + self.y * cosAngle)
+    # def rotate(self, angle):
+    #     angleRad = math.radians(angle)
+    #     cosAngle = math.cos(angleRad)
+    #     sinAngle = math.sin(angleRad)
+    #     return Vector(self.x * cosAngle - self.y * sinAngle, self.x * sinAngle + self.y * cosAngle)
 
 
 class Ball:
@@ -92,7 +92,6 @@ class Ball:
         self.y += self.vector.y * dt
 
         # Apply border collision
-        velocityChanged = False
         if self.x < self.radius:
             self.vector.setX(abs(self.vector.x))
             self.x = self.radius
@@ -106,10 +105,11 @@ class Ball:
             self.vector.setY(-abs(self.vector.y))
             self.y = screenSize[1] - self.radius
     
-    def collide(self, other):
+    def collide(self, other, ball1Index, ball2Index):
         distance = ((self.x - other.x) ** 2 + (self.y - other.y) ** 2) ** 0.5
         if distance == 0:
-            distance = 0.0001
+            # print("Distance is 0:\t" + str(ball1Index) + "\t" + str(ball2Index))
+            return False
         if distance <= self.radius + other.radius:
             originalVectorSelf = Vector(self.vector.magnitude, self.vector.angle)
             originalVectorOther = Vector(other.vector.magnitude, other.vector.angle)
@@ -117,8 +117,11 @@ class Ball:
             otherPosition = Vector(other.x, other.y)
             totalMass = self.mass + other.mass
 
-            self.vector = originalVectorSelf.subtract(selfPosition.subtract(otherPosition).multiply(2 * other.mass / totalMass).multiply(originalVectorSelf.subtract(originalVectorOther).dotProduct(selfPosition.subtract(otherPosition))).divide(distance ** 2))
-            other.vector = originalVectorOther.subtract(otherPosition.subtract(selfPosition).multiply(2 * self.mass / totalMass).multiply(originalVectorOther.subtract(originalVectorSelf).dotProduct(otherPosition.subtract(selfPosition))).divide(distance ** 2))
+            self.vector = originalVectorSelf.subtract(selfPosition.subtract(otherPosition).normalize().multiply(2 * other.mass / totalMass).multiply(originalVectorSelf.subtract(originalVectorOther).dotProduct(selfPosition.subtract(otherPosition))).divide(distance ** 2))
+            other.vector = originalVectorOther.subtract(otherPosition.subtract(selfPosition).normalize().multiply(2 * self.mass / totalMass).multiply(originalVectorOther.subtract(originalVectorSelf).dotProduct(otherPosition.subtract(selfPosition))).divide(distance ** 2))
+
+            testingVector = selfPosition.subtract(otherPosition)
+            # print(testingVector.magnitude, testingVector.angle, distance)
 
             contactAngle = math.degrees(math.atan2(other.y - self.y, other.x - self.x))
 
@@ -152,10 +155,11 @@ for i in range(horizontalAmount):
         randomVelocities = random.randint(0, 100)
         randomAngle = random.randint(0, 360)
         randomVector = Vector(randomVelocities, randomAngle)
+        # randomVector = Vector(0, 0)
         balls.append(Ball(ballPos[0], ballPos[1], randomVector, ballSize))
 
-# balls.append(Ball(100, 100, 100, 0, 20))
-# balls.append(Ball(600, 100, 100, 180, 20))
+# balls.append(Ball(100, 100, Vector(200, 45), 20))
+# balls.append(Ball(800, 100, Vector(200, 135), 20))
 # balls.append(Ball(100, 100, 8000, 45, 10))
 
 pygame.init()
@@ -235,6 +239,7 @@ while True:
         ball.move(1 / fps)
 
     # Check for collisions in the current cell and the adjacent cells
+    ballsAlreadyChecked = []
     for cellX in range(horizontalCells):
         for cellY in range(verticalCells):
             cellId = cellX + cellY * horizontalCells
@@ -248,7 +253,11 @@ while True:
                                 if(ballIndex == -1 or otherBallIndex == -1):
                                     continue
                                 if ballIndex != otherBallIndex:
-                                    balls[ballIndex].collide(balls[otherBallIndex])
+                                    # Check if the balls have already been checked
+                                    if (ballIndex, otherBallIndex) in ballsAlreadyChecked or (otherBallIndex, ballIndex) in ballsAlreadyChecked:
+                                        continue
+                                    ballsAlreadyChecked.append((ballIndex, otherBallIndex))
+                                    balls[ballIndex].collide(balls[otherBallIndex], ballIndex, otherBallIndex)
 
     pygame.display.flip()
     clock.tick(fps)

@@ -8,7 +8,7 @@ screenSize = (1200, 600)
 ballSize = 10
 horizontalAmount = 12
 verticalAmount = 6
-fps = 60
+fps = 200
 horizontalCells = 24 # 48
 verticalCells = 12 # 24
 gravity = 0 # 200
@@ -105,12 +105,11 @@ class Ball:
             self.vector.setY(-abs(self.vector.y))
             self.y = screenSize[1] - self.radius
     
-    def collide(self, other, ball1Index, ball2Index):
+    def collide(self, other):
         distance = ((self.x - other.x) ** 2 + (self.y - other.y) ** 2) ** 0.5
         if distance == 0:
-            # print("Distance is 0:\t" + str(ball1Index) + "\t" + str(ball2Index))
             return False
-        if distance <= self.radius + other.radius:
+        if distance <= self.radius + other.radius:            
             originalVectorSelf = Vector(self.vector.magnitude, self.vector.angle)
             originalVectorOther = Vector(other.vector.magnitude, other.vector.angle)
             selfPosition = Vector(self.x, self.y)
@@ -122,18 +121,13 @@ class Ball:
 
             # If the balls are overlapping, move them apart
             if distance < self.radius + other.radius:
-                # distanceToMove = (self.radius + other.radius - distance)
-                # # bigger mass == less movement
-                # self.x -= distanceToMove * math.cos(math.radians(contactAngle)) * other.mass / totalMass
-                # self.y -= distanceToMove * math.sin(math.radians(contactAngle)) * other.mass / totalMass
-                # other.x += distanceToMove * math.cos(math.radians(contactAngle)) * self.mass / totalMass
-                # other.y += distanceToMove * math.sin(math.radians(contactAngle)) * self.mass / totalMass
-                selfPositionOffset = self.vector.normalize().multiply((self.radius + other.radius - distance) * other.mass / totalMass)
-                selfPositionOffset = other.vector.normalize().multiply((self.radius + other.radius - distance) * self.mass / totalMass)
-                self.x += selfPositionOffset.x
-                self.y += selfPositionOffset.y
-                other.x -= selfPositionOffset.x
-                other.y -= selfPositionOffset.y
+                contactAngle = math.degrees(math.atan2(self.y - other.y, self.x - other.x))
+                distanceToMove = (self.radius + other.radius - distance)
+                # bigger mass == less movement
+                self.x += distanceToMove * math.cos(math.radians(contactAngle)) * other.mass / totalMass
+                self.y += distanceToMove * math.sin(math.radians(contactAngle)) * other.mass / totalMass
+                other.x -= distanceToMove * math.cos(math.radians(contactAngle)) * self.mass / totalMass
+                other.y -= distanceToMove * math.sin(math.radians(contactAngle)) * self.mass / totalMass
             
             return True
         return False
@@ -160,8 +154,8 @@ for i in range(horizontalAmount):
         # randomVector = Vector(0, 0)
         balls.append(Ball(ballPos[0], ballPos[1], randomVector, ballSize))
 
-# balls.append(Ball(100, 100, Vector(200, 45), 20))
-# balls.append(Ball(800, 100, Vector(200, 135), 20))
+# balls.append(Ball(200, 200, Vector(0, 0), 20))
+# balls.append(Ball(240, 240, Vector(150, 225), 20))
 # balls.append(Ball(1120, 500, Vector(800, 45), 40))
 
 pygame.init()
@@ -259,7 +253,7 @@ while True:
                                     # if (ballIndex, otherBallIndex) in ballsAlreadyChecked or (otherBallIndex, ballIndex) in ballsAlreadyChecked:
                                     #     continue
                                     # ballsAlreadyChecked.append((ballIndex, otherBallIndex))
-                                    balls[ballIndex].collide(balls[otherBallIndex], ballIndex, otherBallIndex)
+                                    balls[ballIndex].collide(balls[otherBallIndex])
 
     pygame.display.flip()
     clock.tick(fps)

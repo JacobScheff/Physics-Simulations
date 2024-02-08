@@ -2,12 +2,15 @@ import pygame
 import sys
 import time
 import math
+import random
 
 screenSize = (1200, 600)
-ballRadius = 8
+particleRadius = 8
 fps = 100
-gravity = 160
+gravity = 0 # 160
 borderCollisionMultiplier = 0.9
+horizontalAmount = 12 * 2
+verticalAmount = 6 * 2
 
 class Particle(pygame.sprite.Sprite):
     # position and velocity is pygame.Vector2
@@ -39,8 +42,13 @@ class Particle(pygame.sprite.Sprite):
             self.velocity.y *= -borderCollisionMultiplier
 
 particles = []
-for i in range(10):
-    particles.append(Particle(pygame.Vector2(100 * i, 25 * i), pygame.Vector2(100, 100), ballRadius))
+for i in range(horizontalAmount):
+    for j in range(verticalAmount):
+        ballPos = (screenSize[0] - particleRadius * 2) * i / horizontalAmount + particleRadius, (screenSize[1] - particleRadius * 2) * j / verticalAmount + particleRadius
+        # create random vector
+        ballVel = pygame.Vector2(1, 1).rotate(random.randint(0, 360))
+        ballVel *= random.randint(50, 150)
+        particles.append(Particle(ballPos, ballVel, particleRadius))
 
 pygame.init()
 screen = pygame.display.set_mode(screenSize)
@@ -62,6 +70,9 @@ while True:
             distance = particles[i].position.distance_to(particles[j].position)
             if distance < particles[i].radius + particles[j].radius:
                 normal = particles[i].position - particles[j].position
+                # if particles are on top of each other
+                if normal.length() == 0:
+                    normal = pygame.Vector2(1, 0)
                 normal.normalize_ip()
                 relativeVelocity = particles[i].velocity - particles[j].velocity
                 dotProduct = relativeVelocity.dot(normal)

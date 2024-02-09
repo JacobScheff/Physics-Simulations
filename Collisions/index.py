@@ -5,7 +5,7 @@ import math
 import random
 
 screenSize = (1200, 600)
-fps = 80
+fps = 25
 horizontalCells = 24 # 48
 verticalCells = 12 # 24
 gravity = 0 # 200
@@ -14,8 +14,8 @@ ballIndexKey = [[-1, -1]for i in range(horizontalCells * verticalCells)]
 
 # Ball parameters
 ballSize = 10
-horizontalAmount = 12
-verticalAmount = 6
+horizontalAmount = 48
+verticalAmount = 24
 def getRandomVelocity():
     return Vector(0, 0)
     # return Vector(random.randint(-100, 100), random.randint(-100, 100))
@@ -143,7 +143,7 @@ for i in range(horizontalAmount):
 
 # balls.append(Ball(200, 200, Vector(0, 0), 20))
 # balls.append(Ball(300, 300, Vector(-150, -150), 20))
-balls.append(Ball(1120, 500, Vector(-500, -200), 40))
+balls.append(Ball(1120, 500, Vector(-1000, -400), 40))
 
 pygame.init()
 screen = pygame.display.set_mode(screenSize)

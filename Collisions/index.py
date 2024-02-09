@@ -5,15 +5,20 @@ import math
 import random
 
 screenSize = (1200, 600)
-ballSize = 10
-horizontalAmount = 12
-verticalAmount = 6
 fps = 80
 horizontalCells = 24 # 48
 verticalCells = 12 # 24
 gravity = 0 # 200
 balls = []
 ballIndexKey = [[-1, -1]for i in range(horizontalCells * verticalCells)]
+
+# Ball parameters
+ballSize = 10
+horizontalAmount = 12
+verticalAmount = 6
+def getRandomVelocity():
+    return Vector(0, 0)
+    # return Vector(random.randint(-100, 100), random.randint(-100, 100))
 
 class Vector:
     def __init__(self, x, y):
@@ -133,15 +138,12 @@ def dotProduct(v1, a1, v2, a2):
 for i in range(horizontalAmount):
     for j in range(verticalAmount):
         ballPos = (screenSize[0] - ballSize * 2) * i / horizontalAmount + ballSize, (screenSize[1] - ballSize * 2) * j / verticalAmount + ballSize
-        randomX = random.randint(-100, 100)
-        randomY = random.randint(-100, 100)
-        randomVector = Vector(randomX, randomY)
-        # randomVector = Vector(0, 0)
+        randomVector = getRandomVelocity()
         balls.append(Ball(ballPos[0], ballPos[1], randomVector, ballSize))
 
 # balls.append(Ball(200, 200, Vector(0, 0), 20))
 # balls.append(Ball(300, 300, Vector(-150, -150), 20))
-# balls.append(Ball(1120, 500, Vector(800, 45), 40))
+balls.append(Ball(1120, 500, Vector(-500, -200), 40))
 
 pygame.init()
 screen = pygame.display.set_mode(screenSize)

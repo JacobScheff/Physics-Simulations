@@ -5,18 +5,18 @@ import math
 import random
 
 screenSize = (1200, 600)
-fps = 50
+fps = 25
 horizontalCells = 24 # 48
 verticalCells = 12 # 24
 gravity = 0 # 200
-repulsionForce = 4
+# repulsionForce = 4
 balls = []
 ballIndexKey = [[-1, -1]for i in range(horizontalCells * verticalCells)]
 
 # Ball parameters
 ballSize = 10
-horizontalAmount = 48 // 2
-verticalAmount = 24 // 2
+horizontalAmount = 48
+verticalAmount = 24
 def getRandomVelocity():
     return Vector(0, 0)
     # return Vector(random.randint(-100, 100), random.randint(-100, 100))
@@ -97,9 +97,9 @@ class Ball:
     
     def collide(self, other):
         distance = ((self.x - other.x) ** 2 + (self.y - other.y) ** 2) ** 0.5
-        if distance != 0:
-            self.vector = self.vector.add(Vector(self.x - other.x, self.y - other.y).normalize().multiply(repulsionForce * self.mass / (distance ** 2)))
-            other.vector = other.vector.add(Vector(other.x - self.x, other.y - self.y).normalize().multiply(repulsionForce * other.mass / (distance ** 2)))
+        # if distance != 0:
+        #     self.vector = self.vector.add(Vector(self.x - other.x, self.y - other.y).normalize().multiply(repulsionForce * self.mass / (distance ** 2)))
+        #     other.vector = other.vector.add(Vector(other.x - self.x, other.y - self.y).normalize().multiply(repulsionForce * other.mass / (distance ** 2)))
         if distance == 0:
             return False
         if distance <= self.radius + other.radius:            
@@ -147,7 +147,7 @@ for i in range(horizontalAmount):
 
 # balls.append(Ball(200, 200, Vector(0, 0), 20))
 # balls.append(Ball(300, 300, Vector(-150, -150), 20))
-balls.append(Ball(1120, 500, Vector(-400, -200), 40))
+balls.append(Ball(1120, 500, Vector(-800, -400), 40))
 
 pygame.init()
 screen = pygame.display.set_mode(screenSize)

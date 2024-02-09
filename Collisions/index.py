@@ -6,8 +6,8 @@ import random
 
 screenSize = (1200, 600)
 ballSize = 10
-horizontalAmount = 12 * 0
-verticalAmount = 6 * 0
+horizontalAmount = 12
+verticalAmount = 6
 fps = 80
 horizontalCells = 24 # 48
 verticalCells = 12 # 24
@@ -16,29 +16,9 @@ balls = []
 ballIndexKey = [[-1, -1]for i in range(horizontalCells * verticalCells)]
 
 class Vector:
-    def __init__(self, magnitude, angle):
-        self.magnitude = magnitude
-        self.angle = angle
-        self.x = self.magnitude * math.cos(math.radians(self.angle))
-        self.y = self.magnitude * math.sin(math.radians(self.angle))
-
-    def createVector(self, x, y):
-        return Vector((x ** 2 + y ** 2) ** 0.5, math.degrees(math.atan2(y, x)))
-
-    def setX(self, x):
+    def __init__(self, x, y):
         self.x = x
-        self.magnitude = (self.x ** 2 + self.y ** 2) ** 0.5
-        self.angle = math.degrees(math.atan2(self.y, self.x))
-
-    def setY(self, y):
         self.y = y
-        self.magnitude = (self.x ** 2 + self.y ** 2) ** 0.5
-        self.angle = math.degrees(math.atan2(self.y, self.x))
-
-    def setMagnitude(self, magnitude):
-        self.magnitude = magnitude
-        self.x = self.magnitude * math.cos(math.radians(self.angle))
-        self.y = self.magnitude * math.sin(math.radians(self.angle))
 
     def crossProduct(self, other):
         return self.x * other.y - self.y * other.x
@@ -47,44 +27,39 @@ class Vector:
         return self.x * other.x + self.y * other.y
     
     def add(self, other):
-        # return self.createVector(self.x + other.x, self.y + other.y)
-        self.x += other.x
-        self.y += other.y
-        self.magnitude = (self.x ** 2 + self.y ** 2) ** 0.5
-        self.angle = math.degrees(math.atan2(self.y, self.x))
-        return self
-    
+        newVector = Vector(self.x + other.x, self.y + other.y)
+        return newVector
+
     def subtract(self, other):
-        # return self.createVector(self.x - other.x, self.y - other.y)
-        self.x -= other.x
-        self.y -= other.y
-        self.magnitude = (self.x ** 2 + self.y ** 2) ** 0.5
-        self.angle = math.degrees(math.atan2(self.y, self.x))
-        return self
-    
+        newVector = Vector(self.x - other.x, self.y - other.y)
+        return newVector
+
     def multiply(self, scalar):
-        return self.createVector(self.x * scalar, self.y * scalar)
-    
+        newVector = Vector(self.x * scalar, self.y * scalar)
+        return newVector
+
     def divide(self, scalar):
-        return self.createVector(self.x / scalar, self.y / scalar)
-        
+        newVector = Vector(self.x / scalar, self.y / scalar)
+        return newVector
+
+    def getMagnitude(self):
+        return (self.x ** 2 + self.y ** 2) ** 0.5
+    
+    def getAngle(self):
+        return math.degrees(math.atan2(self.y, self.x))
+    
     def normalize(self):
-        return self.divide(self.magnitude)
-
-testing1 = Vector(3, 45)
-testing2 = Vector(4, 90)
-print(testing1.subtract(testing2).magnitude)
-print(testing1.subtract(testing2).angle)
-print(testing1.createVector(3, 4).magnitude
-
-time.sleep(9999999)
+        return self.divide(self.getMagnitude())
+    
+    def setMagnitude(self, magnitude):
+        self.normalize().multiply(magnitude)
+        return self
 
 class Ball:
     def __init__(self, x, y, vector, radius):
         self.x = x
         self.y = y
         self.vector = vector
-        # self.radius = radius + random.randint(-1, 3)
         self.radius = radius
         # Mass is the area of the ball
         self.mass = self.radius ** 2 * 3.14
@@ -94,7 +69,7 @@ class Ball:
 
     def move(self, dt):
         # Apply gravity
-        self.vector.setY(self.vector.y + gravity * dt)
+        self.vector.y += gravity * dt
 
         # Move the ball
         self.x += self.vector.x * dt
@@ -102,16 +77,16 @@ class Ball:
 
         # Apply border collision
         if self.x < self.radius:
-            self.vector.setX(abs(self.vector.x))
+            self.vector.x = abs(self.vector.x)
             self.x = self.radius
         elif self.x > screenSize[0] - self.radius:
-            self.vector.setX(-abs(self.vector.x))
+            self.vector.x = -abs(self.vector.x)
             self.x = screenSize[0] - self.radius
         if self.y < self.radius:
-            self.vector.setY(abs(self.vector.y))
+            self.vector.y = abs(self.vector.y)
             self.y = self.radius
         elif self.y > screenSize[1] - self.radius:
-            self.vector.setY(-abs(self.vector.y))
+            self.vector.y = -abs(self.vector.y)
             self.y = screenSize[1] - self.radius
     
     def collide(self, other):
@@ -119,8 +94,8 @@ class Ball:
         if distance == 0:
             return False
         if distance <= self.radius + other.radius:            
-            originalVectorSelf = Vector(self.vector.magnitude, self.vector.angle)
-            originalVectorOther = Vector(other.vector.magnitude, other.vector.angle)
+            originalVectorSelf = Vector(self.vector.x, self.vector.y)
+            originalVectorOther = Vector(other.vector.x, other.vector.y)
             selfPosition = Vector(self.x, self.y)
             otherPosition = Vector(other.x, other.y)
             totalMass = self.mass + other.mass
@@ -137,7 +112,7 @@ class Ball:
                 self.y += distanceToMove * math.sin(math.radians(contactAngle)) * other.mass / totalMass
                 other.x -= distanceToMove * math.cos(math.radians(contactAngle)) * self.mass / totalMass
                 other.y -= distanceToMove * math.sin(math.radians(contactAngle)) * self.mass / totalMass
-            print("v1:\t" + str(self.vector.magnitude) + "\tv2:\t" + str(other.vector.magnitude) + "\tangle:\t" + str(math.degrees(math.atan2(self.y - other.y, self.x - other.x))))
+            # print("v1:\t" + str(self.vector.getMagnitude()) + "\tv2:\t" + str(other.vector.getMagnitude()) + "\tangle:\t" + str(math.degrees(math.atan2(self.y - other.y, self.x - other.x))))
             
             return True
         return False
@@ -158,14 +133,14 @@ def dotProduct(v1, a1, v2, a2):
 for i in range(horizontalAmount):
     for j in range(verticalAmount):
         ballPos = (screenSize[0] - ballSize * 2) * i / horizontalAmount + ballSize, (screenSize[1] - ballSize * 2) * j / verticalAmount + ballSize
-        randomVelocities = random.randint(0, 200)
-        randomAngle = random.randint(0, 360)
-        randomVector = Vector(randomVelocities, randomAngle)
+        randomX = random.randint(-100, 100)
+        randomY = random.randint(-100, 100)
+        randomVector = Vector(randomX, randomY)
         # randomVector = Vector(0, 0)
         balls.append(Ball(ballPos[0], ballPos[1], randomVector, ballSize))
 
-balls.append(Ball(200, 200, Vector(0, 0), 20))
-balls.append(Ball(300, 300, Vector(150, 225), 20))
+# balls.append(Ball(200, 200, Vector(0, 0), 20))
+# balls.append(Ball(300, 300, Vector(-150, -150), 20))
 # balls.append(Ball(1120, 500, Vector(800, 45), 40))
 
 pygame.init()
@@ -270,6 +245,6 @@ while True:
     if time.time() - fpsTimer >= 1:
         totalKineticEnergy = 0
         for ball in balls:
-            totalKineticEnergy += ball.mass * ball.vector.magnitude ** 2
+            totalKineticEnergy += ball.mass * ball.vector.getMagnitude() ** 2
         print(str(clock.get_fps()) + "\t" + str(totalKineticEnergy))
         fpsTimer = time.time()

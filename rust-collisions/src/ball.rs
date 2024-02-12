@@ -1,12 +1,11 @@
 use crate::vector::Vector;
-use crate::screen_size;
-use crate::fps;
-use crate::horizontal_cells;
-use crate::vertical_cells;
-use crate::ball_size;
-use crate::horizontal_amount;
-use crate::vertical_amount;
-use crate::balls;
+use crate::SCREEN_SIZE;
+use crate::FPS;
+use crate::HORIZONTAL_CELLS;
+use crate::VERTICAL_CELLS;
+use crate::BALL_SIZE;
+use crate::HORIZONTAL_AMOUNT;
+use crate::VERTICAL_AMOUNT;
 
 pub struct Ball {
     x: f64,
@@ -38,15 +37,15 @@ impl Ball {
         if self.x < self.radius {
             self.x = self.radius;
             self.velocity.x = self.velocity.x.abs();
-        } else if self.x > screen_size.0 as f64 - self.radius {
-            self.x = screen_size.0 as f64 - self.radius;
+        } else if self.x > SCREEN_SIZE.0 as f64 - self.radius {
+            self.x = SCREEN_SIZE.0 as f64 - self.radius;
             self.velocity.x = -self.velocity.x.abs();
         }
         if self.y < self.radius {
             self.y = self.radius;
             self.velocity.y = self.velocity.y.abs();
-        } else if self.y > screen_size.1 as f64 - self.radius {
-            self.y = screen_size.1 as f64 - self.radius;
+        } else if self.y > SCREEN_SIZE.1 as f64 - self.radius {
+            self.y = SCREEN_SIZE.1 as f64 - self.radius;
             self.velocity.y = -self.velocity.y.abs();
         }
     }
@@ -80,17 +79,17 @@ impl Ball {
         }
     }
 
-    pub fn getCell(&self) -> (i32, i32) {
-        let mut cell_x: i32 = (self.x / (screen_size.0 as f64 / horizontal_cells as f64)) as i32;
-        cell_x = cell_x.clamp(0, horizontal_cells - 1);
-        let mut cell_y: i32 = (self.y / (screen_size.1 as f64 / vertical_cells as f64)) as i32;
-        cell_y = cell_y.clamp(0, vertical_cells - 1);
+    pub fn get_cell(&self) -> (i32, i32) {
+        let mut cell_x: i32 = (self.x / (SCREEN_SIZE.0 as f64 / HORIZONTAL_CELLS as f64)) as i32;
+        cell_x = cell_x.clamp(0, HORIZONTAL_CELLS - 1);
+        let mut cell_y: i32 = (self.y / (SCREEN_SIZE.1 as f64 / VERTICAL_CELLS as f64)) as i32;
+        cell_y = cell_y.clamp(0, VERTICAL_CELLS - 1);
         (cell_x, cell_y)
     }
 
-    pub fn getCellId(&self) -> i32 {
-        let cell: (i32, i32) = self.getCell();
-        cell.0 + cell.1 * horizontal_cells
+    pub fn get_cell_id(&self) -> i32 {
+        let cell: (i32, i32) = self.get_cell();
+        cell.0 + cell.1 * HORIZONTAL_CELLS
     }
     
 }

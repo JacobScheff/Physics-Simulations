@@ -1,160 +1,26 @@
-use macroquad::miniquad::window::set_window_size;
-use macroquad::prelude::*;
+// use macroquad::miniquad::window::set_window_size;
+// use macroquad::prelude::*;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
+mod vector;
 mod ball;
 
-#[macroquad::main("BasicShapes")]
-async fn main() {
-    let screen_size: (i32, i32) = (1000, 600);
-    let ball_size = 6;
-    let horizontal_amount: i32 = 16;
-    let vertical_amount: i32 = 12;
-    let fps: i32 = 120;
-    let horizontal_cells: i32 = 48;
-    let vertical_cells: i32 = 24;
-    // let gravity: i32 = 200;
+const screen_size: (i32, i32) = (1200, 600);
+const fps: i32 = 120;
+const horizontal_cells: i32 = 48;
+const vertical_cells: i32 = 24;
+const ball_size: i32 = 6;
+const horizontal_amount: i32 = 16;
+const vertical_amount: i32 = 12;
+const balls: Vec<ball::Ball> = Vec::new();
 
-    // Update the window size
-    request_new_screen_size(screen_size.0 as f32, screen_size.1 as f32);
+// Get dot product of two vectors with magnitude and angle
+fn dot_product(v1: f64, a1: f64, v2: f64, a2: f64) -> f64 {
+    v1 * v2 * (a2 - a1).to_radians().cos()
+}
+
+// #[macroquad::main("BasicShapes")]
+fn main() {
     
-    // Create the balls array
-    let mut balls: Vec<Vec<Vec<ball::Ball>>> = Vec::new();
-    for i in 0..horizontal_cells {
-        let mut row: Vec<Vec<ball::Ball>> = Vec::new();
-        for j in 0..vertical_cells {
-            row.push(Vec::new());
-        }
-        balls.push(row);
-    }
-
-    // Initialize the balls
-    for i in 0..horizontal_amount {
-        for j in 0..vertical_amount {
-            // Create the ball
-            let ball = ball::Ball::new(
-                ((screen_size.0 - ball_size * 2) * i / horizontal_amount + ball_size) as f64,
-                ((screen_size.1 - ball_size * 2) * j / vertical_amount + ball_size) as f64,
-                0.0,
-                0.0,
-                ball_size as f64,
-                (i * vertical_amount + j) as i32,
-            );
-            let cell = ball.get_cell(screen_size.0, screen_size.1, horizontal_cells, vertical_cells);
-            balls[cell.0 as usize][cell.1 as usize].push(ball);
-        }
-    }
-
-    // Add a ball that moves
-    let movingBall = ball::Ball::new(
-        1000.0,
-        500.0,
-        350.0,
-        -125.0,
-        20 as f64,
-        9999999,
-    );
-    let cell = movingBall.get_cell(screen_size.0, screen_size.1, horizontal_cells, vertical_cells);
-    balls[cell.0 as usize][cell.1 as usize].push(movingBall);
-
-    // Never ending loop that runs at fps
-    let mut last_time = Instant::now();
-    loop {
-        // Calculate the delta time
-        let dt = last_time.elapsed().as_secs_f64();
-        last_time = Instant::now();
-
-        // Clear the screen
-        clear_background(BLACK);
-
-        // Move the balls
-        for x in 0..horizontal_cells {
-            for y in 0..vertical_cells {
-                for i in 0..balls[x as usize][y as usize].len() {
-                    let mut ball = balls[x as usize][y as usize][i].clone();
-                    let (current_cell, new_cell) = ball.move_ball(screen_size.0, screen_size.1, horizontal_cells, vertical_cells, 0.0, dt);
-                    // Update the cells if the ball moved to a different cell
-                    if current_cell != new_cell {
-                        balls[current_cell.0 as usize][current_cell.1 as usize].retain(|b| b.get_id() != ball.get_id());
-                        balls[new_cell.0 as usize][new_cell.1 as usize].push(ball);
-                    }
-                    else {
-                        balls[current_cell.0 as usize][current_cell.1 as usize][i] = ball;
-                    }
-                    // Draw the ball
-                    let ballDislay = balls[current_cell.0 as usize][current_cell.1 as usize][i].clone();
-                    draw_circle(
-                        ballDislay.get_x() as f32,
-                        ballDislay.get_y() as f32,
-                        ballDislay.get_radius() as f32,
-                        WHITE,
-                    );
-                }
-            }
-        }
-
-        next_frame().await;
-
-        // Collision check the balls
-        for x in 0..horizontal_cells {
-            for y in 0..vertical_cells {
-                // Iterate over the balls in the cell
-                let mut i = 0;
-                loop {
-                    if balls[x as usize][y as usize].len() == 0 {
-                        break;
-                    }
-                    // Iterate over the balls in the same cell or the adjacent cells
-                    for j in -1..2 {
-                        for k in -1..2 {
-                            if x + j >= 0 && x + j < horizontal_cells && y + k >= 0 && y + k < vertical_cells {
-                                let mut l = 0;
-                                loop{
-                                    // Check if the loop should end
-                                    if balls[(x + j) as usize][(y + k) as usize].len() == 0 || l >= balls[(x + j) as usize][(y + k) as usize].len() {
-                                        break;
-                                    }
-                                    // Create a copy of the balls to avoid borrowing issues
-                                    let mut ball = balls[x as usize][y as usize][i].clone();
-                                    let mut other_ball = balls[(x + j) as usize][(y + k) as usize][l].clone();
-                                    // Check if the balls are different
-                                    if ball.get_id() == other_ball.get_id() {
-                                        l += 1;
-                                        continue;
-                                    }
-                                    // Check for collisions
-                                    let (current_cell, new_cell, other_current_cell, other_new_cell) = ball.collide(&mut other_ball, screen_size.0, screen_size.1, horizontal_cells, vertical_cells);
-                                    // Update the cells if the ball moved to a different cell or update the ball's state
-                                    if current_cell != new_cell {
-                                        balls[current_cell.0 as usize][current_cell.1 as usize].retain(|b| b.get_id() != ball.get_id());
-                                        balls[new_cell.0 as usize][new_cell.1 as usize].push(ball);
-                                    }
-                                    else {
-                                        balls[current_cell.0 as usize][current_cell.1 as usize][i] = ball;
-                                    }
-                                    if other_current_cell != other_new_cell {
-                                        balls[other_current_cell.0 as usize][other_current_cell.1 as usize].retain(|b| b.get_id() != other_ball.get_id());
-                                        balls[other_new_cell.0 as usize][other_new_cell.1 as usize].push(other_ball);
-                                    }
-                                    else {
-                                        balls[other_current_cell.0 as usize][other_current_cell.1 as usize][l] = other_ball;
-                                    }
-
-                                    // Update loop state
-                                    l += 1;
-                                }
-                            }
-                        }
-                    }
-                    i += 1;
-                    if i >= balls[x as usize][y as usize].len() {
-                        break;
-                    }
-                }
-            }
-        }
-
-        println!("FPS: {}", 1.0 / dt);
-        sleep(Duration::from_millis(1000 / fps as u64));
-    }
+    
 }

@@ -141,7 +141,7 @@ async fn main() {
 
     // Game loop
     let mut fps_timer = Instant::now();
-    while true {
+    loop {
         // Clear the screen
         clear_background(BLACK);
 
@@ -151,23 +151,8 @@ async fn main() {
         // Move and draw the balls
         for i in 0..balls.len() {
             balls[i].move_ball(1.0 / FPS as f64);
-            draw_circle(balls[i].get_x() as f32, balls[i].get_y() as f32, BALL_SIZE as f32, WHITE);
+            draw_circle(balls[i].get_x() as f32, balls[i].get_y() as f32, balls[i].get_radius() as f32, WHITE);
         }
-        
-        // for cellX in range(horizontalCells):
-        // for cellY in range(verticalCells):
-        //     cellId = cellX + cellY * horizontalCells
-        //     for ballIndex in range(ballIndexKey[cellId][0], ballIndexKey[cellId][1] + 1):
-        //         for j in range(-1, 2):
-        //             for k in range(-1, 2):
-        //                 if cellX + j >= 0 and cellX + j < horizontalCells and cellY + k >= 0 and cellY + k < verticalCells:
-        //                     newCellId = cellX + j + (cellY + k) * horizontalCells
-        //                     for otherBallIndex in range(ballIndexKey[newCellId][0], ballIndexKey[newCellId][1] + 1):
-        //                         # There are no balls in this cell
-        //                         if(ballIndex == -1 or otherBallIndex == -1):
-        //                             continue
-        //                         if ballIndex != otherBallIndex:
-        //                             balls[ballIndex].collide(balls[otherBallIndex])
 
         // Check for collisions in the current cell and the adjacent cells
         for cell_x in 0..HORIZONTAL_CELLS {
@@ -185,7 +170,6 @@ async fn main() {
                                     }
                                     if ball_index != other_ball_index {
                                         let ball_1_clone = balls[ball_index as usize].clone();
-                                        let ball_2_clone = balls[other_ball_index as usize].clone();
                                         let (ball_1, ball_2) = ball_1_clone.collide(&mut balls[other_ball_index as usize]);
                                         balls[ball_index as usize] = ball_1;
                                         balls[other_ball_index as usize] = ball_2.clone();
@@ -206,6 +190,9 @@ async fn main() {
 
         // Update the fps timer
         fps_timer = Instant::now();
+
+        // Update the screen
+        next_frame().await
     }
     
 }

@@ -50,10 +50,10 @@ impl Ball {
         }
     }
 
-    pub fn collide(&mut self, other: &mut Ball) {
+    pub fn collide(mut self, other: &mut Ball) -> (Ball, Ball) {
         let distance: f64 = ((self.x - other.x).powi(2) + (self.y - other.y).powi(2)).sqrt();
         if distance == 0.0 {
-            return;
+            return (self, other.clone());
         }
 
         if distance <= self.radius + other.radius {
@@ -77,6 +77,8 @@ impl Ball {
                 other.y -= distance_to_move * constact_angle.sin() * self.mass / total_mass;
             }
         }
+
+        return (self, other.clone());
     }
 
     pub fn get_cell(&self) -> (i32, i32) {

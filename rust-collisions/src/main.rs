@@ -184,7 +184,11 @@ async fn main() {
                                         continue;
                                     }
                                     if ball_index != other_ball_index {
-                                        balls[ball_index as usize].collide(&mut balls[other_ball_index as usize]);
+                                        let ball_1_clone = balls[ball_index as usize].clone();
+                                        let ball_2_clone = balls[other_ball_index as usize].clone();
+                                        let (ball_1, ball_2) = ball_1_clone.collide(&mut balls[other_ball_index as usize]);
+                                        balls[ball_index as usize] = ball_1;
+                                        balls[other_ball_index as usize] = ball_2.clone();
                                     }
                                 }
                             }

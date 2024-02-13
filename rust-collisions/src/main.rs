@@ -20,7 +20,7 @@ fn dot_product(v1: f64, a1: f64, v2: f64, a2: f64) -> f64 {
 
 // Binary search functions
 fn binary_search_ball_index_first(
-    arr: Vec<ball::Ball>,
+    arr: &Vec<ball::Ball>,
     target_cell_id: i32,
     mut start: i32,
     mut end: i32,
@@ -50,7 +50,7 @@ fn binary_search_ball_index_first(
 }
 
 fn binary_search_ball_index_last(
-    arr: Vec<ball::Ball>,
+    arr: &Vec<ball::Ball>,
     target_cell_id: i32,
     mut start: i32,
     mut end: i32,
@@ -79,10 +79,39 @@ fn binary_search_ball_index_last(
     return -1;
 }
 
+// Insertion sort the balls (possibly can use binary sort to make this even faster)
+fn sort_balls(mut arr: Vec<ball::Ball>, mut keys: Vec<Vec<i32>>) -> (Vec<ball::Ball>, Vec<Vec<i32>>) {
+    for i in 1..arr.len() {
+        let key = arr[i].clone();
+        let key_id = key.get_cell_id();
+        let mut j = i - 1;
+        while j >= 0 && arr[j].get_cell_id() > key_id {
+            arr[j + 1] = arr[j].clone();
+            j -= 1;
+        }
+        arr[j + 1] = key.clone();
+    }
+
+    // Update the ball index key
+    let mut start_index = 0;
+    for i in 0..HORIZONTAL_CELLS*VERTICAL_CELLS {
+        let found_index_start = binary_search_ball_index_first(&arr, i, start_index, arr.len() as i32 - 1);
+        let found_index_end = binary_search_ball_index_last(&arr, i, start_index, arr.len() as i32 - 1);
+        if found_index_start != -1 {
+            start_index = found_index_start;
+        }
+        keys[i as usize][0] = found_index_start;
+        keys[i as usize][1] = found_index_end;
+    }
+
+    return (arr, keys);
+}
+
 // #[macroquad::main("BasicShapes")]
 fn main() {
     // Create the balls list
     let mut balls: Vec<ball::Ball> = Vec::new();
+    let mut ball_index_key: Vec<Vec<i32>> = vec![vec![-1, -1]; HORIZONTAL_CELLS as usize * VERTICAL_CELLS as usize];
 
     for i in 0..HORIZONTAL_AMOUNT {
         for j in 0..VERTICAL_AMOUNT {

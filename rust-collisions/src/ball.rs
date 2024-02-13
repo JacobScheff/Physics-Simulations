@@ -91,5 +91,16 @@ impl Ball {
         let cell: (i32, i32) = self.get_cell();
         cell.0 + cell.1 * HORIZONTAL_CELLS
     }
+
+    pub fn clone(&self) -> Ball {
+        Ball {
+            x: self.x,
+            y: self.y,
+            velocity: self.velocity.clone(),
+            radius: self.radius,
+            mass: self.mass,
+            id: self.id,
+        }
+    }
     
 }

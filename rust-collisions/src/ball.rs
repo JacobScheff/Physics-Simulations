@@ -92,6 +92,42 @@ impl Ball {
         cell.0 + cell.1 * HORIZONTAL_CELLS
     }
 
+    pub fn get_id(&self) -> i32 {
+        self.id
+    }
+
+    pub fn get_x(&self) -> f64 {
+        self.x
+    }
+
+    pub fn get_y(&self) -> f64 {
+        self.y
+    }
+
+    pub fn get_radius(&self) -> f64 {
+        self.radius
+    }
+
+    pub fn get_mass(&self) -> f64 {
+        self.mass
+    }
+
+    pub fn get_velocity(&self) -> Vector {
+        self.velocity.clone()
+    }
+
+    pub fn set_x(&mut self, x: f64) {
+        self.x = x;
+    }
+
+    pub fn set_y(&mut self, y: f64) {
+        self.y = y;
+    }
+
+    pub fn set_velocity(&mut self, velocity: Vector) {
+        self.velocity = velocity;
+    }
+
     pub fn clone(&self) -> Ball {
         Ball {
             x: self.x,

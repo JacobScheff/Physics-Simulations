@@ -1,5 +1,5 @@
-// use macroquad::miniquad::window::set_window_size;
-// use macroquad::prelude::*;
+use macroquad::miniquad::window::set_window_size;
+use macroquad::prelude::*;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 mod ball;
@@ -107,8 +107,11 @@ fn sort_balls(mut arr: Vec<ball::Ball>, mut keys: Vec<Vec<i32>>) -> (Vec<ball::B
     return (arr, keys);
 }
 
-// #[macroquad::main("BasicShapes")]
-fn main() {
+#[macroquad::main("BasicShapes")]
+async fn main() {
+    // Set the window size
+    set_window_size(SCREEN_SIZE.0 as u32, SCREEN_SIZE.1 as u32);
+
     // Create the balls list
     let mut balls: Vec<ball::Ball> = Vec::new();
     let mut ball_index_key: Vec<Vec<i32>> = vec![vec![-1, -1]; HORIZONTAL_CELLS as usize * VERTICAL_CELLS as usize];
@@ -136,5 +139,69 @@ fn main() {
         HORIZONTAL_AMOUNT * VERTICAL_AMOUNT as i32,
     ));
 
+    // Game loop
+    let mut fps_timer = Instant::now();
+    while true {
+        // Clear the screen
+        clear_background(BLACK);
+
+        // Sort the balls by cell id
+        (balls, ball_index_key) = sort_balls(balls, ball_index_key);
+
+        // Move and draw the balls
+        for i in 0..balls.len() {
+            balls[i].move_ball(1.0 / FPS as f64);
+            draw_circle(balls[i].get_x() as f32, balls[i].get_y() as f32, BALL_SIZE as f32, WHITE);
+        }
+        
+        // for cellX in range(horizontalCells):
+        // for cellY in range(verticalCells):
+        //     cellId = cellX + cellY * horizontalCells
+        //     for ballIndex in range(ballIndexKey[cellId][0], ballIndexKey[cellId][1] + 1):
+        //         for j in range(-1, 2):
+        //             for k in range(-1, 2):
+        //                 if cellX + j >= 0 and cellX + j < horizontalCells and cellY + k >= 0 and cellY + k < verticalCells:
+        //                     newCellId = cellX + j + (cellY + k) * horizontalCells
+        //                     for otherBallIndex in range(ballIndexKey[newCellId][0], ballIndexKey[newCellId][1] + 1):
+        //                         # There are no balls in this cell
+        //                         if(ballIndex == -1 or otherBallIndex == -1):
+        //                             continue
+        //                         if ballIndex != otherBallIndex:
+        //                             balls[ballIndex].collide(balls[otherBallIndex])
+
+        // Check for collisions in the current cell and the adjacent cells
+        for cell_x in 0..HORIZONTAL_CELLS {
+            for cell_y in 0..VERTICAL_CELLS {
+                let cell_id = cell_x + cell_y * HORIZONTAL_CELLS;
+                for ball_index in ball_index_key[cell_id as usize][0]..=ball_index_key[cell_id as usize][1] {
+                    for j in -1..=1 {
+                        for k in -1..=1 {
+                            if cell_x + j >= 0 && cell_x + j < HORIZONTAL_CELLS && cell_y + k >= 0 && cell_y + k < VERTICAL_CELLS {
+                                let new_cell_id = cell_x + j + (cell_y + k) * HORIZONTAL_CELLS;
+                                for other_ball_index in ball_index_key[new_cell_id as usize][0]..=ball_index_key[new_cell_id as usize][1] {
+                                    // There are no balls in this cell
+                                    if ball_index == -1 || other_ball_index == -1 {
+                                        continue;
+                                    }
+                                    if ball_index != other_ball_index {
+                                        balls[ball_index as usize].collide(&mut balls[other_ball_index as usize]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Wait for the next frame
+        let elapsed = fps_timer.elapsed();
+        if elapsed < Duration::from_secs(1 / FPS as u64) {
+            sleep(Duration::from_secs(1 / FPS as u64) - elapsed);
+        }
+
+        // Update the fps timer
+        fps_timer = Instant::now();
+    }
     
 }

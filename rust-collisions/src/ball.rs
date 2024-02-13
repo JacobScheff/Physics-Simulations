@@ -65,8 +65,8 @@ impl Ball {
 
             let total_mass: f64 = self.mass + other.mass;
 
-            self.velocity = original_velocity_self.subtract(&self_position.subtract(&other_position).normalize().multiply(2.0 * other.mass / total_mass).multiply(original_velocity_other.subtract(&original_velocity_other).dot_product(&self_position.subtract(&other_position))).divide(distance.powi(2)));
-            other.velocity = original_velocity_other.subtract(&other_position.subtract(&self_position).normalize().multiply(2.0 * self.mass / total_mass).multiply(original_velocity_self.subtract(&original_velocity_self).dot_product(&other_position.subtract(&self_position))).divide(distance.powi(2)));
+            self.velocity = original_velocity_self.subtract(&self_position.subtract(&other_position).normalize().multiply(2.0 * other.mass / total_mass).multiply(original_velocity_self.subtract(&original_velocity_other).dot_product(&self_position.subtract(&other_position))).divide(distance.powi(2)));
+            other.velocity = original_velocity_other.subtract(&other_position.subtract(&self_position).normalize().multiply(2.0 * self.mass / total_mass).multiply(original_velocity_other.subtract(&original_velocity_self).dot_product(&other_position.subtract(&self_position))).divide(distance.powi(2)));
 
             if distance < self.radius + other.radius {
                 let constact_angle: f64 = (self.y - other.y).atan2(self.x - other.x);
@@ -78,7 +78,7 @@ impl Ball {
             }
         }
 
-        return (self, other.clone());
+        return (self.clone(), other.clone());
     }
 
     pub fn get_cell(&self) -> (i32, i32) {

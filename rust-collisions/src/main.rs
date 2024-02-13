@@ -7,11 +7,11 @@ mod vector;
 
 const SCREEN_SIZE: (i32, i32) = (1200, 600);
 const FPS: i32 = 120;
-const HORIZONTAL_CELLS: i32 = 48;
-const VERTICAL_CELLS: i32 = 24;
+const HORIZONTAL_CELLS: i32 = 48 / 4;
+const VERTICAL_CELLS: i32 = 24 / 4;
 const BALL_SIZE: i32 = 6;
-const HORIZONTAL_AMOUNT: i32 = 16;
-const VERTICAL_AMOUNT: i32 = 12;
+const HORIZONTAL_AMOUNT: i32 = 16 * 3;
+const VERTICAL_AMOUNT: i32 = 12 * 3;
 
 // Get dot product of two vectors with magnitude and angle
 fn dot_product(v1: f64, a1: f64, v2: f64, a2: f64) -> f64 {
@@ -85,7 +85,7 @@ fn sort_balls(mut arr: Vec<ball::Ball>, mut keys: Vec<Vec<i32>>) -> (Vec<ball::B
         let key = arr[i].clone();
         let key_id = key.get_cell_id();
         let mut j = i - 1;
-        while j >= 0 && arr[j].get_cell_id() > key_id {
+        while j as i32 >= 0 && arr[j].get_cell_id() > key_id {
             arr[j + 1] = arr[j].clone();
             j -= 1;
         }
@@ -110,7 +110,7 @@ fn sort_balls(mut arr: Vec<ball::Ball>, mut keys: Vec<Vec<i32>>) -> (Vec<ball::B
 #[macroquad::main("BasicShapes")]
 async fn main() {
     // Set the window size
-    set_window_size(SCREEN_SIZE.0 as u32, SCREEN_SIZE.1 as u32);
+    set_window_size(SCREEN_SIZE.0 as u32, SCREEN_SIZE.1 as u32 + 80);
 
     // Create the balls list
     let mut balls: Vec<ball::Ball> = Vec::new();
@@ -134,7 +134,7 @@ async fn main() {
     balls.push(ball::Ball::new(
         1120.0,
         500.0,
-        vector::Vector::new(-800.0, 400.0),
+        vector::Vector::new(-800.0, -500.0),
         40.0,
         HORIZONTAL_AMOUNT * VERTICAL_AMOUNT as i32,
     ));
@@ -150,7 +150,8 @@ async fn main() {
 
         // Move and draw the balls
         for i in 0..balls.len() {
-            balls[i].move_ball(1.0 / FPS as f64);
+            let elapsed_time = fps_timer.elapsed().as_secs_f64();
+            balls[i].move_ball(elapsed_time);
             draw_circle(balls[i].get_x() as f32, balls[i].get_y() as f32, balls[i].get_radius() as f32, WHITE);
         }
 
@@ -190,6 +191,7 @@ async fn main() {
 
         // Update the fps timer
         fps_timer = Instant::now();
+        println!("FPS: {}", 1.0 / elapsed.as_secs_f64());
 
         // Update the screen
         next_frame().await

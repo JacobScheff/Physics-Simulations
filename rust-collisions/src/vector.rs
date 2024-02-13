@@ -53,11 +53,16 @@ impl Vector {
     }
 
     pub fn normalize(&self) -> Vector {
-        self.divide(self.get_magnitude())
+        let magnitude = self.get_magnitude();
+        if magnitude != 0.0 {
+            return Vector::new(self.x / magnitude, self.y / magnitude);
+        } else {
+            self.clone()
+        }
     }
 
     pub fn set_magnitude(&self, magnitude: f64) -> Vector {
-        self.normalize().multiply(magnitude)
+        return self.normalize().multiply(magnitude).clone();
     }
 
     pub fn clone(&self) -> Vector {

@@ -69,12 +69,12 @@ impl Ball {
             other.velocity = original_velocity_other.subtract(&other_position.subtract(&self_position).normalize().multiply(2.0 * self.mass / total_mass).multiply(original_velocity_self.subtract(&original_velocity_self).dot_product(&other_position.subtract(&self_position))).divide(distance.powi(2)));
 
             if distance < self.radius + other.radius {
-                let constactAngle: f64 = (self.y - other.y).atan2(self.x - other.x);
-                let distanceToMove: f64 = (self.radius + other.radius - distance);
-                self.x += distanceToMove * constactAngle.cos() * other.mass / total_mass;
-                self.y += distanceToMove * constactAngle.sin() * other.mass / total_mass;
-                other.x -= distanceToMove * constactAngle.cos() * self.mass / total_mass;
-                other.y -= distanceToMove * constactAngle.sin() * self.mass / total_mass;
+                let constact_angle: f64 = (self.y - other.y).atan2(self.x - other.x);
+                let distance_to_move: f64 = (self.radius + other.radius - distance);
+                self.x += distance_to_move * constact_angle.cos() * other.mass / total_mass;
+                self.y += distance_to_move * constact_angle.sin() * other.mass / total_mass;
+                other.x -= distance_to_move * constact_angle.cos() * self.mass / total_mass;
+                other.y -= distance_to_move * constact_angle.sin() * self.mass / total_mass;
             }
         }
     }

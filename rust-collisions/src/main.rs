@@ -134,13 +134,14 @@ async fn main() {
     balls.push(ball::Ball::new(
         1120.0,
         500.0,
-        vector::Vector::new(-800.0, -500.0),
+        vector::Vector::new(-1200.0, -750.0),
         40.0,
         HORIZONTAL_AMOUNT * VERTICAL_AMOUNT as i32,
     ));
 
     // Game loop
     let mut fps_timer = Instant::now();
+    let mut ticks = 0;
     loop {
         // Clear the screen
         clear_background(BLACK);
@@ -189,12 +190,24 @@ async fn main() {
             sleep(Duration::from_secs(1 / FPS as u64) - elapsed);
         }
 
+        let mut totalMomentum = 0;
+        for i in 0..balls.len() {
+            totalMomentum += balls[i].get_velocity().get_magnitude() as i32 * balls[i].get_mass() as i32;
+        }
+
         // Update the fps timer
         fps_timer = Instant::now();
-        println!("FPS: {}", 1.0 / elapsed.as_secs_f64());
+
+        // Print the fps and total momentum
+        if ticks % 60 == 0 {
+            println!("FPS: {}\tTotal Momentum: {}", 1.0 / elapsed.as_secs_f64(), totalMomentum);
+        }
 
         // Update the screen
-        next_frame().await
+        next_frame().await;
+
+        // Update the ticks
+        ticks += 1;
     }
     
 }

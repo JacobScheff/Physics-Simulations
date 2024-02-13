@@ -163,7 +163,7 @@ async fn main() {
                 for ball_index in ball_index_key[cell_id as usize][0]..=ball_index_key[cell_id as usize][1] {
                     for j in -1..=1 {
                         for k in -1..=1 {
-                            if cell_x + j >= 0 && cell_x + j < HORIZONTAL_CELLS && cell_y + k >= 0 && cell_y + k < VERTICAL_CELLS {
+                            if cell_x + j > 0 && cell_x + j < HORIZONTAL_CELLS && cell_y + k >= 0 && cell_y + k < VERTICAL_CELLS {
                                 let new_cell_id = cell_x + j + (cell_y + k) * HORIZONTAL_CELLS;
                                 for other_ball_index in ball_index_key[new_cell_id as usize][0]..=ball_index_key[new_cell_id as usize][1] {
                                     // There are no balls in this cell

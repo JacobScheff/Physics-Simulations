@@ -3,6 +3,7 @@ import sys
 import time
 import math
 import random
+import threading
 
 screenSize = (1200, 600)
 fps = 25
@@ -145,7 +146,7 @@ for i in range(horizontalAmount):
         randomVector = getRandomVelocity()
         balls.append(Ball(ballPos[0], ballPos[1], randomVector, ballSize))
 
-balls.append(Ball(1120, 500, Vector(-1200, -750), 40))
+balls.append(Ball(1120, 500, Vector(-600, -375), 40))
 
 pygame.init()
 screen = pygame.display.set_mode(screenSize)
@@ -206,6 +207,26 @@ def sortBalls():
         if foundIndexStart!= -1:
             startIndex = foundIndexStart
         ballIndexKey[i] = [foundIndexStart, foundIndexEnd]
+        
+def updateBalls(startX, endX, startY, endY):
+    for cellX in range(startX, endX + 1):
+        for cellY in range(startY, endY + 1):
+            cellId = cellX + cellY * horizontalCells
+            for ballIndex in range(ballIndexKey[cellId][0], ballIndexKey[cellId][1] + 1):
+                for j in range(-1, 2):
+                    for k in range(-1, 2):
+                        if cellX + j >= 0 and cellX + j < horizontalCells and cellY + k >= 0 and cellY + k < verticalCells:
+                            newCellId = cellX + j + (cellY + k) * horizontalCells
+                            for otherBallIndex in range(ballIndexKey[newCellId][0], ballIndexKey[newCellId][1] + 1):
+                                # There are no balls in this cell
+                                if(ballIndex == -1 or otherBallIndex == -1):
+                                    continue
+                                if ballIndex != otherBallIndex:
+                                    # Check if the balls have already been checked
+                                    # if (ballIndex, otherBallIndex) in ballsAlreadyChecked or (otherBallIndex, ballIndex) in ballsAlreadyChecked:
+                                    #     continue
+                                    # ballsAlreadyChecked.append((ballIndex, otherBallIndex))
+                                    balls[ballIndex].collide(balls[otherBallIndex])
 
 fpsTimer = time.time()
 while True:
@@ -225,24 +246,7 @@ while True:
 
     # Check for collisions in the current cell and the adjacent cells
     # ballsAlreadyChecked = []
-    for cellX in range(horizontalCells):
-        for cellY in range(verticalCells):
-            cellId = cellX + cellY * horizontalCells
-            for ballIndex in range(ballIndexKey[cellId][0], ballIndexKey[cellId][1] + 1):
-                for j in range(-1, 2):
-                    for k in range(-1, 2):
-                        if cellX + j >= 0 and cellX + j < horizontalCells and cellY + k >= 0 and cellY + k < verticalCells:
-                            newCellId = cellX + j + (cellY + k) * horizontalCells
-                            for otherBallIndex in range(ballIndexKey[newCellId][0], ballIndexKey[newCellId][1] + 1):
-                                # There are no balls in this cell
-                                if(ballIndex == -1 or otherBallIndex == -1):
-                                    continue
-                                if ballIndex != otherBallIndex:
-                                    # Check if the balls have already been checked
-                                    # if (ballIndex, otherBallIndex) in ballsAlreadyChecked or (otherBallIndex, ballIndex) in ballsAlreadyChecked:
-                                    #     continue
-                                    # ballsAlreadyChecked.append((ballIndex, otherBallIndex))
-                                    balls[ballIndex].collide(balls[otherBallIndex])
+    updateBalls(0, horizontalCells - 1, 0, verticalCells - 1)
 
     pygame.display.flip()
     clock.tick(fps)

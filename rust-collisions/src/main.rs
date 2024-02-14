@@ -7,11 +7,11 @@ mod vector;
 
 const SCREEN_SIZE: (i32, i32) = (1200, 600);
 const FPS: i32 = 120;
-const HORIZONTAL_CELLS: i32 = 48 / 4;
-const VERTICAL_CELLS: i32 = 24 / 4;
+const HORIZONTAL_CELLS: i32 = 48 / 2;
+const VERTICAL_CELLS: i32 = 24 / 2;
 const BALL_SIZE: i32 = 6;
-const HORIZONTAL_AMOUNT: i32 = 16 * 3;
-const VERTICAL_AMOUNT: i32 = 12 * 3;
+const HORIZONTAL_AMOUNT: i32 = 16 * 2;
+const VERTICAL_AMOUNT: i32 = 12 * 2;
 
 // Get dot product of two vectors with magnitude and angle
 fn dot_product(v1: f64, a1: f64, v2: f64, a2: f64) -> f64 {
@@ -85,7 +85,7 @@ fn sort_balls(mut arr: Vec<ball::Ball>, mut keys: Vec<Vec<i32>>) -> (Vec<ball::B
         let key = arr[i].clone();
         let key_id = key.get_cell_id();
         let mut j = i - 1;
-        while j as i32 >= 0 && arr[j].get_cell_id() > key_id {
+        while j as i32 > 0 && arr[j].get_cell_id() > key_id {
             arr[j + 1] = arr[j].clone();
             j -= 1;
         }

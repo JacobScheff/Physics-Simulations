@@ -1,6 +1,7 @@
 use macroquad::miniquad::window::set_window_size;
 use macroquad::prelude::*;
 use std::thread::sleep;
+use std::thread;
 use std::time::{Duration, Instant};
 mod ball;
 mod vector;
@@ -102,13 +103,43 @@ fn sort_balls(mut arr: Vec<ball::Ball>, mut keys: Vec<Vec<i32>>) -> (Vec<ball::B
     return (arr, keys);
 }
 
+// Check ball collisions
+fn update_balls(balls: &mut Vec<ball::Ball>, ball_index_key: &Vec<Vec<i32>>, start_x: i32, end_x: i32, start_y: i32, end_y: i32) {
+    for cell_x in start_x..end_x {
+            for cell_y in start_y..end_y {
+                let cell_id = cell_x + cell_y * HORIZONTAL_CELLS;
+                for ball_index in ball_index_key[cell_id as usize][0]..=ball_index_key[cell_id as usize][1] {
+                    for j in -1..=1 {
+                        for k in -1..=1 {
+                            if cell_x + j > 0 && cell_x + j < HORIZONTAL_CELLS && cell_y + k >= 0 && cell_y + k < VERTICAL_CELLS {
+                                let new_cell_id = cell_x + j + (cell_y + k) * HORIZONTAL_CELLS;
+                                for other_ball_index in ball_index_key[new_cell_id as usize][0]..=ball_index_key[new_cell_id as usize][1] {
+                                    // There are no balls in this cell
+                                    if ball_index == -1 || other_ball_index == -1 {
+                                        continue;
+                                    }
+                                    if ball_index != other_ball_index {
+                                        let ball_1_clone = balls[ball_index as usize].clone();
+                                        let (ball_1, ball_2) = ball_1_clone.collide(&mut balls[other_ball_index as usize]);
+                                        balls[ball_index as usize] = ball_1;
+                                        balls[other_ball_index as usize] = ball_2.clone();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+}
+
 #[macroquad::main("BasicShapes")]
 async fn main() {
     // Set the window size
     set_window_size(SCREEN_SIZE.0 as u32, SCREEN_SIZE.1 as u32);
 
     // Create the balls list
-    let mut balls: Vec<ball::Ball> = Vec::new();
+    let mut balls: Vec<ball::Ball> = Vec::new();    
     let mut ball_index_key: Vec<Vec<i32>> = vec![vec![-1, -1]; HORIZONTAL_CELLS as usize * VERTICAL_CELLS as usize];
 
     for i in 0..HORIZONTAL_AMOUNT {
@@ -151,33 +182,16 @@ async fn main() {
             draw_circle(balls[i].get_x() as f32, balls[i].get_y() as f32, balls[i].get_radius() as f32, WHITE);
         }
 
-        // Check for collisions in the current cell and the adjacent cells
-        for cell_x in 0..HORIZONTAL_CELLS {
-            for cell_y in 0..VERTICAL_CELLS {
-                let cell_id = cell_x + cell_y * HORIZONTAL_CELLS;
-                for ball_index in ball_index_key[cell_id as usize][0]..=ball_index_key[cell_id as usize][1] {
-                    for j in -1..=1 {
-                        for k in -1..=1 {
-                            if cell_x + j > 0 && cell_x + j < HORIZONTAL_CELLS && cell_y + k >= 0 && cell_y + k < VERTICAL_CELLS {
-                                let new_cell_id = cell_x + j + (cell_y + k) * HORIZONTAL_CELLS;
-                                for other_ball_index in ball_index_key[new_cell_id as usize][0]..=ball_index_key[new_cell_id as usize][1] {
-                                    // There are no balls in this cell
-                                    if ball_index == -1 || other_ball_index == -1 {
-                                        continue;
-                                    }
-                                    if ball_index != other_ball_index {
-                                        let ball_1_clone = balls[ball_index as usize].clone();
-                                        let (ball_1, ball_2) = ball_1_clone.collide(&mut balls[other_ball_index as usize]);
-                                        balls[ball_index as usize] = ball_1;
-                                        balls[other_ball_index as usize] = ball_2.clone();
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // Check for collisions in the current cell and the adjacent cells using 4 threads
+        let handle1 = thread::spawn(move || {
+            let index_key_clone = ball_index_key.clone();
+            update_balls(&mut balls, &index_key_clone, 0, HORIZONTAL_CELLS / 2, 0, VERTICAL_CELLS / 2);
+        });
+        
+        handle1.join().unwrap(); // Wait for the first thread to finish
+        // handle2.join().unwrap(); // Wait for the second thread to finish
+        // handle3.join().unwrap(); // Wait for the third thread to finish
+        // handle4.join().unwrap(); // Wait for the fourth thread to finish
 
         // Wait for the next frame
         let elapsed = fps_timer.elapsed();

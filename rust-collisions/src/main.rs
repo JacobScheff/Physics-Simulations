@@ -13,11 +13,6 @@ const BALL_SIZE: i32 = 6;
 const HORIZONTAL_AMOUNT: i32 = 16 * 2;
 const VERTICAL_AMOUNT: i32 = 12 * 2;
 
-// Get dot product of two vectors with magnitude and angle
-fn dot_product(v1: f64, a1: f64, v2: f64, a2: f64) -> f64 {
-    v1 * v2 * (a2 - a1).to_radians().cos()
-}
-
 // Binary search functions
 fn binary_search_ball_index_first(
     arr: &Vec<ball::Ball>,

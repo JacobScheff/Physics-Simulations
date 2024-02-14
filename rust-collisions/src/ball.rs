@@ -1,11 +1,7 @@
 use crate::vector::Vector;
 use crate::SCREEN_SIZE;
-use crate::FPS;
 use crate::HORIZONTAL_CELLS;
 use crate::VERTICAL_CELLS;
-use crate::BALL_SIZE;
-use crate::HORIZONTAL_AMOUNT;
-use crate::VERTICAL_AMOUNT;
 
 pub struct Ball {
     x: f64,

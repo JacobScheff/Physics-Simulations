@@ -110,7 +110,7 @@ fn sort_balls(mut arr: Vec<ball::Ball>, mut keys: Vec<Vec<i32>>) -> (Vec<ball::B
 #[macroquad::main("BasicShapes")]
 async fn main() {
     // Set the window size
-    set_window_size(SCREEN_SIZE.0 as u32, SCREEN_SIZE.1 as u32 + 80);
+    set_window_size(SCREEN_SIZE.0 as u32, SCREEN_SIZE.1 as u32);
 
     // Create the balls list
     let mut balls: Vec<ball::Ball> = Vec::new();

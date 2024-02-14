@@ -3,7 +3,6 @@ import sys
 import time
 import math
 import random
-import threading
 
 screenSize = (1200, 600)
 fps = 25
@@ -245,7 +244,6 @@ while True:
         ball.move(1 / fps)
 
     # Check for collisions in the current cell and the adjacent cells
-    # ballsAlreadyChecked = []
     updateBalls(0, horizontalCells - 1, 0, verticalCells - 1)
 
     pygame.display.flip()

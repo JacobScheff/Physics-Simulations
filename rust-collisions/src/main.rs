@@ -1,10 +1,11 @@
 use macroquad::miniquad::window::set_window_size;
 use macroquad::prelude::*;
+use std::os::unix::thread;
 use std::thread::sleep;
-use std::thread;
 use std::time::{Duration, Instant};
 mod ball;
 mod vector;
+use rayon::prelude::*;
 
 const SCREEN_SIZE: (i32, i32) = (1200, 600);
 const FPS: i32 = 120;
@@ -182,16 +183,23 @@ async fn main() {
             draw_circle(balls[i].get_x() as f32, balls[i].get_y() as f32, balls[i].get_radius() as f32, WHITE);
         }
 
-        // Check for collisions in the current cell and the adjacent cells using 4 threads
-        let handle1 = thread::spawn(move || {
-            let index_key_clone = ball_index_key.clone();
-            update_balls(&mut balls, &index_key_clone, 0, HORIZONTAL_CELLS / 2, 0, VERTICAL_CELLS / 2);
-        });
+        // Check for collisions using 4 asynchronous tasks using rayon
+        let mut tasks = Vec::new();
+        for i in 0..4 {
+            tasks.push(
+                rayon::spawn(move || {
+                    update_balls(&mut balls, &ball_index_key, (i % 2) * HORIZONTAL_CELLS / 2, (i % 2 + 1) * HORIZONTAL_CELLS / 2, (i / 2) * VERTICAL_CELLS / 2, (i / 2 + 1) * VERTICAL_CELLS / 2);
+                })
+            );
+        }
+        sleep(Duration::from_secs(1 / FPS as u64) / 2);
         
-        handle1.join().unwrap(); // Wait for the first thread to finish
-        // handle2.join().unwrap(); // Wait for the second thread to finish
-        // handle3.join().unwrap(); // Wait for the third thread to finish
-        // handle4.join().unwrap(); // Wait for the fourth thread to finish
+
+        // // Check for collisions in the current cell and the adjacent cells using 4 threads
+        // update_balls(&mut balls, &ball_index_key, 0, HORIZONTAL_CELLS / 2, 0, VERTICAL_CELLS / 2);
+        // update_balls(&mut balls, &ball_index_key, HORIZONTAL_CELLS / 2, HORIZONTAL_CELLS, 0, VERTICAL_CELLS / 2);
+        // update_balls(&mut balls, &ball_index_key, 0, HORIZONTAL_CELLS / 2, VERTICAL_CELLS / 2, VERTICAL_CELLS);
+        // update_balls(&mut balls, &ball_index_key, HORIZONTAL_CELLS / 2, HORIZONTAL_CELLS, VERTICAL_CELLS / 2, VERTICAL_CELLS);
 
         // Wait for the next frame
         let elapsed = fps_timer.elapsed();

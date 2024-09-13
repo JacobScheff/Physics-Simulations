@@ -14,8 +14,9 @@ use cgmath::prelude::*;
 
 const SCREEN_SIZE: (u32, u32) = (1200, 600);
 const TIME_BETWEEN_FRAMES: u64 = 10;
-const PARTICLE_COUNT_X: u32 = 10;
-const PARTICLE_COUNT_Y: u32 = 10;
+const PARTICLE_COUNT_X: u32 = 100;
+const PARTICLE_COUNT_Y: u32 = 100;
+const OFFSET: (f32, f32) = (10.0, 5.0); // How much to offset all the particle's starting positions
 
 struct State<'a> {
     surface: wgpu::Surface<'a>,
@@ -140,9 +141,9 @@ impl<'a> State<'a> {
         let mut particle_radii = vec![];
         for i in 0..PARTICLE_COUNT_X {
             for j in 0..PARTICLE_COUNT_Y {
-                let x = SCREEN_SIZE.0 as f32 / (PARTICLE_COUNT_X + 1) as f32 * i as f32;
-                let y = SCREEN_SIZE.1 as f32 / (PARTICLE_COUNT_Y + 1) as f32 * j as f32;
-                println!("x: {}, y: {}", x, y);
+                let x = SCREEN_SIZE.0 as f32 / (PARTICLE_COUNT_X + 1) as f32 * i as f32 + OFFSET.0;
+                let y = SCREEN_SIZE.1 as f32 / (PARTICLE_COUNT_Y + 1) as f32 * j as f32 + OFFSET.1;
+
                 particle_positions.push([x, y]);
                 particle_radii.push(100.0);
             }
@@ -249,8 +250,6 @@ impl<'a> State<'a> {
         self.queue.submit(std::iter::once(command_encoder.finish()));
 
         drawable.present();
-
-        self.frame_count += 1;
 
         if self.frame_count % 10 == 0 {
             let elapsed_time = start_time.elapsed();

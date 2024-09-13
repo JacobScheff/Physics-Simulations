@@ -142,8 +142,9 @@ impl<'a> State<'a> {
             for j in 0..PARTICLE_COUNT_Y {
                 let x = SCREEN_SIZE.0 as f32 / (PARTICLE_COUNT_X + 1) as f32 * i as f32;
                 let y = SCREEN_SIZE.1 as f32 / (PARTICLE_COUNT_Y + 1) as f32 * j as f32;
+                println!("x: {}, y: {}", x, y);
                 particle_positions.push([x, y]);
-                particle_radii.push(10.0);
+                particle_radii.push(100.0);
             }
         }
 

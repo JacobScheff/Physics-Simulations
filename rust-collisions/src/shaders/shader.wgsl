@@ -31,15 +31,15 @@ fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let x: f32 = in.pos.x * SCREEN_SIZE.x;
-    let y: f32 = in.pos.y * SCREEN_SIZE.y;
+    let x: f32 = in.pos.x;
+    let y: f32 = in.pos.y;
     
-    // for (var i = 0; i < i32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y); i=i+1){
-        // let d = (x - particle_positions[i].x) * (x - particle_positions[i].x) + (y - particle_positions[i].y) * (y - particle_positions[i].y);
-        // if d < particle_radii[i] * particle_radii[i] {
-        //     return vec4<f32>(0.0, 1.0, 0.0, 1.0);
-        // }
-    // }
+    for (var i = 0; i < i32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y); i=i+1){
+        let d = (x - particle_positions[i].x) * (x - particle_positions[i].x) + (y - particle_positions[i].y) * (y - particle_positions[i].y);
+        if d < particle_radii[i] * particle_radii[i] {
+            return vec4<f32>(0.0, 1.0, 0.0, 1.0);
+        }
+    }
 
     return vec4<f32>(1.0, 0.0, 0.0, 1.0);
 }

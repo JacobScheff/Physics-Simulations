@@ -42,12 +42,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let y: f32 = in.pos.y;
 
     let grid: Grid = pos_to_grid(vec2<f32>(x, y));
-    let grid_index: i32 = grid.y * i32(GRID_SIZE.x) + grid.x;
-    let starting_index: i32 = particle_lookup[grid_index];
-    var ending_index: i32 = i32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y);
-    if grid_index < i32(GRID_SIZE.x * GRID_SIZE.y) - 1 {
-        ending_index = particle_lookup[grid_index + 1];
-    }
+    // let grid_index: i32 = grid.y * i32(GRID_SIZE.x) + grid.x;
+    let starting_index: i32 = particle_lookup[max(grid.y - 1, 0) * i32(GRID_SIZE.x) + max(grid.x - 1, 0)];
+    var ending_index: i32 = particle_lookup[min((grid.y + 1) * i32(GRID_SIZE.x) + (grid.x + 1), i32(GRID_SIZE.x * GRID_SIZE.y) - 1)];
     
     for (var i = starting_index; i < ending_index; i=i+1){
         let d = (x - particle_positions[i].x) * (x - particle_positions[i].x) + (y - particle_positions[i].y) * (y - particle_positions[i].y);

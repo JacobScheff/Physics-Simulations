@@ -82,8 +82,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
 fn pos_to_grid(pos: vec2<f32>) -> Grid {
     return Grid(
-        i32(pos.x / SCREEN_SIZE.x * GRID_SIZE.x),
-        i32(pos.y / SCREEN_SIZE.y * GRID_SIZE.y)
+        min(i32(pos.x / SCREEN_SIZE.x * GRID_SIZE.x), i32(GRID_SIZE.x - 1)),
+        min(i32(pos.y / SCREEN_SIZE.y * GRID_SIZE.y), i32(GRID_SIZE.y - 1))
     );
 }
 

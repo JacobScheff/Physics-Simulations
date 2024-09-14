@@ -7,6 +7,12 @@ struct Grid {
     y: i32,
 }
 
+const WORKGROUP_SIZE: u32 = 8;
+const DISPATCH_SIZE: vec2<u32> = vec2<u32>(
+    u32(SCREEN_SIZE.x) / u32(WORKGROUP_SIZE),
+    u32(SCREEN_SIZE.y) / u32(WORKGROUP_SIZE),
+);
+
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
 const FOV: f32 = 60.0 * 3.14159 / 180.0; // Field of view in radians
 const ASPECT_RATIO: f32 = SCREEN_SIZE.x / SCREEN_SIZE.y; // Aspect ratio of the screen
@@ -34,6 +40,11 @@ fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
     var out: VertexOutput;
     out.pos = vec4<f32>(positions[i], 0.0, 1.0);
     return out;
+}
+
+@compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    
 }
 
 @fragment
@@ -69,13 +80,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
         }
     }
-    
-    // for (var i = starting_index; i < ending_index; i=i+1){
-    //     let d = (x - particle_positions[i].x) * (x - particle_positions[i].x) + (y - particle_positions[i].y) * (y - particle_positions[i].y);
-    //     if d < particle_radii[i] * particle_radii[i] {
-    //         return vec4<f32>(1.0, 1.0, 1.0, 1.0);
-    //     }
-    // }
 
     return vec4<f32>(0.0, 0.0, 0.0, 1.0);
 }

@@ -17,6 +17,7 @@ const TIME_BETWEEN_FRAMES: u64 = 10;
 const PARTICLE_COUNT_X: u32 = 100;
 const PARTICLE_COUNT_Y: u32 = 100;
 const OFFSET: (f32, f32) = (10.0, 5.0); // How much to offset all the particle's starting positions
+const GRID_SIZE: (i32, i32) = (20, 20); // How many grid cells to divide the screen into
 
 struct State<'a> {
     surface: wgpu::Surface<'a>,
@@ -29,11 +30,85 @@ struct State<'a> {
     bind_group: wgpu::BindGroup,
     frame_count: u32,
     frame_count_buffer: wgpu::Buffer,
+    particle_positions: Vec<[f32; 2]>,
     particle_positions_buffer: wgpu::Buffer,
+    particle_radii: Vec<f32>,
     particle_radii_buffer: wgpu::Buffer,
+    particle_lookup: Vec<i32>,
+    particle_lookup_buffer: wgpu::Buffer,
 }
 
 impl<'a> State<'a> {
+    fn pos_to_grid_index(&self, pos: [f32; 2]) -> i32 {
+        let x = (pos[0] / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32) as i32;
+        let y = (pos[1] / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32) as i32;
+
+        x + y * GRID_SIZE.0
+    }
+
+    fn pos_to_grid(&self, pos: [f32; 2]) -> (i32, i32) {
+        let x = (pos[0] / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32) as i32;
+        let y = (pos[1] / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32) as i32;
+
+        (x, y)
+    }
+
+    fn sort_particles(&mut self) {
+        // Map all particles to their grid cell
+        let mut index_map: Vec<Vec<Vec<i32>>> = vec![vec![vec![]; GRID_SIZE.1 as usize]; GRID_SIZE.0 as usize];
+        for i in 0..self.particle_positions.len() {
+            let grid = self.pos_to_grid(self.particle_positions[i]);
+            index_map[grid.0 as usize][grid.1 as usize].push(i as i32);
+        }
+
+        // Create a new list of particles
+        let mut new_positions: Vec<[f32; 2]> = vec![];
+        let mut new_radii = vec![0.0; self.particle_radii.len()];
+        let mut lookup_table = vec![-1; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
+
+        // Iterate over all grid cells
+        for i in 0..GRID_SIZE.0 {
+            for j in 0..GRID_SIZE.1 {
+                let grid_index = i + j * GRID_SIZE.0;
+                let mut index = -1;
+
+                // Iterate over all particles in the grid cell
+                for k in 0..index_map[i as usize][j as usize].len() {
+                    let particle_index = index_map[i as usize][j as usize][k] as usize;
+                    new_positions.push(self.particle_positions[particle_index]);
+                    new_radii.push(self.particle_radii[particle_index]);
+                    if index == -1 {
+                        index = new_positions.len() as i32 - 1;
+                    }
+                }
+
+                lookup_table[grid_index as usize] = index;
+            }
+        }
+
+        // self.particle_positions = new_positions;
+        // self.particle_radii = new_radii;
+        // self.particle_lookup = lookup_table;
+
+        // self.queue.write_buffer(
+        //     &self.particle_positions_buffer,
+        //     0,
+        //     bytemuck::cast_slice(&self.particle_positions),
+        // );
+
+        // self.queue.write_buffer(
+        //     &self.particle_radii_buffer,
+        //     0,
+        //     bytemuck::cast_slice(&self.particle_radii),
+        // );
+
+        // self.queue.write_buffer(
+        //     &self.particle_lookup_buffer,
+        //     0,
+        //     bytemuck::cast_slice(&self.particle_lookup),
+        // );
+    }
+
     async fn new(window: &'a Window) -> Self {
         let size = window.inner_size();
 
@@ -115,6 +190,16 @@ impl<'a> State<'a> {
                     },
                     count: None,
                 },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 3,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
             ],
             label: Some("Particle Bind Group Layout"),
         });
@@ -148,6 +233,7 @@ impl<'a> State<'a> {
                 particle_radii.push(100.0);
             }
         }
+        let particle_lookup: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
 
         // Buffer for particles
         let particle_positions_buffer = device.create_buffer_init(&BufferInitDescriptor {
@@ -160,10 +246,16 @@ impl<'a> State<'a> {
             contents: bytemuck::cast_slice(&particle_radii),
             usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
         });
+        let particle_lookup_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Particle Lookup Buffer Data"),
+            contents: bytemuck::cast_slice(&particle_lookup),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
+        });
 
         // Write data to buffers
         queue.write_buffer(&particle_positions_buffer, 0, bytemuck::cast_slice(&particle_positions));
-        queue.write_buffer(&particle_radii_buffer, 0, bytemuck::cast_slice(&particle_radii));        
+        queue.write_buffer(&particle_radii_buffer, 0, bytemuck::cast_slice(&particle_radii));
+        queue.write_buffer(&particle_lookup_buffer, 0, bytemuck::cast_slice(&particle_lookup));
 
         // Buffer for the frame count
         let frame_count_buffer = device.create_buffer_init(&BufferInitDescriptor {
@@ -183,8 +275,12 @@ impl<'a> State<'a> {
             bind_group: temp_bind_group,
             frame_count: 0,
             frame_count_buffer,
+            particle_positions,
             particle_positions_buffer,
+            particle_radii,
             particle_radii_buffer,
+            particle_lookup,
+            particle_lookup_buffer,
         }
     }
 
@@ -199,6 +295,9 @@ impl<'a> State<'a> {
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let start_time = std::time::Instant::now();
+
+        // self.sort_particles();
+        // println!("{:?}", self.particle_positions);
 
         // Update the frame count buffer before rendering
         self.queue.write_buffer(
@@ -325,6 +424,16 @@ async fn run() {
                         },
                         count: None,
                     },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
                 ],
                 label: Some("Particle Bind Group Layout"),
             });
@@ -343,6 +452,10 @@ async fn run() {
             wgpu::BindGroupEntry {
                 binding: 2,
                 resource: state.particle_radii_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 3,
+                resource: state.particle_lookup_buffer.as_entire_binding(),
             },
         ],
     });

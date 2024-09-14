@@ -2,6 +2,11 @@ struct VertexOutput {
     @builtin(position) pos: vec4<f32>,
 };
 
+struct Grid {
+    x: i32,
+    y: i32,
+}
+
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
 const FOV: f32 = 60.0 * 3.14159 / 180.0; // Field of view in radians
 const ASPECT_RATIO: f32 = SCREEN_SIZE.x / SCREEN_SIZE.y; // Aspect ratio of the screen
@@ -35,8 +40,16 @@ fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let x: f32 = in.pos.x;
     let y: f32 = in.pos.y;
+
+    let grid: Grid = pos_to_grid(vec2<f32>(x, y));
+    let grid_index: i32 = grid.y * i32(GRID_SIZE.x) + grid.x;
+    let starting_index: i32 = particle_lookup[grid_index];
+    var ending_index: i32 = i32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y);
+    if grid_index < i32(GRID_SIZE.x * GRID_SIZE.y) - 1 {
+        ending_index = particle_lookup[grid_index + 1];
+    }
     
-    for (var i = 0; i < i32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y); i=i+1){
+    for (var i = starting_index; i < ending_index; i=i+1){
         let d = (x - particle_positions[i].x) * (x - particle_positions[i].x) + (y - particle_positions[i].y) * (y - particle_positions[i].y);
         if d < particle_radii[i] * particle_radii[i] {
             return vec4<f32>(1.0, 1.0, 1.0, 1.0);
@@ -44,4 +57,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     return vec4<f32>(0.0, 0.0, 0.0, 1.0);
+}
+
+fn pos_to_grid(pos: vec2<f32>) -> Grid {
+    return Grid(
+        i32(pos.x / SCREEN_SIZE.x * GRID_SIZE.x),
+        i32(pos.y / SCREEN_SIZE.y * GRID_SIZE.y)
+    );
 }

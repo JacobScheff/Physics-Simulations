@@ -297,7 +297,6 @@ impl<'a> State<'a> {
         let start_time = std::time::Instant::now();
 
         self.sort_particles();
-        // println!("{:?}", self.particle_lookup);
 
         // Update the frame count buffer before rendering
         self.queue.write_buffer(

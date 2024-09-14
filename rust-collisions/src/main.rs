@@ -63,7 +63,7 @@ impl<'a> State<'a> {
 
         // Create a new list of particles
         let mut new_positions: Vec<[f32; 2]> = vec![];
-        let mut new_radii = vec![0.0; self.particle_radii.len()];
+        let mut new_radii: Vec<f32> = vec![];
         let mut lookup_table = vec![-1; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
 
         // Iterate over all grid cells
@@ -86,27 +86,27 @@ impl<'a> State<'a> {
             }
         }
 
-        // self.particle_positions = new_positions;
-        // self.particle_radii = new_radii;
-        // self.particle_lookup = lookup_table;
+        self.particle_positions = new_positions;
+        self.particle_radii = new_radii;
+        self.particle_lookup = lookup_table;
 
-        // self.queue.write_buffer(
-        //     &self.particle_positions_buffer,
-        //     0,
-        //     bytemuck::cast_slice(&self.particle_positions),
-        // );
+        self.queue.write_buffer(
+            &self.particle_positions_buffer,
+            0,
+            bytemuck::cast_slice(&self.particle_positions),
+        );
 
-        // self.queue.write_buffer(
-        //     &self.particle_radii_buffer,
-        //     0,
-        //     bytemuck::cast_slice(&self.particle_radii),
-        // );
+        self.queue.write_buffer(
+            &self.particle_radii_buffer,
+            0,
+            bytemuck::cast_slice(&self.particle_radii),
+        );
 
-        // self.queue.write_buffer(
-        //     &self.particle_lookup_buffer,
-        //     0,
-        //     bytemuck::cast_slice(&self.particle_lookup),
-        // );
+        self.queue.write_buffer(
+            &self.particle_lookup_buffer,
+            0,
+            bytemuck::cast_slice(&self.particle_lookup),
+        );
     }
 
     async fn new(window: &'a Window) -> Self {
@@ -296,8 +296,8 @@ impl<'a> State<'a> {
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let start_time = std::time::Instant::now();
 
-        // self.sort_particles();
-        // println!("{:?}", self.particle_positions);
+        self.sort_particles();
+        // println!("{:?}", self.particle_lookup);
 
         // Update the frame count buffer before rendering
         self.queue.write_buffer(

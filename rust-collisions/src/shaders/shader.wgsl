@@ -41,17 +41,41 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let x: f32 = in.pos.x;
     let y: f32 = in.pos.y;
 
-    let grid: Grid = pos_to_grid(vec2<f32>(x, y));
-    // let grid_index: i32 = grid.y * i32(GRID_SIZE.x) + grid.x;
-    let starting_index: i32 = particle_lookup[max(grid.y - 1, 0) * i32(GRID_SIZE.x) + max(grid.x - 1, 0)];
-    var ending_index: i32 = particle_lookup[min((grid.y + 1) * i32(GRID_SIZE.x) + (grid.x + 1), i32(GRID_SIZE.x * GRID_SIZE.y) - 1)];
-    
-    for (var i = starting_index; i < ending_index; i=i+1){
-        let d = (x - particle_positions[i].x) * (x - particle_positions[i].x) + (y - particle_positions[i].y) * (y - particle_positions[i].y);
-        if d < particle_radii[i] * particle_radii[i] {
-            return vec4<f32>(1.0, 1.0, 1.0, 1.0);
+    let grid = pos_to_grid(vec2<f32>(x, y));
+    for (var gx: i32 = -1; gx <= 1; gx=gx+1){
+        for(var gy: i32 = -1; gy <=1; gy=gy+1){
+            let first_grid_index = grid_to_index(grid_add(grid, Grid(gx, gy)));
+            if first_grid_index < 0 || first_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
+                continue;
+            }
+            
+            let starting_index = particle_lookup[first_grid_index];
+            var ending_index = -1;
+
+            let next_grid_index = first_grid_index + 1;
+            if next_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
+                ending_index = i32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y);
+            }
+            else {
+                ending_index = particle_lookup[next_grid_index];
+            }
+
+            for (var i = starting_index; i < ending_index; i=i+1){
+                let d = (x - particle_positions[i].x) * (x - particle_positions[i].x) + (y - particle_positions[i].y) * (y - particle_positions[i].y);
+                if d < particle_radii[i] * particle_radii[i] {
+                    return vec4<f32>(1.0, 1.0, 1.0, 1.0);
+                }
+            }
+
         }
     }
+    
+    // for (var i = starting_index; i < ending_index; i=i+1){
+    //     let d = (x - particle_positions[i].x) * (x - particle_positions[i].x) + (y - particle_positions[i].y) * (y - particle_positions[i].y);
+    //     if d < particle_radii[i] * particle_radii[i] {
+    //         return vec4<f32>(1.0, 1.0, 1.0, 1.0);
+    //     }
+    // }
 
     return vec4<f32>(0.0, 0.0, 0.0, 1.0);
 }
@@ -61,4 +85,12 @@ fn pos_to_grid(pos: vec2<f32>) -> Grid {
         i32(pos.x / SCREEN_SIZE.x * GRID_SIZE.x),
         i32(pos.y / SCREEN_SIZE.y * GRID_SIZE.y)
     );
+}
+
+fn grid_to_index(grid: Grid) -> i32 {
+    return grid.y * i32(GRID_SIZE.x) + grid.x;
+}
+
+fn grid_add(grid: Grid, offset: Grid) -> Grid {
+    return Grid(grid.x + offset.x, grid.y + offset.y);
 }

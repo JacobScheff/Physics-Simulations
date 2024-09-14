@@ -3,8 +3,11 @@ use renderer_backend::{
     pipeline_builder::PipelineBuilder,
 };
 mod renderer_backend;
+use cgmath::prelude::*;
 use wgpu::{
-    core::device::global, util::{BufferInitDescriptor, DeviceExt}, BufferUsages
+    core::device::global,
+    util::{BufferInitDescriptor, DeviceExt},
+    BufferUsages,
 };
 use winit::{
     dpi::PhysicalSize,
@@ -13,7 +16,6 @@ use winit::{
     keyboard::{KeyCode, PhysicalKey},
     window::{Window, WindowBuilder},
 };
-use cgmath::prelude::*;
 
 const SCREEN_SIZE: (u32, u32) = (1200, 600);
 const TIME_BETWEEN_FRAMES: u64 = 10;
@@ -47,26 +49,60 @@ struct State<'a> {
     particle_radii_buffer: wgpu::Buffer,
     particle_lookup: Vec<i32>,
     particle_lookup_buffer: wgpu::Buffer,
+    position_reading_buffer: wgpu::Buffer,
 }
 
 impl<'a> State<'a> {
     fn pos_to_grid_index(&self, pos: [f32; 2]) -> i32 {
-        let x = (pos[0] / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32).min(GRID_SIZE.0 as f32 - 1.0) as i32;
-        let y = (pos[1] / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32).min(GRID_SIZE.1 as f32 - 1.0) as i32;
+        let x = (pos[0] / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32).min(GRID_SIZE.0 as f32 - 1.0)
+            as i32;
+        let y = (pos[1] / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32).min(GRID_SIZE.1 as f32 - 1.0)
+            as i32;
 
         x + y * GRID_SIZE.0
     }
 
     fn pos_to_grid(&self, pos: [f32; 2]) -> (i32, i32) {
-        let x = (pos[0] / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32).min(GRID_SIZE.0 as f32 - 1.0) as i32;
-        let y = (pos[1] / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32).min(GRID_SIZE.1 as f32 - 1.0) as i32;
+        let x = (pos[0] / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32).min(GRID_SIZE.0 as f32 - 1.0)
+            as i32;
+        let y = (pos[1] / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32).min(GRID_SIZE.1 as f32 - 1.0)
+            as i32;
 
         (x, y)
     }
 
-    fn sort_particles(&mut self) {
+    async fn sort_particles(&mut self) {
+        // Map position_reading_buffer for reading asynchronously
+        let buffer_slice = self.position_reading_buffer.slice(..);
+        let (sender, receiver) = futures_intrusive::channel::shared::oneshot_channel();
+        buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
+            sender.send(result).unwrap();
+        });
+
+        // Wait for the mapping to complete
+        self.device.poll(wgpu::Maintain::Wait);
+
+        // Check if the mapping was successful
+        if let Ok(()) = receiver.receive().await.unwrap() {
+            let data = buffer_slice.get_mapped_range();
+            let positions: &[f32] = bytemuck::cast_slice(&data);
+            // Update the particle positions
+            for i in 0..self.particle_positions.len() {
+                self.particle_positions[i] = [positions[i * 2], positions[i * 2 + 1]];
+            }
+
+            drop(data);
+            self.position_reading_buffer.unmap();
+        } else {
+            // Handle mapping error
+            eprintln!("Error mapping buffer");
+            // return Err(wgpu::SurfaceError::Lost); // Or handle the error appropriately
+            return;
+        }
+
         // Map all particles to their grid cell
-        let mut index_map: Vec<Vec<Vec<i32>>> = vec![vec![vec![]; GRID_SIZE.1 as usize]; GRID_SIZE.0 as usize];
+        let mut index_map: Vec<Vec<Vec<i32>>> =
+            vec![vec![vec![]; GRID_SIZE.1 as usize]; GRID_SIZE.0 as usize];
         for i in 0..self.particle_positions.len() {
             let grid = self.pos_to_grid(self.particle_positions[i]);
             index_map[grid.0 as usize][grid.1 as usize].push(i as i32);
@@ -222,7 +258,12 @@ impl<'a> State<'a> {
         let particle_positions_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Particle Positions Buffer Data"),
             contents: bytemuck::cast_slice(&particle_positions),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
+        });
+        let position_reading_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Position Reading Buffer Data"),
+            contents: bytemuck::cast_slice(&particle_positions),
+            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
         });
         let particle_radii_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Particle Radii Buffer Data"),
@@ -236,9 +277,21 @@ impl<'a> State<'a> {
         });
 
         // Write data to buffers
-        queue.write_buffer(&particle_positions_buffer, 0, bytemuck::cast_slice(&particle_positions));
-        queue.write_buffer(&particle_radii_buffer, 0, bytemuck::cast_slice(&particle_radii));
-        queue.write_buffer(&particle_lookup_buffer, 0, bytemuck::cast_slice(&particle_lookup));
+        queue.write_buffer(
+            &particle_positions_buffer,
+            0,
+            bytemuck::cast_slice(&particle_positions),
+        );
+        queue.write_buffer(
+            &particle_radii_buffer,
+            0,
+            bytemuck::cast_slice(&particle_radii),
+        );
+        queue.write_buffer(
+            &particle_lookup_buffer,
+            0,
+            bytemuck::cast_slice(&particle_lookup),
+        );
 
         // Buffer for the frame count
         let frame_count_buffer = device.create_buffer_init(&BufferInitDescriptor {
@@ -266,6 +319,7 @@ impl<'a> State<'a> {
             particle_radii_buffer,
             particle_lookup,
             particle_lookup_buffer,
+            position_reading_buffer,
         }
     }
 
@@ -281,7 +335,7 @@ impl<'a> State<'a> {
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let start_time = std::time::Instant::now();
 
-        self.sort_particles();
+        pollster::block_on(self.sort_particles());
 
         // Update the frame count buffer before rendering
         self.queue.write_buffer(
@@ -303,11 +357,7 @@ impl<'a> State<'a> {
             });
             compute_pass.set_pipeline(&self.compute_pipeline); // Assuming you have a compute pipeline
             compute_pass.set_bind_group(0, &self.compute_bind_group, &[]);
-            compute_pass.dispatch_workgroups(
-                DISPATCH_SIZE.0,
-                DISPATCH_SIZE.1,
-                1,
-            );
+            compute_pass.dispatch_workgroups(DISPATCH_SIZE.0, DISPATCH_SIZE.1, 1);
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));

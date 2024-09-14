@@ -49,7 +49,7 @@ pub fn get_bind_group_layout (device: &Device, isCompute: bool) -> BindGroupLayo
                     min_binding_size: None,
                 },
                 count: None,
-            },
+            }
         ],
         label: Some("Sphere Bind Group Layout"),
     });

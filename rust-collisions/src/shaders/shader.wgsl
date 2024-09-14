@@ -44,7 +44,12 @@ fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    
+    let index = global_id.y * PARTICLE_COUNT_X + global_id.x;
+    if index < 0 || index >= u32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y) {
+        return;
+    }
+
+    particle_positions[index] = particle_positions[index] + vec2<f32>(0, -10);
 }
 
 @fragment

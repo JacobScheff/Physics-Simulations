@@ -7,10 +7,10 @@ struct Grid {
     y: i32,
 }
 
-const WORKGROUP_SIZE: u32 = 8;
+const WORKGROUP_SIZE: u32 = 10;
 const DISPATCH_SIZE: vec2<u32> = vec2<u32>(
-    u32(SCREEN_SIZE.x) / u32(WORKGROUP_SIZE),
-    u32(SCREEN_SIZE.y) / u32(WORKGROUP_SIZE),
+    u32(PARTICLE_COUNT_X + WORKGROUP_SIZE - 1u) / u32(WORKGROUP_SIZE),
+    u32(PARTICLE_COUNT_Y+ WORKGROUP_SIZE - 1u) / u32(WORKGROUP_SIZE),
 );
 
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen

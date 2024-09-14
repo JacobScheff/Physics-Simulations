@@ -22,10 +22,10 @@ const PARTICLE_COUNT_Y: u32 = 100;
 const OFFSET: (f32, f32) = (10.0, 8.0); // How much to offset all the particle's starting positions
 const GRID_SIZE: (i32, i32) = (40, 40); // How many grid cells to divide the screen into
 
-const WORKGROUP_SIZE: u32 = 8;
+const WORKGROUP_SIZE: u32 = 10;
 const DISPATCH_SIZE: (u32, u32) = (
-    SCREEN_SIZE.0 / WORKGROUP_SIZE,
-    SCREEN_SIZE.1 / WORKGROUP_SIZE,
+    (PARTICLE_COUNT_X + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,
+    (PARTICLE_COUNT_Y + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,
 );
 
 struct State<'a> {
@@ -167,53 +167,6 @@ impl<'a> State<'a> {
             desired_maximum_frame_latency: 2,
         };
         surface.configure(&device, &config);
-
-        // Create bind group layout
-        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 3,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-            ],
-            label: Some("Particle Bind Group Layout"),
-        });
 
         // Pass bind group layout to render pipeline builder
         let mut render_pipeline_builder = PipelineBuilder::new();

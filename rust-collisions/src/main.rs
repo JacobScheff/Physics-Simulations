@@ -17,7 +17,7 @@ const TIME_BETWEEN_FRAMES: u64 = 10;
 const PARTICLE_COUNT_X: u32 = 100;
 const PARTICLE_COUNT_Y: u32 = 100;
 const OFFSET: (f32, f32) = (10.0, 8.0); // How much to offset all the particle's starting positions
-const GRID_SIZE: (i32, i32) = (20, 20); // How many grid cells to divide the screen into
+const GRID_SIZE: (i32, i32) = (40, 40); // How many grid cells to divide the screen into
 
 struct State<'a> {
     surface: wgpu::Surface<'a>,

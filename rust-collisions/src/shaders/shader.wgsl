@@ -44,12 +44,12 @@ fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    // let index = global_id.y * PARTICLE_COUNT_X + global_id.x;
-    // if index < 0 || index >= u32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y) {
-    //     return;
-    // }
+    let index = global_id.y * PARTICLE_COUNT_X + global_id.x;
+    if index < 0 || index >= u32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y) {
+        return;
+    }
 
-    // particle_positions[index] = particle_positions[index] + vec2<f32>(0, -10);
+    particle_positions[index] = particle_positions[index] + vec2<f32>(0, -1);
 }
 
 @fragment
@@ -91,8 +91,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
 fn pos_to_grid(pos: vec2<f32>) -> Grid {
     return Grid(
-        min(i32(pos.x / SCREEN_SIZE.x * GRID_SIZE.x), i32(GRID_SIZE.x - 1)),
-        min(i32(pos.y / SCREEN_SIZE.y * GRID_SIZE.y), i32(GRID_SIZE.y - 1))
+        max(min(i32(pos.x / SCREEN_SIZE.x * GRID_SIZE.x), i32(GRID_SIZE.x - 1)), 0),
+        max(min(i32(pos.y / SCREEN_SIZE.y * GRID_SIZE.y), i32(GRID_SIZE.y - 1)), 0)
     );
 }
 

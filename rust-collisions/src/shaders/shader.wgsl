@@ -18,7 +18,7 @@ const FOV: f32 = 60.0 * 3.14159 / 180.0; // Field of view in radians
 const ASPECT_RATIO: f32 = SCREEN_SIZE.x / SCREEN_SIZE.y; // Aspect ratio of the screen
 const PARTICLE_COUNT_X: u32 = 100;
 const PARTICLE_COUNT_Y: u32 = 100;
-const GRID_SIZE: vec2<f32> = vec2<f32>(40.0, 40.0);
+const GRID_SIZE: vec2<f32> = vec2<f32>(80.0, 40.0);
 
 @group(0) @binding(0) var<storage, read> frame_count: u32;
 @group(0) @binding(1) var<storage, read_write> particle_positions: array<vec2<f32>, u32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y)>;

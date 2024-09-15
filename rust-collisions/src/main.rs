@@ -22,7 +22,7 @@ const TIME_BETWEEN_FRAMES: u64 = 10;
 const PARTICLE_COUNT_X: u32 = 100;
 const PARTICLE_COUNT_Y: u32 = 100;
 const OFFSET: (f32, f32) = (10.0, 8.0); // How much to offset all the particle's starting positions
-const GRID_SIZE: (i32, i32) = (40, 40); // How many grid cells to divide the screen into
+const GRID_SIZE: (i32, i32) = (80, 40); // How many grid cells to divide the screen into
 
 const WORKGROUP_SIZE: u32 = 10;
 const DISPATCH_SIZE: (u32, u32) = (

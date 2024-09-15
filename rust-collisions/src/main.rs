@@ -20,8 +20,8 @@ use winit::{
 
 const SCREEN_SIZE: (u32, u32) = (1200, 600);
 const TIME_BETWEEN_FRAMES: u64 = 10;
-const PARTICLE_COUNT_X: u32 = 25;
-const PARTICLE_COUNT_Y: u32 = 25;
+const PARTICLE_COUNT_X: u32 = 100;
+const PARTICLE_COUNT_Y: u32 = 100;
 const OFFSET: (f32, f32) = (10.0, 8.0); // How much to offset all the particle's starting positions
 const GRID_SIZE: (i32, i32) = (20, 10); // How many grid cells to divide the screen into
 
@@ -333,8 +333,8 @@ impl<'a> State<'a> {
 
                 particle_positions.push([x, y]);
                 // particle_velocities.push([x / SCREEN_SIZE.0 as f32 * 2.0 - 1.0, y / SCREEN_SIZE.1 as f32 * 2.0 - 1.0]);
-                particle_velocities.push([rand::random::<f32>() * 2.0 - 1.0, rand::random::<f32>() * 2.0 - 1.0]);
-                particle_radii.push(4.0);
+                particle_velocities.push([-2.0 * (rand::random::<f32>() * 2.0 - 1.0), 2.0 * (rand::random::<f32>() * 2.0 - 1.0)]);
+                particle_radii.push(2.0);
             }
         }
         let particle_lookup: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
@@ -540,6 +540,7 @@ impl<'a> State<'a> {
                 "fps: {}",
                 1.0 / elapsed_time.as_micros() as f32 * 1000.0 * 1000.0
             );
+            self.frame_count = 0;
         }
 
         self.frame_count += 1;

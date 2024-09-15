@@ -77,7 +77,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
             for (var i = starting_index; i < ending_index; i=i+1){
                 let other_pos = particle_positions[i];
                 let d = (pos.x - particle_positions[i].x) * (pos.x - particle_positions[i].x) + (pos.y - particle_positions[i].y) * (pos.y - particle_positions[i].y);
-                if d < (radius + particle_radii[i]) * (radius + particle_radii[i]) && u32(i) != u32(index) {
+                if d <= (radius + particle_radii[i]) * (radius + particle_radii[i]) && u32(i) != u32(index) {
                     let other_vel = particle_velocities[i];
                     let other_mass = 3.14159265359 * particle_radii[i] * particle_radii[i];
                     let other_radius = particle_radii[i];
@@ -85,9 +85,15 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
                     // particle_velocities[index] -= (2.0 * other_mass / (mass + other_mass)) * dot(vel - other_vel, pos - other_pos) / max(length(pos - other_pos), 0.000001) / max(length(pos - other_pos), 0.000001) * (pos - other_pos);
                     // particle_velocities[i] -= (2.0 * mass / (mass + other_mass)) * dot(vel - other_vel, pos - other_pos) / max(length(pos - other_pos), 0.000001) / max(length(pos - other_pos), 0.000001) * (other_pos - pos);
 
-                    particle_velocities[index] -= (2.0 * other_mass / (mass + other_mass)) * dot(vel - other_vel, pos - other_pos) / (radius + other_radius) / (radius + other_radius) * (pos - other_pos);
-                    particle_velocities[i] -= (2.0 * mass / (mass + other_mass)) * dot(vel - other_vel, pos - other_pos) / (radius + other_radius) / (radius + other_radius) * (other_pos - pos);
+                    particle_velocities[index] -= (2.0 * other_mass / (mass + other_mass)) * dot(vel - other_vel, pos - other_pos) / (radius + other_radius) / (radius + other_radius) * normalize(pos - other_pos);
+                    particle_velocities[i] -= (2.0 * mass / (mass + other_mass)) * dot(vel - other_vel, pos - other_pos) / (radius + other_radius) / (radius + other_radius) * normalize(other_pos - pos);
 
+                    // If the particles are overlapping, move them apart
+                    if d < (radius + particle_radii[i]) * (radius + particle_radii[i]) {
+                        let overlap = (radius + particle_radii[i]) - sqrt(d);
+                        particle_positions[index] += overlap * normalize(pos - other_pos);
+                        particle_positions[i] -= overlap * normalize(pos - other_pos);
+                    }
                 }
             }
 

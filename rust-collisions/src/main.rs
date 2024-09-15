@@ -169,6 +169,9 @@ impl<'a> State<'a> {
         self.update_position_from_buffer().await;
         self.update_velocities_from_buffer().await;
 
+        // Move the particles
+        self.move_particles();
+
         // Map all particles to their grid cell
         let mut index_map: Vec<Vec<Vec<i32>>> =
             vec![vec![vec![]; GRID_SIZE.1 as usize]; GRID_SIZE.0 as usize];
@@ -432,6 +435,7 @@ impl<'a> State<'a> {
     
     fn move_particles(&mut self) {
         for index in 0..self.particle_positions.len() {
+            // println!("{:?}", self.particle_velocities[index]);
             if self.particle_positions[index][0] < 0.0 {
                 self.particle_positions[index][0] = 0.0;
                 self.particle_velocities[index][0] = -self.particle_velocities[index][0];
@@ -456,9 +460,6 @@ impl<'a> State<'a> {
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let start_time = std::time::Instant::now();
-
-        // Move the particles
-        self.move_particles();
 
         pollster::block_on(self.sort_particles());
 

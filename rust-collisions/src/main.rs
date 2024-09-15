@@ -72,6 +72,21 @@ impl<'a> State<'a> {
     }
 
     async fn sort_particles(&mut self) {
+        // Copy particle positions to position_reading_buffer
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Copy Encoder"),
+            });
+        encoder.copy_buffer_to_buffer(
+            &self.particle_positions_buffer,
+            0,
+            &self.position_reading_buffer,
+            0,
+            self.particle_positions_buffer.size(),
+        );
+        self.queue.submit(std::iter::once(encoder.finish()));
+
         // Map position_reading_buffer for reading asynchronously
         let buffer_slice = self.position_reading_buffer.slice(..);
         let (sender, receiver) = futures_intrusive::channel::shared::oneshot_channel();
@@ -99,6 +114,8 @@ impl<'a> State<'a> {
             // return Err(wgpu::SurfaceError::Lost); // Or handle the error appropriately
             return;
         }
+
+        // println!("{:?}", self.particle_positions[0]);
 
         // Map all particles to their grid cell
         let mut index_map: Vec<Vec<Vec<i32>>> =

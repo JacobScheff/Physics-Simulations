@@ -53,6 +53,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let pos: vec2<f32> = particle_positions[index];
     let vel = particle_velocities[index];
     let mass = 3.14159265359 * particle_radii[index] * particle_radii[index];
+    let radius = particle_radii[index];
 
     let grid = pos_to_grid(pos);
     for (var gx: i32 = -1; gx <= 1; gx=gx+1){
@@ -76,15 +77,17 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
             for (var i = starting_index; i < ending_index; i=i+1){
                 let other_pos = particle_positions[i];
                 let d = (pos.x - particle_positions[i].x) * (pos.x - particle_positions[i].x) + (pos.y - particle_positions[i].y) * (pos.y - particle_positions[i].y);
-                if d < particle_radii[i] * particle_radii[i] {
+                if d < (radius + particle_radii[i]) * (radius + particle_radii[i]) && u32(i) != u32(index) {
                     let other_vel = particle_velocities[i];
                     let other_mass = 3.14159265359 * particle_radii[i] * particle_radii[i];
+                    let other_radius = particle_radii[i];
 
-                    // particle_velocities[index] -= (2.0 * other_mass / (mass + other_mass)) * dot(vel - other_vel, pos - other_pos) / length(pos - other_pos) / length(pos - other_pos) * (pos - other_pos);
-                    // particle_velocities[i] -= (2.0 * mass / (mass + other_mass)) * dot(other_vel - vel, other_pos - pos) / length(other_pos - pos) / length(other_pos - pos) * (other_pos - pos);
+                    // particle_velocities[index] -= (2.0 * other_mass / (mass + other_mass)) * dot(vel - other_vel, pos - other_pos) / max(length(pos - other_pos), 0.000001) / max(length(pos - other_pos), 0.000001) * (pos - other_pos);
+                    // particle_velocities[i] -= (2.0 * mass / (mass + other_mass)) * dot(vel - other_vel, pos - other_pos) / max(length(pos - other_pos), 0.000001) / max(length(pos - other_pos), 0.000001) * (other_pos - pos);
 
-                    particle_velocities[index] -= (2.0 * other_mass / (mass + other_mass)) * dot(vel - other_vel, pos - other_pos) / max(length(pos - other_pos), 0.000001) / max(length(pos - other_pos), 0.000001);
-                    particle_velocities[i] -= (2.0 * mass / (mass + other_mass)) * dot(vel - other_vel, pos - other_pos) / max(length(pos - other_pos), 0.000001) / max(length(pos - other_pos), 0.000001);
+                    particle_velocities[index] -= (2.0 * other_mass / (mass + other_mass)) * dot(vel - other_vel, pos - other_pos) / (radius + other_radius) / (radius + other_radius) * (pos - other_pos);
+                    particle_velocities[i] -= (2.0 * mass / (mass + other_mass)) * dot(vel - other_vel, pos - other_pos) / (radius + other_radius) / (radius + other_radius) * (other_pos - pos);
+
                 }
             }
 

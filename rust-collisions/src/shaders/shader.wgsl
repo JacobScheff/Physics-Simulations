@@ -86,7 +86,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
                     // particle_velocities[i] -= (2.0 * mass / (mass + other_mass)) * dot(vel - other_vel, pos - other_pos) / max(length(pos - other_pos), 0.000001) / max(length(pos - other_pos), 0.000001) * (other_pos - pos);
 
                     particle_velocities[index] -= (2.0 * other_mass / (mass + other_mass)) * dot(vel - other_vel, normalize(pos - other_pos) * (radius + other_radius)) / (radius + other_radius) / (radius + other_radius) * normalize(pos - other_pos);
-                    particle_velocities[i] -= (2.0 * mass / (mass + other_mass)) * dot(vel - other_vel, normalize(pos - other_pos) * (radius + other_radius)) / (radius + other_radius) / (radius + other_radius) * normalize(other_pos - pos);
+                    particle_velocities[i] -= (2.0 * mass / (mass + other_mass)) * dot(other_vel - vel, normalize(other_pos - pos) * (radius + other_radius)) / (radius + other_radius) / (radius + other_radius) * normalize(other_pos - pos);
 
                     // If the particles are overlapping, move them apart
                     if d < (radius + particle_radii[i]) * (radius + particle_radii[i]) {

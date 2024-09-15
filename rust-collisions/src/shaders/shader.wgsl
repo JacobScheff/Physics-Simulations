@@ -50,7 +50,43 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         return;
     }
 
-    particle_positions[index] = particle_positions[index] + particle_velocities[index];
+    let pos: vec2<f32> = particle_positions[index];
+    let vel = particle_velocities[index];
+    let mass = 3.14159265359 * particle_radii[index] * particle_radii[index];
+
+    let grid = pos_to_grid(pos);
+    for (var gx: i32 = -1; gx <= 1; gx=gx+1){
+        for(var gy: i32 = -1; gy <=1; gy=gy+1){
+            let first_grid_index = grid_to_index(grid_add(grid, Grid(gx, gy)));
+            if first_grid_index < 0 || first_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
+                continue;
+            }
+            
+            let starting_index = particle_lookup[first_grid_index];
+            var ending_index = -1;
+
+            let next_grid_index = first_grid_index + 1;
+            if next_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
+                ending_index = i32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y);
+            }
+            else {
+                ending_index = particle_lookup[next_grid_index];
+            }
+
+            for (var i = starting_index; i < ending_index; i=i+1){
+                let other_pos = particle_positions[i];
+                let d = (pos.x - particle_positions[i].x) * (pos.x - particle_positions[i].x) + (pos.y - particle_positions[i].y) * (pos.y - particle_positions[i].y);
+                if d < particle_radii[i] * particle_radii[i] {
+                    let other_vel = particle_velocities[i];
+                    let other_mass = 3.14159265359 * particle_radii[i] * particle_radii[i];
+
+                    particle_velocities[index] -= (2.0 * other_mass / (mass + other_mass)) * dot(vel - other_vel, pos - other_pos) / length(pos - other_pos) / length(pos - other_pos) * (pos - other_pos);
+                    particle_velocities[i] -= (2.0 * mass / (mass + other_mass)) * dot(other_vel - vel, other_pos - pos) / length(other_pos - pos) / length(other_pos - pos) * (other_pos - pos);
+                }
+            }
+
+        }
+    }
 }
 
 @fragment

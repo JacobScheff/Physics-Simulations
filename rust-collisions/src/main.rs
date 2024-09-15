@@ -429,9 +429,36 @@ impl<'a> State<'a> {
             self.surface.configure(&self.device, &self.config);
         }
     }
+    
+    fn move_particles(&mut self) {
+        for index in 0..self.particle_positions.len() {
+            if self.particle_positions[index][0] < 0.0 {
+                self.particle_positions[index][0] = 0.0;
+                self.particle_velocities[index][0] = -self.particle_velocities[index][0];
+            }
+            if self.particle_positions[index][0] > SCREEN_SIZE.0 as f32 {
+                self.particle_positions[index][0] = SCREEN_SIZE.0 as f32;
+                self.particle_velocities[index][0] = -self.particle_velocities[index][0];
+            }
+        
+            if self.particle_positions[index][1] < 0.0 {
+                self.particle_positions[index][1] = 0.0;
+                self.particle_velocities[index][1] = -self.particle_velocities[index][1];
+            }
+            if self.particle_positions[index][1] > SCREEN_SIZE.1 as f32 {
+                self.particle_positions[index][1] = SCREEN_SIZE.1 as f32;
+                self.particle_velocities[index][1] = -self.particle_velocities[index][1];
+            }
+            self.particle_positions[index][0] += self.particle_velocities[index][0];   
+            self.particle_positions[index][1] += self.particle_velocities[index][1]; 
+        }
+    }
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let start_time = std::time::Instant::now();
+
+        // Move the particles
+        self.move_particles();
 
         pollster::block_on(self.sort_particles());
 
@@ -503,50 +530,6 @@ impl<'a> State<'a> {
         self.queue.submit(std::iter::once(command_encoder.finish()));
 
         drawable.present();
-
-        // let drawable = self.surface.get_current_texture()?;
-        // let image_view_descriptor = wgpu::TextureViewDescriptor::default();
-        // let image_view = drawable.texture.create_view(&image_view_descriptor);
-
-        // let command_encoder_descriptor = wgpu::CommandEncoderDescriptor {
-        //     label: Some("Render Encoder"),
-        // };
-        // let mut command_encoder = self
-        //     .device
-        //     .create_command_encoder(&command_encoder_descriptor);
-        // let color_attachment = wgpu::RenderPassColorAttachment {
-        //     view: &image_view,
-        //     resolve_target: None,
-        //     ops: wgpu::Operations {
-        //         load: wgpu::LoadOp::Clear(wgpu::Color {
-        //             r: 0.75,
-        //             g: 0.5,
-        //             b: 0.25,
-        //             a: 1.0,
-        //         }),
-        //         store: wgpu::StoreOp::Store,
-        //     },
-        // };
-
-        // let render_pass_descriptor = wgpu::RenderPassDescriptor {
-        //     label: Some("Render Pass"),
-        //     color_attachments: &[Some(color_attachment)],
-        //     depth_stencil_attachment: None,
-        //     occlusion_query_set: None,
-        //     timestamp_writes: None,
-        // };
-
-        // {
-        //     let mut render_pass = command_encoder.begin_render_pass(&render_pass_descriptor);
-        //     render_pass.set_pipeline(&self.render_pipeline);
-        //     render_pass.set_bind_group(0, &self.bind_group, &[]); // Access using self
-        //     render_pass.draw(0..3, 0..1); // Draw the first triangle
-        //     render_pass.draw(3..6, 0..1); // Draw the second triangle
-        // }
-
-        // self.queue.submit(std::iter::once(command_encoder.finish()));
-
-        // drawable.present();
 
         if self.frame_count % 10 == 0 {
             let elapsed_time = start_time.elapsed();

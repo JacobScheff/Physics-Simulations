@@ -58,19 +58,23 @@ struct State<'a> {
 
 impl<'a> State<'a> {
     fn pos_to_grid_index(&self, pos: [f32; 2]) -> i32 {
-        let x = (pos[0] / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32).min(GRID_SIZE.0 as f32 - 1.0).max(0.0)
-            as i32;
-        let y = (pos[1] / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32).min(GRID_SIZE.1 as f32 - 1.0).max(0.0)
-            as i32;
+        let x = (pos[0] / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32)
+            .min(GRID_SIZE.0 as f32 - 1.0)
+            .max(0.0) as i32;
+        let y = (pos[1] / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32)
+            .min(GRID_SIZE.1 as f32 - 1.0)
+            .max(0.0) as i32;
 
         x + y * GRID_SIZE.0
     }
 
     fn pos_to_grid(&self, pos: [f32; 2]) -> (i32, i32) {
-        let x = (pos[0] / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32).min(GRID_SIZE.0 as f32 - 1.0).max(0.0)
-            as i32;
-        let y = (pos[1] / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32).min(GRID_SIZE.1 as f32 - 1.0).max(0.0)
-            as i32;
+        let x = (pos[0] / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32)
+            .min(GRID_SIZE.0 as f32 - 1.0)
+            .max(0.0) as i32;
+        let y = (pos[1] / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32)
+            .min(GRID_SIZE.1 as f32 - 1.0)
+            .max(0.0) as i32;
 
         (x, y)
     }
@@ -153,6 +157,27 @@ impl<'a> State<'a> {
             // Update the particle velocities
             for i in 0..self.particle_velocities.len() {
                 self.particle_velocities[i] = [velocities[i * 2], velocities[i * 2 + 1]];
+
+                // Move the particle
+                if self.particle_positions[i][0] < 0.0 {
+                    self.particle_positions[i][0] = 0.0;
+                    self.particle_velocities[i][0] = -self.particle_velocities[i][0];
+                }
+                if self.particle_positions[i][0] > SCREEN_SIZE.0 as f32 {
+                    self.particle_positions[i][0] = SCREEN_SIZE.0 as f32;
+                    self.particle_velocities[i][0] = -self.particle_velocities[i][0];
+                }
+
+                if self.particle_positions[i][1] < 0.0 {
+                    self.particle_positions[i][1] = 0.0;
+                    self.particle_velocities[i][1] = -self.particle_velocities[i][1];
+                }
+                if self.particle_positions[i][1] > SCREEN_SIZE.1 as f32 {
+                    self.particle_positions[i][1] = SCREEN_SIZE.1 as f32;
+                    self.particle_velocities[i][1] = -self.particle_velocities[i][1];
+                }
+                self.particle_positions[i][0] += self.particle_velocities[i][0];
+                self.particle_positions[i][1] += self.particle_velocities[i][1];
             }
 
             drop(data);
@@ -169,9 +194,6 @@ impl<'a> State<'a> {
         // Update the particle positions and velocities from the buffers
         self.update_position_from_buffer().await;
         self.update_velocities_from_buffer().await;
-
-        // Move the particles
-        self.move_particles();
 
         // Map all particles to their grid cell
         let mut index_map: Vec<Vec<Vec<i32>>> =
@@ -333,7 +355,10 @@ impl<'a> State<'a> {
 
                 particle_positions.push([x, y]);
                 // particle_velocities.push([x / SCREEN_SIZE.0 as f32 * 2.0 - 1.0, y / SCREEN_SIZE.1 as f32 * 2.0 - 1.0]);
-                particle_velocities.push([2.0 * (rand::random::<f32>() * 2.0 - 1.0), 2.0 * (rand::random::<f32>() * 2.0 - 1.0)]);
+                particle_velocities.push([
+                    2.0 * (rand::random::<f32>() * 2.0 - 1.0),
+                    2.0 * (rand::random::<f32>() * 2.0 - 1.0),
+                ]);
                 particle_radii.push(2.0);
             }
         }
@@ -434,31 +459,29 @@ impl<'a> State<'a> {
             self.surface.configure(&self.device, &self.config);
         }
     }
-    
-    fn move_particles(&mut self) {
-        for index in 0..self.particle_positions.len() {
-            // println!("{:?}", self.particle_velocities[index]);
-            if self.particle_positions[index][0] < 0.0 {
-                self.particle_positions[index][0] = 0.0;
-                self.particle_velocities[index][0] = -self.particle_velocities[index][0];
-            }
-            if self.particle_positions[index][0] > SCREEN_SIZE.0 as f32 {
-                self.particle_positions[index][0] = SCREEN_SIZE.0 as f32;
-                self.particle_velocities[index][0] = -self.particle_velocities[index][0];
-            }
-        
-            if self.particle_positions[index][1] < 0.0 {
-                self.particle_positions[index][1] = 0.0;
-                self.particle_velocities[index][1] = -self.particle_velocities[index][1];
-            }
-            if self.particle_positions[index][1] > SCREEN_SIZE.1 as f32 {
-                self.particle_positions[index][1] = SCREEN_SIZE.1 as f32;
-                self.particle_velocities[index][1] = -self.particle_velocities[index][1];
-            }
-            self.particle_positions[index][0] += self.particle_velocities[index][0];   
-            self.particle_positions[index][1] += self.particle_velocities[index][1]; 
-        }
-    }
+
+    // fn move_particle(&mut self, index: usize) {
+    //     // println!("{:?}", self.particle_velocities[index]);
+    //     if self.particle_positions[index][0] < 0.0 {
+    //         self.particle_positions[index][0] = 0.0;
+    //         self.particle_velocities[index][0] = -self.particle_velocities[index][0];
+    //     }
+    //     if self.particle_positions[index][0] > SCREEN_SIZE.0 as f32 {
+    //         self.particle_positions[index][0] = SCREEN_SIZE.0 as f32;
+    //         self.particle_velocities[index][0] = -self.particle_velocities[index][0];
+    //     }
+
+    //     if self.particle_positions[index][1] < 0.0 {
+    //         self.particle_positions[index][1] = 0.0;
+    //         self.particle_velocities[index][1] = -self.particle_velocities[index][1];
+    //     }
+    //     if self.particle_positions[index][1] > SCREEN_SIZE.1 as f32 {
+    //         self.particle_positions[index][1] = SCREEN_SIZE.1 as f32;
+    //         self.particle_velocities[index][1] = -self.particle_velocities[index][1];
+    //     }
+    //     self.particle_positions[index][0] += self.particle_velocities[index][0];
+    //     self.particle_positions[index][1] += self.particle_velocities[index][1];
+    // }
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let start_time = std::time::Instant::now();

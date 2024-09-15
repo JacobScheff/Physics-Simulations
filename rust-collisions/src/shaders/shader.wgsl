@@ -23,7 +23,8 @@ const GRID_SIZE: vec2<f32> = vec2<f32>(80.0, 40.0);
 @group(0) @binding(0) var<storage, read> frame_count: u32;
 @group(0) @binding(1) var<storage, read_write> particle_positions: array<vec2<f32>, u32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y)>;
 @group(0) @binding(2) var<storage, read> particle_radii: array<f32>;
-@group(0) @binding(3) var<storage, read> particle_lookup: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
+@group(0) @binding(3) var<storage, read_write> particle_velocities: array<vec2<f32>, u32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y)>;
+@group(0) @binding(4) var<storage, read> particle_lookup: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
 
 @vertex
 fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
@@ -49,7 +50,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         return;
     }
 
-    particle_positions[index] = particle_positions[index] + vec2<f32>(0, -1);
+    particle_positions[index] = particle_positions[index] + particle_velocities[index];
 }
 
 @fragment

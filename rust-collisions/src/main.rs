@@ -47,9 +47,12 @@ struct State<'a> {
     particle_positions_buffer: wgpu::Buffer,
     particle_radii: Vec<f32>,
     particle_radii_buffer: wgpu::Buffer,
+    particle_velocities: Vec<[f32; 2]>,
+    particle_velocities_buffer: wgpu::Buffer,
     particle_lookup: Vec<i32>,
     particle_lookup_buffer: wgpu::Buffer,
     position_reading_buffer: wgpu::Buffer,
+    velocity_reading_buffer: wgpu::Buffer,
 }
 
 impl<'a> State<'a> {
@@ -71,7 +74,7 @@ impl<'a> State<'a> {
         (x, y)
     }
 
-    async fn sort_particles(&mut self) {
+    async fn update_position_from_buffer(&mut self) {
         // Copy particle positions to position_reading_buffer
         let mut encoder = self
             .device
@@ -114,8 +117,57 @@ impl<'a> State<'a> {
             // return Err(wgpu::SurfaceError::Lost); // Or handle the error appropriately
             return;
         }
+    }
 
-        // println!("{:?}", self.particle_positions[0]);
+    async fn update_velocities_from_buffer(&mut self) {
+        // Copy particle velocities to velocity_reading_buffer
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Copy Encoder"),
+            });
+        encoder.copy_buffer_to_buffer(
+            &self.particle_velocities_buffer,
+            0,
+            &self.velocity_reading_buffer,
+            0,
+            self.particle_velocities_buffer.size(),
+        );
+        self.queue.submit(std::iter::once(encoder.finish()));
+
+        // Map velocity_reading_buffer for reading asynchronously
+        let buffer_slice = self.velocity_reading_buffer.slice(..);
+        let (sender, receiver) = futures_intrusive::channel::shared::oneshot_channel();
+        buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
+            sender.send(result).unwrap();
+        });
+
+        // Wait for the mapping to complete
+        self.device.poll(wgpu::Maintain::Wait);
+
+        // Check if the mapping was successful
+        if let Ok(()) = receiver.receive().await.unwrap() {
+            let data = buffer_slice.get_mapped_range();
+            let velocities: &[f32] = bytemuck::cast_slice(&data);
+            // Update the particle velocities
+            for i in 0..self.particle_velocities.len() {
+                self.particle_velocities[i] = [velocities[i * 2], velocities[i * 2 + 1]];
+            }
+
+            drop(data);
+            self.velocity_reading_buffer.unmap();
+        } else {
+            // Handle mapping error
+            eprintln!("Error mapping buffer");
+            // return Err(wgpu::SurfaceError::Lost); // Or handle the error appropriately
+            return;
+        }
+    }
+
+    async fn sort_particles(&mut self) {
+        // Update the particle positions and velocities from the buffers
+        self.update_position_from_buffer().await;
+        self.update_velocities_from_buffer().await;
 
         // Map all particles to their grid cell
         let mut index_map: Vec<Vec<Vec<i32>>> =
@@ -127,6 +179,7 @@ impl<'a> State<'a> {
 
         // Create a new list of particles
         let mut new_positions: Vec<[f32; 2]> = vec![];
+        let mut new_velocities: Vec<[f32; 2]> = vec![];
         let mut new_radii: Vec<f32> = vec![];
         let mut lookup_table = vec![-1; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
 
@@ -140,6 +193,7 @@ impl<'a> State<'a> {
                 for k in 0..index_map[i as usize][j as usize].len() {
                     let particle_index = index_map[i as usize][j as usize][k] as usize;
                     new_positions.push(self.particle_positions[particle_index]);
+                    new_velocities.push(self.particle_velocities[particle_index]);
                     new_radii.push(self.particle_radii[particle_index]);
                     if index == -1 {
                         index = new_positions.len() as i32 - 1;
@@ -151,6 +205,7 @@ impl<'a> State<'a> {
         }
 
         self.particle_positions = new_positions;
+        self.particle_velocities = new_velocities;
         self.particle_radii = new_radii;
         self.particle_lookup = lookup_table;
 
@@ -164,6 +219,12 @@ impl<'a> State<'a> {
             &self.particle_radii_buffer,
             0,
             bytemuck::cast_slice(&self.particle_radii),
+        );
+
+        self.queue.write_buffer(
+            &self.particle_velocities_buffer,
+            0,
+            bytemuck::cast_slice(&self.particle_velocities),
         );
 
         self.queue.write_buffer(
@@ -259,6 +320,7 @@ impl<'a> State<'a> {
 
         // Create particle data
         let mut particle_positions = vec![];
+        let mut particle_velocities = vec![];
         let mut particle_radii = vec![];
         for i in 0..PARTICLE_COUNT_X {
             for j in 0..PARTICLE_COUNT_Y {
@@ -266,6 +328,7 @@ impl<'a> State<'a> {
                 let y = SCREEN_SIZE.1 as f32 / (PARTICLE_COUNT_Y + 1) as f32 * j as f32 + OFFSET.1;
 
                 particle_positions.push([x, y]);
+                particle_velocities.push([0.0, 0.0]);
                 particle_radii.push(1.0);
             }
         }
@@ -280,6 +343,16 @@ impl<'a> State<'a> {
         let position_reading_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Position Reading Buffer Data"),
             contents: bytemuck::cast_slice(&particle_positions),
+            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
+        });
+        let particle_velocities_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Particle Velocities Buffer Data"),
+            contents: bytemuck::cast_slice(&particle_velocities),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
+        });
+        let velocity_reading_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Velocity Reading Buffer Data"),
+            contents: bytemuck::cast_slice(&particle_velocities),
             usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
         });
         let particle_radii_buffer = device.create_buffer_init(&BufferInitDescriptor {
@@ -303,6 +376,11 @@ impl<'a> State<'a> {
             &particle_radii_buffer,
             0,
             bytemuck::cast_slice(&particle_radii),
+        );
+        queue.write_buffer(
+            &particle_velocities_buffer,
+            0,
+            bytemuck::cast_slice(&particle_velocities),
         );
         queue.write_buffer(
             &particle_lookup_buffer,
@@ -334,9 +412,12 @@ impl<'a> State<'a> {
             particle_positions_buffer,
             particle_radii,
             particle_radii_buffer,
+            particle_velocities,
+            particle_velocities_buffer,
             particle_lookup,
             particle_lookup_buffer,
             position_reading_buffer,
+            velocity_reading_buffer,
         }
     }
 
@@ -525,6 +606,10 @@ async fn run() {
             },
             wgpu::BindGroupEntry {
                 binding: 3,
+                resource: state.particle_velocities_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 4,
                 resource: state.particle_lookup_buffer.as_entire_binding(),
             },
         ],
@@ -550,6 +635,10 @@ async fn run() {
             },
             wgpu::BindGroupEntry {
                 binding: 3,
+                resource: state.particle_velocities_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 4,
                 resource: state.particle_lookup_buffer.as_entire_binding(),
             },
         ],

@@ -328,7 +328,7 @@ impl<'a> State<'a> {
                 let y = SCREEN_SIZE.1 as f32 / (PARTICLE_COUNT_Y + 1) as f32 * j as f32 + OFFSET.1;
 
                 particle_positions.push([x, y]);
-                particle_velocities.push([0.0, 0.0]);
+                particle_velocities.push([x / SCREEN_SIZE.0 as f32 * 2.0 - 1.0, y / SCREEN_SIZE.1 as f32 * 2.0 - 1.0]);
                 particle_radii.push(1.0);
             }
         }

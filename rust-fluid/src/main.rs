@@ -591,6 +591,9 @@ impl<'a> State<'a> {
                 }
 
                 for i in starting_index..ending_index {
+                    if i == -1 || i == index as i32 || i >= self.particle_positions.len() as i32 {
+                        continue;
+                    }
                     let offset = (
                         position.0 - self.particle_positions[i as usize][0]
                             + self.particle_velocities[i as usize][0] * LOOK_AHEAD_TIME,

@@ -1,3 +1,5 @@
+use core::f32;
+
 use renderer_backend::{
     bind_group_layout_generator, compute_pipeline_builder::ComputePipelineBuilder,
     pipeline_builder::PipelineBuilder,
@@ -34,6 +36,11 @@ const LOOK_AHEAD_TIME: f32 = 1.0 / 60.0; // The time to look ahead when calculat
 const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 
+const grids_to_check: (i32, i32) = (
+    (SCREEN_SIZE.0 as f32 / RADIUS_OF_INFLUENCE + 0.5) as i32,
+    (SCREEN_SIZE.1 as f32 / RADIUS_OF_INFLUENCE + 0.5) as i32,
+);
+
 const WORKGROUP_SIZE: u32 = 10;
 const DISPATCH_SIZE: (u32, u32) = (
     (PARTICLE_AMOUNT_X + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,
@@ -68,26 +75,30 @@ struct State<'a> {
 }
 
 impl<'a> State<'a> {
-    fn pos_to_grid_index(&self, pos: [f32; 2]) -> i32 {
-        let x = (pos[0] / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32)
+    fn pos_to_grid_index(&self, pos: (f32, f32)) -> i32 {
+        let x = (pos.0 / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32)
             .min(GRID_SIZE.0 as f32 - 1.0)
             .max(0.0) as i32;
-        let y = (pos[1] / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32)
+        let y = (pos.1 / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32)
             .min(GRID_SIZE.1 as f32 - 1.0)
             .max(0.0) as i32;
 
         x + y * GRID_SIZE.0
     }
 
-    fn pos_to_grid(&self, pos: [f32; 2]) -> (i32, i32) {
-        let x = (pos[0] / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32)
+    fn pos_to_grid(&self, pos: (f32, f32)) -> (i32, i32) {
+        let x = (pos.0 / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32)
             .min(GRID_SIZE.0 as f32 - 1.0)
             .max(0.0) as i32;
-        let y = (pos[1] / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32)
+        let y = (pos.1 / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32)
             .min(GRID_SIZE.1 as f32 - 1.0)
             .max(0.0) as i32;
 
         (x, y)
+    }
+
+    fn grid_to_index(&self, grid: (i32, i32)) -> i32 {
+        grid.0 + grid.1 * GRID_SIZE.0
     }
 
     async fn update_position_from_buffer(&mut self) {
@@ -230,7 +241,7 @@ impl<'a> State<'a> {
         let mut index_map: Vec<Vec<Vec<i32>>> =
             vec![vec![vec![]; GRID_SIZE.1 as usize]; GRID_SIZE.0 as usize];
         for i in 0..self.particle_positions.len() {
-            let grid = self.pos_to_grid(self.particle_positions[i]);
+            let grid = self.pos_to_grid(self.particle_positions[i].into());
             index_map[grid.0 as usize][grid.1 as usize].push(i as i32);
         }
 
@@ -508,28 +519,135 @@ impl<'a> State<'a> {
         }
     }
 
-    // fn move_particle(&mut self, index: usize) {
-    //     // println!("{:?}", self.particle_velocities[index]);
-    //     if self.particle_positions[index][0] < 0.0 {
-    //         self.particle_positions[index][0] = 0.0;
-    //         self.particle_velocities[index][0] = -self.particle_velocities[index][0];
-    //     }
-    //     if self.particle_positions[index][0] > SCREEN_SIZE.0 as f32 {
-    //         self.particle_positions[index][0] = SCREEN_SIZE.0 as f32;
-    //         self.particle_velocities[index][0] = -self.particle_velocities[index][0];
-    //     }
+    fn density_to_pressure(&self, density: f32) -> f32 {
+        let density_error = density - TARGET_DENSITY;
+        return density_error * PRESURE_MULTIPLIER;
+    }
 
-    //     if self.particle_positions[index][1] < 0.0 {
-    //         self.particle_positions[index][1] = 0.0;
-    //         self.particle_velocities[index][1] = -self.particle_velocities[index][1];
-    //     }
-    //     if self.particle_positions[index][1] > SCREEN_SIZE.1 as f32 {
-    //         self.particle_positions[index][1] = SCREEN_SIZE.1 as f32;
-    //         self.particle_velocities[index][1] = -self.particle_velocities[index][1];
-    //     }
-    //     self.particle_positions[index][0] += self.particle_velocities[index][0];
-    //     self.particle_positions[index][1] += self.particle_velocities[index][1];
-    // }
+    fn smoothing_kernel(&self, distance: f32) -> f32 {
+        if distance >= RADIUS_OF_INFLUENCE {
+            return 0.0;
+        }
+
+        let volume = f32::consts::PI * RADIUS_OF_INFLUENCE.powi(4) / 6.0;
+        return (RADIUS_OF_INFLUENCE - distance) * (RADIUS_OF_INFLUENCE - distance) / volume;
+    }
+
+    fn smoothing_kernel_derivative(&self, distance: f32) -> f32 {
+        if distance >= RADIUS_OF_INFLUENCE {
+            return 0.0;
+        }
+
+        let scale = 12.0 / RADIUS_OF_INFLUENCE.powi(4) * f32::consts::PI;
+        return (RADIUS_OF_INFLUENCE - distance) * scale;
+    }
+
+    fn viscosity_kernel(&self, distance: f32) -> f32 {
+        if distance >= RADIUS_OF_INFLUENCE {
+            return 0.0;
+        }
+
+        let volume = f32::consts::PI * RADIUS_OF_INFLUENCE.powi(8) / 4.0;
+        let value = RADIUS_OF_INFLUENCE * RADIUS_OF_INFLUENCE - distance * distance;
+        return value * value * value / volume;
+    }
+
+    fn calculate_shared_pressure(&self, density_a: f32, density_b: f32) -> f32 {
+        let pressure_a = self.density_to_pressure(density_a);
+        let pressure_b = self.density_to_pressure(density_b);
+        return (pressure_a + pressure_b) / 2.0;
+    }
+
+    fn calculate_forces(&mut self, index: usize) -> ((f32, f32), (f32, f32)) {
+        let mut pressure_force = (0.0, 0.0);
+        let mut viscosity_force = (0.0, 0.0);
+        let position = (
+            self.particle_positions[index][0]
+                + self.particle_velocities[index][0] * LOOK_AHEAD_TIME,
+            self.particle_positions[index][1]
+                + self.particle_velocities[index][1] * LOOK_AHEAD_TIME,
+        );
+
+        let grid = self.pos_to_grid(position);
+
+        let density = self.particle_densities[index];
+
+        // for (let mut gx: i32 = -grids_to_check.x; gx <= grids_to_check.x; gx+=1){
+        for gx in -grids_to_check.0..=grids_to_check.0 {
+            for gy in -grids_to_check.1..=grids_to_check.1 {
+                let first_grid_index = self.grid_to_index((grid.0 + gx, grid.1 + gy));
+                if first_grid_index < 0 || first_grid_index >= GRID_SIZE.0 * GRID_SIZE.1 {
+                    continue;
+                }
+
+                let starting_index = self.particle_lookup[first_grid_index as usize];
+                let mut ending_index: i32 = -1;
+
+                let next_grid_index = first_grid_index + 1;
+                if next_grid_index >= (GRID_SIZE.0 * GRID_SIZE.1) {
+                    ending_index = PARTICLE_AMOUNT_X as i32 * PARTICLE_AMOUNT_Y as i32;
+                } else {
+                    ending_index = self.particle_lookup[next_grid_index as usize];
+                }
+
+                for i in starting_index..ending_index {
+                    let offset = (
+                        position.0 - self.particle_positions[i as usize][0]
+                            + self.particle_velocities[i as usize][0] * LOOK_AHEAD_TIME,
+                        position.1 - self.particle_positions[i as usize][1]
+                            + self.particle_velocities[i as usize][1] * LOOK_AHEAD_TIME,
+                    );
+                    let distance = offset.0 * offset.0 + offset.1 * offset.1;
+                    if distance == 0.0 {
+                        continue;
+                    }
+                    let dir = (offset.0 / distance.sqrt(), offset.1 / distance.sqrt());
+
+                    let slope = self.smoothing_kernel_derivative(distance);
+                    let other_density = self.particle_densities[i as usize];
+                    let shared_pressure = self.calculate_shared_pressure(density, other_density);
+
+                    // Pressure force
+                    for i in 0..2 {
+                        pressure_force.0 = pressure_force.0
+                            + dir.0
+                                * shared_pressure
+                                * slope
+                                * 3.141592653589
+                                * PARTICLE_RADIUS
+                                * PARTICLE_RADIUS
+                                / density.max(0.000001);
+                        pressure_force.1 = pressure_force.1
+                            + dir.1
+                                * shared_pressure
+                                * slope
+                                * 3.141592653589
+                                * PARTICLE_RADIUS
+                                * PARTICLE_RADIUS
+                                / density.max(0.000001);
+                    }
+
+                    // Viscosity force
+                    let viscosity_influence = self.viscosity_kernel(distance);
+                    for i in 0..2 {
+                        viscosity_force.0 = viscosity_force.0
+                            + (self.particle_velocities[i as usize][0]
+                                - self.particle_velocities[index][0])
+                                * viscosity_influence;
+                        viscosity_force.1 = viscosity_force.1
+                            + (self.particle_velocities[i as usize][1]
+                                - self.particle_velocities[index][1])
+                                * viscosity_influence;
+                    }
+                }
+            }
+        }
+
+        return (
+            pressure_force,
+            (viscosity_force.0 * VISCOSITY, viscosity_force.1 * VISCOSITY),
+        );
+    }
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let start_time = std::time::Instant::now();
@@ -538,6 +656,11 @@ impl<'a> State<'a> {
         pollster::block_on(self.update_position_from_buffer());
         pollster::block_on(self.update_velocities_from_buffer());
         pollster::block_on(self.update_densities_from_buffer());
+
+        // Update the particles based on forces
+        for i in 0..self.particle_positions.len() {
+            let mut forces: ((f32, f32), (f32, f32)) = self.calculate_forces(i);
+        }
 
         // Move the particles
         for i in 0..self.particle_positions.len() {
@@ -562,7 +685,6 @@ impl<'a> State<'a> {
             self.particle_positions[i][0] += self.particle_velocities[i][0];
             self.particle_positions[i][1] += self.particle_velocities[i][1];
         }
-
 
         pollster::block_on(self.sort_particles());
 

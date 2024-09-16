@@ -161,12 +161,6 @@ fn get_density(pos: vec2<f32>) -> f32 {
     return density;
 }
 
-fn calculate_shared_pressure(density_a: f32, density_b: f32) -> f32 {
-    let pressure_a = density_to_pressure(density_a);
-    let pressure_b = density_to_pressure(density_b);
-    return (pressure_a + pressure_b) / 2.0;
-}
-
 fn pos_to_grid(pos: vec2<f32>) -> Grid {
     return Grid(
         max(min(i32(pos.x / SCREEN_SIZE.x * GRID_SIZE.x), i32(GRID_SIZE.x - 1)), 0),

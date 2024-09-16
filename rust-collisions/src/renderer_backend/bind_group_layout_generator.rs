@@ -1,8 +1,8 @@
 use wgpu::BindGroupLayout;
 use wgpu::Device;
 
-pub fn get_bind_group_layout (device: &Device, isCompute: bool) -> BindGroupLayout {
-    let visibility: wgpu::ShaderStages = if isCompute {
+pub fn get_bind_group_layout (device: &Device, is_compute: bool) -> BindGroupLayout {
+    let _visibility: wgpu::ShaderStages = if is_compute {
         wgpu::ShaderStages::COMPUTE
     } else {
         wgpu::ShaderStages::FRAGMENT

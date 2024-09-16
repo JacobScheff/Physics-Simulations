@@ -58,10 +58,13 @@ struct State<'a> {
     particle_radii_buffer: wgpu::Buffer,
     particle_velocities: Vec<[f32; 2]>,
     particle_velocities_buffer: wgpu::Buffer,
+    particle_densities: Vec<f32>,
+    particle_densities_buffer: wgpu::Buffer,
     particle_lookup: Vec<i32>,
     particle_lookup_buffer: wgpu::Buffer,
     position_reading_buffer: wgpu::Buffer,
     velocity_reading_buffer: wgpu::Buffer,
+    density_reading_buffer: wgpu::Buffer,
 }
 
 impl<'a> State<'a> {
@@ -198,6 +201,51 @@ impl<'a> State<'a> {
         }
     }
 
+    async fn update_densities_from_buffer(&mut self) {
+        // Copy particle densities to density_reading_buffer
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Copy Encoder"),
+            });
+        encoder.copy_buffer_to_buffer(
+            &self.particle_densities_buffer,
+            0,
+            &self.density_reading_buffer,
+            0,
+            self.particle_densities_buffer.size(),
+        );
+        self.queue.submit(std::iter::once(encoder.finish()));
+
+        // Map density_reading_buffer for reading asynchronously
+        let buffer_slice = self.density_reading_buffer.slice(..);
+        let (sender, receiver) = futures_intrusive::channel::shared::oneshot_channel();
+        buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
+            sender.send(result).unwrap();
+        });
+
+        // Wait for the mapping to complete
+        self.device.poll(wgpu::Maintain::Wait);
+
+        // Check if the mapping was successful
+        if let Ok(()) = receiver.receive().await.unwrap() {
+            let data = buffer_slice.get_mapped_range();
+            let densities: &[f32] = bytemuck::cast_slice(&data);
+            // Update the particle densities
+            for i in 0..self.particle_densities.len() {
+                self.particle_densities[i] = densities[i];
+            }
+
+            drop(data);
+            self.density_reading_buffer.unmap();
+        } else {
+            // Handle mapping error
+            eprintln!("Error mapping buffer");
+            // return Err(wgpu::SurfaceError::Lost); // Or handle the error appropriately
+            return;
+        }
+    }
+
     async fn sort_particles(&mut self) {
         // Update the particle positions and velocities from the buffers
         self.update_position_from_buffer().await;
@@ -215,6 +263,7 @@ impl<'a> State<'a> {
         let mut new_positions: Vec<[f32; 2]> = vec![];
         let mut new_velocities: Vec<[f32; 2]> = vec![];
         let mut new_radii: Vec<f32> = vec![];
+        let mut new_densities: Vec<f32> = vec![];
         let mut lookup_table = vec![-1; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
 
         // Iterate over all grid cells
@@ -229,6 +278,7 @@ impl<'a> State<'a> {
                     new_positions.push(self.particle_positions[particle_index]);
                     new_velocities.push(self.particle_velocities[particle_index]);
                     new_radii.push(self.particle_radii[particle_index]);
+                    new_densities.push(self.particle_densities[particle_index]);
                     if index == -1 {
                         index = new_positions.len() as i32 - 1;
                     }
@@ -241,6 +291,7 @@ impl<'a> State<'a> {
         self.particle_positions = new_positions;
         self.particle_velocities = new_velocities;
         self.particle_radii = new_radii;
+        self.particle_densities = new_densities;
         self.particle_lookup = lookup_table;
 
         self.queue.write_buffer(
@@ -259,6 +310,12 @@ impl<'a> State<'a> {
             &self.particle_velocities_buffer,
             0,
             bytemuck::cast_slice(&self.particle_velocities),
+        );
+
+        self.queue.write_buffer(
+            &self.particle_densities_buffer,
+            0,
+            bytemuck::cast_slice(&self.particle_densities),
         );
 
         self.queue.write_buffer(
@@ -356,6 +413,7 @@ impl<'a> State<'a> {
         let mut particle_positions = vec![];
         let mut particle_velocities = vec![];
         let mut particle_radii = vec![];
+        let mut particle_densities = vec![];
         for i in 0..PARTICLE_AMOUNT_X {
             for j in 0..PARTICLE_AMOUNT_Y {
                 let x = SCREEN_SIZE.0 as f32 / (PARTICLE_AMOUNT_X + 1) as f32 * i as f32 + OFFSET.0;
@@ -364,6 +422,7 @@ impl<'a> State<'a> {
                 particle_positions.push([x, y]);
                 particle_velocities.push([0.0, 0.0]);
                 particle_radii.push(PARTICLE_RADIUS);
+                particle_densities.push(0.0);
             }
         }
         let particle_lookup: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
@@ -394,6 +453,16 @@ impl<'a> State<'a> {
             contents: bytemuck::cast_slice(&particle_radii),
             usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
         });
+        let particle_densities_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Particle Densities Buffer Data"),
+            contents: bytemuck::cast_slice(&particle_densities),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
+        });
+        let density_reading_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Density Reading Buffer Data"),
+            contents: bytemuck::cast_slice(&particle_densities),
+            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
+        });
         let particle_lookup_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Particle Lookup Buffer Data"),
             contents: bytemuck::cast_slice(&particle_lookup),
@@ -415,6 +484,11 @@ impl<'a> State<'a> {
             &particle_velocities_buffer,
             0,
             bytemuck::cast_slice(&particle_velocities),
+        );
+        queue.write_buffer(
+            &particle_densities_buffer,
+            0,
+            bytemuck::cast_slice(&particle_densities),
         );
         queue.write_buffer(
             &particle_lookup_buffer,
@@ -440,10 +514,13 @@ impl<'a> State<'a> {
             particle_radii_buffer,
             particle_velocities,
             particle_velocities_buffer,
+            particle_densities,
+            particle_densities_buffer,
             particle_lookup,
             particle_lookup_buffer,
             position_reading_buffer,
             velocity_reading_buffer,
+            density_reading_buffer,
         }
     }
 
@@ -607,6 +684,10 @@ async fn run() {
                 binding: 3,
                 resource: state.particle_lookup_buffer.as_entire_binding(),
             },
+            wgpu::BindGroupEntry {
+                binding: 4,
+                resource: state.particle_densities_buffer.as_entire_binding(),
+            },
         ],
     });
 
@@ -631,6 +712,10 @@ async fn run() {
             wgpu::BindGroupEntry {
                 binding: 3,
                 resource: state.particle_lookup_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 4,
+                resource: state.particle_densities_buffer.as_entire_binding(),
             },
         ],
     });

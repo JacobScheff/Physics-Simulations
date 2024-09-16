@@ -35,6 +35,7 @@ const grids_to_check = vec2<i32>(i32(SCREEN_SIZE.x / RADIUS_OF_INFLUENCE + 0.5),
 @group(0) @binding(1) var<storage, read> particle_radii: array<f32>;
 @group(0) @binding(2) var<storage, read_write> particle_velocities: array<vec2<f32>, u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y)>;
 @group(0) @binding(3) var<storage, read> particle_lookup: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
+@group(0) @binding(4) var<storage, read_write> particle_density: array<f32, u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y)>;
 
 @vertex
 fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
@@ -60,20 +61,17 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         return;
     }
 
-    // let pos: vec2<f32> = particle_positions[index];
-    // let vel = particle_velocities[index];
-    // let mass = 3.14159265359 * particle_radii[index] * particle_radii[index];
-    // let radius = particle_radii[index];
+    let density = get_density(particle_positions[index]);
 
-    let forces: vec4<f32> = calculate_forces(index);
-    let pressure_force: vec2<f32> = forces.xy;
-    let viscosity_force: vec2<f32> = forces.zw;
-    let gravity_force: vec2<f32> = vec2<f32>(0.0, GRAVITY);
+    // let forces: vec4<f32> = calculate_forces(index);
+    // let pressure_force: vec2<f32> = forces.xy;
+    // let viscosity_force: vec2<f32> = forces.zw;
+    // let gravity_force: vec2<f32> = vec2<f32>(0.0, GRAVITY);
 
-    var particle_acceleration: vec2<f32> = (pressure_force) / max(get_density(particle_positions[index]), 0.000001);
-    particle_acceleration = particle_acceleration + viscosity_force;
-    particle_acceleration = particle_acceleration + gravity_force;
-    particle_velocities[index] = particle_velocities[index] + particle_acceleration;
+    // var particle_acceleration: vec2<f32> = (pressure_force) / max(get_density(particle_positions[index]), 0.000001);
+    // particle_acceleration = particle_acceleration + viscosity_force;
+    // particle_acceleration = particle_acceleration + gravity_force;
+    // particle_velocities[index] = particle_velocities[index] + particle_acceleration;
 }
 
 @fragment

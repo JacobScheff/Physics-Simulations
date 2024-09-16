@@ -126,25 +126,6 @@ fn smoothing_kernel(distance: f32) -> f32 {
     return (RADIUS_OF_INFLUENCE - distance) * (RADIUS_OF_INFLUENCE - distance) / volume;
 }
 
-fn smoothing_kernel_derivative(distance: f32) -> f32 {
-    if distance >= RADIUS_OF_INFLUENCE {
-        return 0.0;
-    }
-
-    let scale = 12.0 / (pow(RADIUS_OF_INFLUENCE, 4.0) * 3.141592653589);
-    return (RADIUS_OF_INFLUENCE - distance) * scale;
-}
-
-fn viscosity_kernel(distance: f32) -> f32 {
-    if distance >= RADIUS_OF_INFLUENCE {
-        return 0.0;
-    }
-
-    let volume = 3.141592653589 * pow(RADIUS_OF_INFLUENCE, 8.0) / 4.0;
-    let value = RADIUS_OF_INFLUENCE * RADIUS_OF_INFLUENCE - distance * distance;
-    return value * value * value / volume;
-}
-
 fn get_density(pos: vec2<f32>) -> f32 {
     let grid = pos_to_grid(pos);
 
@@ -184,59 +165,6 @@ fn calculate_shared_pressure(density_a: f32, density_b: f32) -> f32 {
     let pressure_a = density_to_pressure(density_a);
     let pressure_b = density_to_pressure(density_b);
     return (pressure_a + pressure_b) / 2.0;
-}
-
-fn calculate_forces(index: u32) -> vec4<f32> {
-    var pressure_force = vec2<f32>(0.0, 0.0);
-    var viscosity_force = vec2<f32>(0.0, 0.0);
-    let position = particle_positions[index] + particle_velocities[index] * LOOK_AHEAD_TIME;
-
-    let grid = pos_to_grid(position);
-
-    let density = get_density(position);
-
-    for (var gx: i32 = -grids_to_check.x; gx <= grids_to_check.x; gx=gx+1){
-        for(var gy: i32 = -grids_to_check.y; gy <=grids_to_check.y; gy=gy+1){
-            let first_grid_index = grid_to_index(grid_add(grid, Grid(gx, gy)));
-            if first_grid_index < 0 || first_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
-                continue;
-            }
-            
-            let starting_index = particle_lookup[first_grid_index];
-            var ending_index = -1;
-
-            let next_grid_index = first_grid_index + 1;
-            if next_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
-                ending_index = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y);
-            }
-            else {
-                ending_index = particle_lookup[next_grid_index];
-            }
-
-            for (var i = starting_index; i < ending_index; i=i+1){
-                let offset = position - (particle_positions[i] + particle_velocities[i] * LOOK_AHEAD_TIME);
-                let distance = length(offset);
-                if distance == 0.0 {
-                    continue;
-                }
-                let dir = normalize(offset);
-
-                let slope = smoothing_kernel_derivative(distance);
-                let other_density = get_density(particle_positions[i]);
-                let shared_pressure = calculate_shared_pressure(density, other_density);
-
-                // Pressure force
-                pressure_force = pressure_force + dir * shared_pressure * slope * 3.141592653589 * particle_radii[i] * particle_radii[i] / max(density, 0.000001);
-
-                // Viscosity force
-                let viscosity_influence = viscosity_kernel(distance);
-                viscosity_force = viscosity_force + (particle_velocities[i] - particle_velocities[index]) * viscosity_influence;
-            }
-
-        }
-    }
-
-    return vec4<f32>(pressure_force, viscosity_force * VISCOSITY);
 }
 
 fn pos_to_grid(pos: vec2<f32>) -> Grid {

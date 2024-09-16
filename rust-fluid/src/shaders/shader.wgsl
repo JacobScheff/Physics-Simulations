@@ -19,8 +19,8 @@ const ASPECT_RATIO: f32 = SCREEN_SIZE.x / SCREEN_SIZE.y; // Aspect ratio of the 
 const GRID_SIZE: vec2<f32> = vec2<f32>(40.0, 20.0);
 
 const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
-const PARTICLE_AMOUNT_X: u32 = 100; // The number of particles in the x direction
-const PARTICLE_AMOUNT_Y: u32 = 50; // The number of particles in the y direction
+const PARTICLE_AMOUNT_X: u32 = 4; // The number of particles in the x direction
+const PARTICLE_AMOUNT_Y: u32 = 2; // The number of particles in the y direction
 const RADIUS_OF_INFLUENCE: f32 = 75.0; // MUST BE DIVISIBLE BY SCREEN_SIZE - The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
 const PRESURE_MULTIPLIER: f32 = 500.0; // The multiplier for the pressure force
@@ -30,7 +30,7 @@ const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 
 const grids_to_check = vec2<i32>(i32(SCREEN_SIZE.x / RADIUS_OF_INFLUENCE + 0.5), i32(SCREEN_SIZE.y / RADIUS_OF_INFLUENCE + 0.5));
-
+// TODO: Cache density for particles
 @group(0) @binding(0) var<storage, read> frame_count: u32;
 @group(0) @binding(1) var<storage, read_write> particle_positions: array<vec2<f32>, u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y)>;
 @group(0) @binding(2) var<storage, read> particle_radii: array<f32>;
@@ -61,36 +61,20 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         return;
     }
 
-    let pos: vec2<f32> = particle_positions[index];
-    let vel = particle_velocities[index];
-    let mass = 3.14159265359 * particle_radii[index] * particle_radii[index];
-    let radius = particle_radii[index];
+    // let pos: vec2<f32> = particle_positions[index];
+    // let vel = particle_velocities[index];
+    // let mass = 3.14159265359 * particle_radii[index] * particle_radii[index];
+    // let radius = particle_radii[index];
 
-    let grid = pos_to_grid(pos);
-    for (var gx: i32 = -1; gx <= 1; gx=gx+1){
-        for(var gy: i32 = -1; gy <=1; gy=gy+1){
-            let first_grid_index = grid_to_index(grid_add(grid, Grid(gx, gy)));
-            if first_grid_index < 0 || first_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
-                continue;
-            }
-            
-            let starting_index = particle_lookup[first_grid_index];
-            var ending_index = -1;
+    let forces: vec4<f32> = calculate_forces(index);
+    let pressure_force: vec2<f32> = forces.xy;
+    let viscosity_force: vec2<f32> = forces.zw;
+    let gravity_force: vec2<f32> = vec2<f32>(0.0, GRAVITY);
 
-            let next_grid_index = first_grid_index + 1;
-            if next_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
-                ending_index = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y);
-            }
-            else {
-                ending_index = particle_lookup[next_grid_index];
-            }
-
-            for (var i = starting_index; i < ending_index; i=i+1){
-                
-            }
-
-        }
-    }
+    var particle_acceleration: vec2<f32> = (pressure_force) / max(get_density(particle_positions[index]), 0.000001);
+    particle_acceleration = particle_acceleration + viscosity_force;
+    particle_acceleration = particle_acceleration + gravity_force;
+    particle_velocities[index] = particle_velocities[index] + particle_acceleration;
 }
 
 @fragment
@@ -244,7 +228,7 @@ fn calculate_forces(index: u32) -> vec4<f32> {
                 let shared_pressure = calculate_shared_pressure(density, other_density);
 
                 // Pressure force
-                pressure_force = pressure_force + dir * shared_pressure * slope * 3.141592653589 * particle_radii[i] * particle_radii[i] / density;
+                pressure_force = pressure_force + dir * shared_pressure * slope * 3.141592653589 * particle_radii[i] * particle_radii[i] / max(density, 0.000001);
 
                 // Viscosity force
                 let viscosity_influence = viscosity_kernel(distance);

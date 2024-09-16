@@ -660,11 +660,10 @@ impl<'a> State<'a> {
         pollster::block_on(self.update_velocities_from_buffer());
         pollster::block_on(self.update_densities_from_buffer());
 
-        // Update the particles based on forces
-        let gravity_force: (f32, f32) = (0.0, GRAVITY);
+        // Update the particles based on forces and then move them
         for i in 0..self.particle_positions.len() {
             // Calculate the forces
-            let mut forces: ((f32, f32), (f32, f32)) = self.calculate_forces(i);
+            let forces: ((f32, f32), (f32, f32)) = self.calculate_forces(i);
             let pressure: [f32; 2] = forces.0.into();
             let viscosity: [f32; 2] = forces.1.into();
 
@@ -679,10 +678,7 @@ impl<'a> State<'a> {
             // Apply the acceleration
             self.particle_velocities[i][0] += particle_acceleration[0];
             self.particle_velocities[i][1] += particle_acceleration[1];
-        }
 
-        // Move the particles
-        for i in 0..self.particle_positions.len() {
             // Move the particle
             if self.particle_positions[i][0] < 0.0 {
                 self.particle_positions[i][0] = 0.0;

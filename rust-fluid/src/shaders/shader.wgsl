@@ -62,6 +62,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     let density = get_density(particle_positions[index]);
+    particle_density[index] = density;
 
     // let forces: vec4<f32> = calculate_forces(index);
     // let pressure_force: vec2<f32> = forces.xy;

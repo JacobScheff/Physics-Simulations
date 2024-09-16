@@ -168,27 +168,6 @@ impl<'a> State<'a> {
             // Update the particle velocities
             for i in 0..self.particle_velocities.len() {
                 self.particle_velocities[i] = [velocities[i * 2], velocities[i * 2 + 1]];
-
-                // Move the particle
-                if self.particle_positions[i][0] < 0.0 {
-                    self.particle_positions[i][0] = 0.0;
-                    self.particle_velocities[i][0] = -self.particle_velocities[i][0];
-                }
-                if self.particle_positions[i][0] > SCREEN_SIZE.0 as f32 {
-                    self.particle_positions[i][0] = SCREEN_SIZE.0 as f32;
-                    self.particle_velocities[i][0] = -self.particle_velocities[i][0];
-                }
-
-                if self.particle_positions[i][1] < 0.0 {
-                    self.particle_positions[i][1] = 0.0;
-                    self.particle_velocities[i][1] = -self.particle_velocities[i][1];
-                }
-                if self.particle_positions[i][1] > SCREEN_SIZE.1 as f32 {
-                    self.particle_positions[i][1] = SCREEN_SIZE.1 as f32;
-                    self.particle_velocities[i][1] = -self.particle_velocities[i][1];
-                }
-                self.particle_positions[i][0] += self.particle_velocities[i][0];
-                self.particle_positions[i][1] += self.particle_velocities[i][1];
             }
 
             drop(data);
@@ -247,10 +226,6 @@ impl<'a> State<'a> {
     }
 
     async fn sort_particles(&mut self) {
-        // Update the particle positions and velocities from the buffers
-        self.update_position_from_buffer().await;
-        self.update_velocities_from_buffer().await;
-
         // Map all particles to their grid cell
         let mut index_map: Vec<Vec<Vec<i32>>> =
             vec![vec![vec![]; GRID_SIZE.1 as usize]; GRID_SIZE.0 as usize];
@@ -456,7 +431,7 @@ impl<'a> State<'a> {
         let particle_densities_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Particle Densities Buffer Data"),
             contents: bytemuck::cast_slice(&particle_densities),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
         });
         let density_reading_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Density Reading Buffer Data"),
@@ -558,6 +533,36 @@ impl<'a> State<'a> {
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let start_time = std::time::Instant::now();
+
+        // Update the particles from the buffers
+        pollster::block_on(self.update_position_from_buffer());
+        pollster::block_on(self.update_velocities_from_buffer());
+        pollster::block_on(self.update_densities_from_buffer());
+
+        // Move the particles
+        for i in 0..self.particle_positions.len() {
+            // Move the particle
+            if self.particle_positions[i][0] < 0.0 {
+                self.particle_positions[i][0] = 0.0;
+                self.particle_velocities[i][0] = -self.particle_velocities[i][0];
+            }
+            if self.particle_positions[i][0] > SCREEN_SIZE.0 as f32 {
+                self.particle_positions[i][0] = SCREEN_SIZE.0 as f32;
+                self.particle_velocities[i][0] = -self.particle_velocities[i][0];
+            }
+
+            if self.particle_positions[i][1] < 0.0 {
+                self.particle_positions[i][1] = 0.0;
+                self.particle_velocities[i][1] = -self.particle_velocities[i][1];
+            }
+            if self.particle_positions[i][1] > SCREEN_SIZE.1 as f32 {
+                self.particle_positions[i][1] = SCREEN_SIZE.1 as f32;
+                self.particle_velocities[i][1] = -self.particle_velocities[i][1];
+            }
+            self.particle_positions[i][0] += self.particle_velocities[i][0];
+            self.particle_positions[i][1] += self.particle_velocities[i][1];
+        }
+
 
         pollster::block_on(self.sort_particles());
 

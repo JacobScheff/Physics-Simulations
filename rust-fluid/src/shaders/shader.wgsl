@@ -31,11 +31,10 @@ const DAMPENING: f32 = 0.95; // How much to slow down particles when they collid
 
 const grids_to_check = vec2<i32>(i32(SCREEN_SIZE.x / RADIUS_OF_INFLUENCE + 0.5), i32(SCREEN_SIZE.y / RADIUS_OF_INFLUENCE + 0.5));
 // TODO: Cache density for particles
-@group(0) @binding(0) var<storage, read> frame_count: u32;
-@group(0) @binding(1) var<storage, read_write> particle_positions: array<vec2<f32>, u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y)>;
-@group(0) @binding(2) var<storage, read> particle_radii: array<f32>;
-@group(0) @binding(3) var<storage, read_write> particle_velocities: array<vec2<f32>, u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y)>;
-@group(0) @binding(4) var<storage, read> particle_lookup: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
+@group(0) @binding(0) var<storage, read_write> particle_positions: array<vec2<f32>, u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y)>;
+@group(0) @binding(1) var<storage, read> particle_radii: array<f32>;
+@group(0) @binding(2) var<storage, read_write> particle_velocities: array<vec2<f32>, u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y)>;
+@group(0) @binding(3) var<storage, read> particle_lookup: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
 
 @vertex
 fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {

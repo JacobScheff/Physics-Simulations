@@ -52,7 +52,6 @@ struct State<'a> {
     render_bind_group: wgpu::BindGroup,
     compute_bind_group: wgpu::BindGroup,
     frame_count: u32,
-    frame_count_buffer: wgpu::Buffer,
     particle_positions: Vec<[f32; 2]>,
     particle_positions_buffer: wgpu::Buffer,
     particle_radii: Vec<f32>,
@@ -423,13 +422,6 @@ impl<'a> State<'a> {
             bytemuck::cast_slice(&particle_lookup),
         );
 
-        // Buffer for the frame count
-        let frame_count_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("Frame Count Buffer"),
-            contents: bytemuck::cast_slice(&[0]),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
-        });
-
         Self {
             window,
             surface,
@@ -442,7 +434,6 @@ impl<'a> State<'a> {
             render_bind_group: temp_render_bind_group,
             compute_bind_group: temp_compute_render_bind_group,
             frame_count: 0,
-            frame_count_buffer,
             particle_positions,
             particle_positions_buffer,
             particle_radii,
@@ -492,13 +483,6 @@ impl<'a> State<'a> {
         let start_time = std::time::Instant::now();
 
         pollster::block_on(self.sort_particles());
-
-        // Update the frame count buffer before rendering
-        self.queue.write_buffer(
-            &self.frame_count_buffer,
-            0,
-            bytemuck::cast_slice(&[self.frame_count]),
-        );
 
         // Dispatch the compute shader
         let mut encoder = self
@@ -609,22 +593,18 @@ async fn run() {
         entries: &[
             wgpu::BindGroupEntry {
                 binding: 0,
-                resource: state.frame_count_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
                 resource: state.particle_positions_buffer.as_entire_binding(),
             },
             wgpu::BindGroupEntry {
-                binding: 2,
+                binding: 1,
                 resource: state.particle_radii_buffer.as_entire_binding(),
             },
             wgpu::BindGroupEntry {
-                binding: 3,
+                binding: 2,
                 resource: state.particle_velocities_buffer.as_entire_binding(),
             },
             wgpu::BindGroupEntry {
-                binding: 4,
+                binding: 3,
                 resource: state.particle_lookup_buffer.as_entire_binding(),
             },
         ],
@@ -638,22 +618,18 @@ async fn run() {
         entries: &[
             wgpu::BindGroupEntry {
                 binding: 0,
-                resource: state.frame_count_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
                 resource: state.particle_positions_buffer.as_entire_binding(),
             },
             wgpu::BindGroupEntry {
-                binding: 2,
+                binding: 1,
                 resource: state.particle_radii_buffer.as_entire_binding(),
             },
             wgpu::BindGroupEntry {
-                binding: 3,
+                binding: 2,
                 resource: state.particle_velocities_buffer.as_entire_binding(),
             },
             wgpu::BindGroupEntry {
-                binding: 4,
+                binding: 3,
                 resource: state.particle_lookup_buffer.as_entire_binding(),
             },
         ],

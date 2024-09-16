@@ -20,15 +20,16 @@ use winit::{
 
 const SCREEN_SIZE: (u32, u32) = (1200, 600);
 const TIME_BETWEEN_FRAMES: u64 = 10;
-const PARTICLE_COUNT_X: u32 = 100;
-const PARTICLE_COUNT_Y: u32 = 100;
+const PARTICLE_COUNT_X: u32 = 10;
+const PARTICLE_COUNT_Y: u32 = 10;
 const OFFSET: (f32, f32) = (10.0, 8.0); // How much to offset all the particle's starting positions
-const GRID_SIZE: (i32, i32) = (20, 10); // How many grid cells to divide the screen into
+const GRID_SIZE: (i32, i32) = (2, 1); // How many grid cells to divide the screen into
+const PARTICLE_RADIUS: f32 = 10.0;
 
 const WORKGROUP_SIZE: u32 = 10;
 const DISPATCH_SIZE: (u32, u32) = (
-    (PARTICLE_COUNT_X + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,
-    (PARTICLE_COUNT_Y + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,
+    (PARTICLE_COUNT_X as f32 / WORKGROUP_SIZE as f32 + 0.5) as u32,
+    (PARTICLE_COUNT_Y as f32 / WORKGROUP_SIZE as f32 + 0.5) as u32,
 );
 
 struct State<'a> {
@@ -359,7 +360,7 @@ impl<'a> State<'a> {
                     2.0 * (rand::random::<f32>() * 2.0 - 1.0),
                     2.0 * (rand::random::<f32>() * 2.0 - 1.0),
                 ]);
-                particle_radii.push(2.0);
+                particle_radii.push(PARTICLE_RADIUS);
             }
         }
         let particle_lookup: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];

@@ -21,12 +21,12 @@ use winit::{
 const SCREEN_SIZE: (u32, u32) = (1200, 600);
 const TIME_BETWEEN_FRAMES: u64 = 10;
 const OFFSET: (f32, f32) = (10.0, 8.0); // How much to offset all the particle's starting positions
-const GRID_SIZE: (i32, i32) = (20, 10); // How many grid cells to divide the screen into
+const GRID_SIZE: (i32, i32) = (40, 20); // How many grid cells to divide the screen into
 
 const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
 const PARTICLE_AMOUNT_X: u32 = 100; // The number of particles in the x direction
 const PARTICLE_AMOUNT_Y: u32 = 50; // The number of particles in the y direction
-const RADIUS_OF_INFLUENCE: f32 = 75.0; // MUST BE DIVISIBLE BY SCREEN_SIZE - The radius of the sphere of influence. Also the radius to search for particles to calculate the density
+const RADIUS_OF_INFLUENCE: f32 = 150.0; // MUST BE DIVISIBLE BY SCREEN_SIZE - The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
 const PRESURE_MULTIPLIER: f32 = 500.0; // The multiplier for the pressure force
 const GRAVITY: f32 = 0.2; // The strength of gravity

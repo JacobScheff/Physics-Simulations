@@ -20,11 +20,11 @@ use winit::{
 
 const SCREEN_SIZE: (u32, u32) = (1200, 600);
 const TIME_BETWEEN_FRAMES: u64 = 10;
-const PARTICLE_COUNT_X: u32 = 10;
-const PARTICLE_COUNT_Y: u32 = 10;
+const PARTICLE_COUNT_X: u32 = 100;
+const PARTICLE_COUNT_Y: u32 = 100;
 const OFFSET: (f32, f32) = (10.0, 8.0); // How much to offset all the particle's starting positions
-const GRID_SIZE: (i32, i32) = (2, 1); // How many grid cells to divide the screen into
-const PARTICLE_RADIUS: f32 = 10.0;
+const GRID_SIZE: (i32, i32) = (20, 10); // How many grid cells to divide the screen into
+const PARTICLE_RADIUS: f32 = 2.0;
 
 const WORKGROUP_SIZE: u32 = 10;
 const DISPATCH_SIZE: (u32, u32) = (

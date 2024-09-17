@@ -16,21 +16,20 @@ const DISPATCH_SIZE: vec2<u32> = vec2<u32>(
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
 const FOV: f32 = 60.0 * 3.14159 / 180.0; // Field of view in radians
 const ASPECT_RATIO: f32 = SCREEN_SIZE.x / SCREEN_SIZE.y; // Aspect ratio of the screen
-const GRID_SIZE: vec2<f32> = vec2<f32>(4.0, 2.0);
+const GRID_SIZE: vec2<f32> = vec2<f32>(20.0, 10.0);
 
-const PARTICLE_RADIUS: f32 = 10.0; // The radius of the particles
-const PARTICLE_AMOUNT_X: u32 = 50; // The number of particles in the x direction
-const PARTICLE_AMOUNT_Y: u32 = 25; // The number of particles in the y direction
+const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
+const PARTICLE_AMOUNT_X: u32 = 100; // The number of particles in the x direction
+const PARTICLE_AMOUNT_Y: u32 = 50; // The number of particles in the y direction
 const RADIUS_OF_INFLUENCE: f32 = 75.0; // MUST BE DIVISIBLE BY SCREEN_SIZE - The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
-const PRESURE_MULTIPLIER: f32 = 1.0; //500.0; // The multiplier for the pressure force
-const GRAVITY: f32 = 0.02; // The strength of gravity
+const PRESURE_MULTIPLIER: f32 = 100.0; //500.0; // The multiplier for the pressure force
+const GRAVITY: f32 = 0.2; // The strength of gravity
 const LOOK_AHEAD_TIME: f32 = 1.0 / 60.0; // The time to look ahead when calculating the predicted position
 const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 
-const grids_to_check = vec2<i32>(i32(SCREEN_SIZE.x / RADIUS_OF_INFLUENCE + 0.5), i32(SCREEN_SIZE.y / RADIUS_OF_INFLUENCE + 0.5));
-// TODO: Cache density for particles
+const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x / GRID_SIZE.x + 0.5), i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.y / GRID_SIZE.y + 0.5));
 @group(0) @binding(0) var<storage, read_write> particle_positions: array<vec2<f32>, u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y)>;
 @group(0) @binding(1) var<storage, read> particle_radii: array<f32>;
 @group(0) @binding(2) var<storage, read_write> particle_velocities: array<vec2<f32>, u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y)>;

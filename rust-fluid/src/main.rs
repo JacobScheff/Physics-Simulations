@@ -28,9 +28,9 @@ const GRID_SIZE: (i32, i32) = (20, 10); // How many grid cells to divide the scr
 const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
 const PARTICLE_AMOUNT_X: u32 = 100; // The number of particles in the x direction
 const PARTICLE_AMOUNT_Y: u32 = 50; // The number of particles in the y direction
-const RADIUS_OF_INFLUENCE: f32 = 75.0; // MUST BE DIVISIBLE BY SCREEN_SIZE - The radius of the sphere of influence. Also the radius to search for particles to calculate the density
+const RADIUS_OF_INFLUENCE: f32 = 150.0; // MUST BE DIVISIBLE BY SCREEN_SIZE - The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
-const PRESURE_MULTIPLIER: f32 = 100.0; // The multiplier for the pressure force
+const PRESURE_MULTIPLIER: f32 = 0.1; // The multiplier for the pressure force
 const GRAVITY: f32 = 0.2; // The strength of gravity
 const LOOK_AHEAD_TIME: f32 = 1.0 / 60.0; // The time to look ahead when calculating the predicted position
 const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
@@ -406,7 +406,8 @@ impl<'a> State<'a> {
                 let y = SCREEN_SIZE.1 as f32 / (PARTICLE_AMOUNT_Y + 1) as f32 * j as f32 + OFFSET.1;
 
                 particle_positions.push([x, y]);
-                particle_velocities.push([0.0, 0.0]);
+                // particle_velocities.push([0.0, 0.0]);
+                particle_velocities.push([rand::thread_rng().gen_range(-1.0..1.0), rand::thread_rng().gen_range(-1.0..1.0)]);
                 particle_radii.push(PARTICLE_RADIUS);
                 particle_densities.push(0.0);
             }
@@ -682,20 +683,20 @@ impl<'a> State<'a> {
             // Move the particle
             if self.particle_positions[i][0] < 0.0 {
                 self.particle_positions[i][0] = 0.0;
-                self.particle_velocities[i][0] = -self.particle_velocities[i][0];
+                self.particle_velocities[i][0] = -self.particle_velocities[i][0] * DAMPENING;
             }
             if self.particle_positions[i][0] > SCREEN_SIZE.0 as f32 {
                 self.particle_positions[i][0] = SCREEN_SIZE.0 as f32;
-                self.particle_velocities[i][0] = -self.particle_velocities[i][0];
+                self.particle_velocities[i][0] = -self.particle_velocities[i][0] * DAMPENING;
             }
 
             if self.particle_positions[i][1] < 0.0 {
                 self.particle_positions[i][1] = 0.0;
-                self.particle_velocities[i][1] = -self.particle_velocities[i][1];
+                self.particle_velocities[i][1] = -self.particle_velocities[i][1] * DAMPENING;
             }
             if self.particle_positions[i][1] > SCREEN_SIZE.1 as f32 {
                 self.particle_positions[i][1] = SCREEN_SIZE.1 as f32;
-                self.particle_velocities[i][1] = -self.particle_velocities[i][1];
+                self.particle_velocities[i][1] = -self.particle_velocities[i][1] * DAMPENING;
             }
             self.particle_positions[i][0] += self.particle_velocities[i][0];
             self.particle_positions[i][1] += self.particle_velocities[i][1];

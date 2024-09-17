@@ -13,17 +13,15 @@ const DISPATCH_SIZE: vec2<u32> = vec2<u32>(
     u32(PARTICLE_AMOUNT_Y + WORKGROUP_SIZE - 1u) / u32(WORKGROUP_SIZE),
 );
 
-const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
-const FOV: f32 = 60.0 * 3.14159 / 180.0; // Field of view in radians
-const ASPECT_RATIO: f32 = SCREEN_SIZE.x / SCREEN_SIZE.y; // Aspect ratio of the screen
-const GRID_SIZE: vec2<f32> = vec2<f32>(20.0, 10.0);
+const SCREEN_SIZE: vec2<f32> = vec2<f32>(1800.0, 900.0); // Size of the screen
+const GRID_SIZE: vec2<f32> = vec2<f32>(40.0, 20.0);
 
-const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
+const PARTICLE_RADIUS: f32 = 2.5; // The radius of the particles
 const PARTICLE_AMOUNT_X: u32 = 100; // The number of particles in the x direction
 const PARTICLE_AMOUNT_Y: u32 = 50; // The number of particles in the y direction
 const RADIUS_OF_INFLUENCE: f32 = 150.0; // MUST BE DIVISIBLE BY SCREEN_SIZE - The radius of the sphere of influence. Also the radius to search for particles to calculate the density
-const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
-const PRESURE_MULTIPLIER: f32 = 0.1; // The multiplier for the pressure force
+const TARGET_DENSITY: f32 = 0.4; // The target density of the fluid
+const PRESURE_MULTIPLIER: f32 = 0.00001; // The multiplier for the pressure force
 const GRAVITY: f32 = 0.2; // The strength of gravity
 const LOOK_AHEAD_TIME: f32 = 1.0 / 60.0; // The time to look ahead when calculating the predicted position
 const VISCOSITY: f32 = 0.5; // The viscosity of the fluid

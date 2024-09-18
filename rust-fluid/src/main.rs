@@ -559,99 +559,99 @@ impl<'a> State<'a> {
         return (pressure_a + pressure_b) / 2.0;
     }
 
-    fn calculate_forces(&mut self, index: usize) -> ((f32, f32), (f32, f32)) {
-        let mut pressure_force = (0.0, 0.0);
-        let mut viscosity_force = (0.0, 0.0);
-        let position = (
-            self.particle_positions[index][0]
-                + self.particle_velocities[index][0] * LOOK_AHEAD_TIME,
-            self.particle_positions[index][1]
-                + self.particle_velocities[index][1] * LOOK_AHEAD_TIME,
-        );
+    // fn calculate_forces(&mut self, index: usize) -> ((f32, f32), (f32, f32)) {
+    //     let mut pressure_force = (0.0, 0.0);
+    //     let mut viscosity_force = (0.0, 0.0);
+    //     let position = (
+    //         self.particle_positions[index][0]
+    //             + self.particle_velocities[index][0] * LOOK_AHEAD_TIME,
+    //         self.particle_positions[index][1]
+    //             + self.particle_velocities[index][1] * LOOK_AHEAD_TIME,
+    //     );
 
-        let grid = self.pos_to_grid(position);
+    //     let grid = self.pos_to_grid(position);
 
-        let density = self.particle_densities[index];
+    //     let density = self.particle_densities[index];
 
-        // for (let mut gx: i32 = -grids_to_check.x; gx <= grids_to_check.x; gx+=1){
-        for gx in -grids_to_check.0..=grids_to_check.0 {
-            for gy in -grids_to_check.1..=grids_to_check.1 {
-                let first_grid_index = self.grid_to_index((grid.0 + gx, grid.1 + gy));
-                if first_grid_index < 0 || first_grid_index >= GRID_SIZE.0 * GRID_SIZE.1 {
-                    continue;
-                }
+    //     // for (let mut gx: i32 = -grids_to_check.x; gx <= grids_to_check.x; gx+=1){
+    //     for gx in -grids_to_check.0..=grids_to_check.0 {
+    //         for gy in -grids_to_check.1..=grids_to_check.1 {
+    //             let first_grid_index = self.grid_to_index((grid.0 + gx, grid.1 + gy));
+    //             if first_grid_index < 0 || first_grid_index >= GRID_SIZE.0 * GRID_SIZE.1 {
+    //                 continue;
+    //             }
 
-                let starting_index = self.particle_lookup[first_grid_index as usize];
-                let mut ending_index: i32 = -1;
+    //             let starting_index = self.particle_lookup[first_grid_index as usize];
+    //             let mut ending_index: i32 = -1;
 
-                let next_grid_index = first_grid_index + 1;
-                if next_grid_index >= (GRID_SIZE.0 * GRID_SIZE.1) {
-                    ending_index = PARTICLE_AMOUNT_X as i32 * PARTICLE_AMOUNT_Y as i32;
-                } else {
-                    ending_index = self.particle_lookup[next_grid_index as usize];
-                }
+    //             let next_grid_index = first_grid_index + 1;
+    //             if next_grid_index >= (GRID_SIZE.0 * GRID_SIZE.1) {
+    //                 ending_index = PARTICLE_AMOUNT_X as i32 * PARTICLE_AMOUNT_Y as i32;
+    //             } else {
+    //                 ending_index = self.particle_lookup[next_grid_index as usize];
+    //             }
 
-                for i in starting_index..ending_index {
-                    if i == -1 || i == index as i32 || i >= self.particle_positions.len() as i32 {
-                        continue;
-                    }
-                    let offset = (
-                        position.0 - self.particle_positions[i as usize][0]
-                            + self.particle_velocities[i as usize][0] * LOOK_AHEAD_TIME,
-                        position.1 - self.particle_positions[i as usize][1]
-                            + self.particle_velocities[i as usize][1] * LOOK_AHEAD_TIME,
-                    );
-                    let distance = offset.0 * offset.0 + offset.1 * offset.1;
-                    if distance == 0.0 {
-                        continue;
-                    }
-                    let dir = (offset.0 / distance.sqrt(), offset.1 / distance.sqrt());
+    //             for i in starting_index..ending_index {
+    //                 if i == -1 || i == index as i32 || i >= self.particle_positions.len() as i32 {
+    //                     continue;
+    //                 }
+    //                 let offset = (
+    //                     position.0 - self.particle_positions[i as usize][0]
+    //                         + self.particle_velocities[i as usize][0] * LOOK_AHEAD_TIME,
+    //                     position.1 - self.particle_positions[i as usize][1]
+    //                         + self.particle_velocities[i as usize][1] * LOOK_AHEAD_TIME,
+    //                 );
+    //                 let distance = offset.0 * offset.0 + offset.1 * offset.1;
+    //                 if distance == 0.0 {
+    //                     continue;
+    //                 }
+    //                 let dir = (offset.0 / distance.sqrt(), offset.1 / distance.sqrt());
 
-                    let slope = self.smoothing_kernel_derivative(distance);
-                    let other_density = self.particle_densities[i as usize];
-                    let shared_pressure = self.calculate_shared_pressure(density, other_density);
+    //                 let slope = self.smoothing_kernel_derivative(distance);
+    //                 let other_density = self.particle_densities[i as usize];
+    //                 let shared_pressure = self.calculate_shared_pressure(density, other_density);
 
-                    // Pressure force
-                    for i in 0..2 {
-                        pressure_force.0 = pressure_force.0
-                            + dir.0
-                                * shared_pressure
-                                * slope
-                                * 3.141592653589
-                                * PARTICLE_RADIUS
-                                * PARTICLE_RADIUS
-                                / density.max(0.000001);
-                        pressure_force.1 = pressure_force.1
-                            + dir.1
-                                * shared_pressure
-                                * slope
-                                * 3.141592653589
-                                * PARTICLE_RADIUS
-                                * PARTICLE_RADIUS
-                                / density.max(0.000001);
-                    }
+    //                 // Pressure force
+    //                 for i in 0..2 {
+    //                     pressure_force.0 = pressure_force.0
+    //                         + dir.0
+    //                             * shared_pressure
+    //                             * slope
+    //                             * 3.141592653589
+    //                             * PARTICLE_RADIUS
+    //                             * PARTICLE_RADIUS
+    //                             / density.max(0.000001);
+    //                     pressure_force.1 = pressure_force.1
+    //                         + dir.1
+    //                             * shared_pressure
+    //                             * slope
+    //                             * 3.141592653589
+    //                             * PARTICLE_RADIUS
+    //                             * PARTICLE_RADIUS
+    //                             / density.max(0.000001);
+    //                 }
 
-                    // Viscosity force
-                    let viscosity_influence = self.viscosity_kernel(distance);
-                    for i in 0..2 {
-                        viscosity_force.0 = viscosity_force.0
-                            + (self.particle_velocities[i as usize][0]
-                                - self.particle_velocities[index][0])
-                                * viscosity_influence;
-                        viscosity_force.1 = viscosity_force.1
-                            + (self.particle_velocities[i as usize][1]
-                                - self.particle_velocities[index][1])
-                                * viscosity_influence;
-                    }
-                }
-            }
-        }
+    //                 // Viscosity force
+    //                 let viscosity_influence = self.viscosity_kernel(distance);
+    //                 for i in 0..2 {
+    //                     viscosity_force.0 = viscosity_force.0
+    //                         + (self.particle_velocities[i as usize][0]
+    //                             - self.particle_velocities[index][0])
+    //                             * viscosity_influence;
+    //                     viscosity_force.1 = viscosity_force.1
+    //                         + (self.particle_velocities[i as usize][1]
+    //                             - self.particle_velocities[index][1])
+    //                             * viscosity_influence;
+    //                 }
+    //             }
+    //         }
+    //     }
 
-        return (
-            pressure_force,
-            (viscosity_force.0 * VISCOSITY, viscosity_force.1 * VISCOSITY),
-        );
-    }
+    //     return (
+    //         pressure_force,
+    //         (viscosity_force.0 * VISCOSITY, viscosity_force.1 * VISCOSITY),
+    //     );
+    // }
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let start_time = std::time::Instant::now();
@@ -664,24 +664,21 @@ impl<'a> State<'a> {
         // Update the particles based on forces and then move them
         for i in 0..self.particle_positions.len() {
             // Calculate the forces
-            let forces: ((f32, f32), (f32, f32)) = self.calculate_forces(i);
-            let pressure: [f32; 2] = forces.0.into();
-            let viscosity: [f32; 2] = forces.1.into();
+            // let forces: ((f32, f32), (f32, f32)) = self.calculate_forces(i);
+            // let pressure: [f32; 2] = forces.0.into();
+            // let viscosity: [f32; 2] = forces.1.into();
 
             // Calculate the acceleration
-            let mut particle_acceleration: [f32; 2] = [0.0, 0.0];
-            for i in 0..2 {
-                // if self.particle_densities[i] < 1.0 {
-                //     println!("{:?}", self.particle_densities[i]);
-                // }
-                particle_acceleration[i] += pressure[i] / self.particle_densities[i].max(0.000001);
-                particle_acceleration[i] += viscosity[i];
-            }
-            particle_acceleration[1] += GRAVITY;
+            // let mut particle_acceleration: [f32; 2] = [0.0, 0.0];
+            // for i in 0..2 {
+            //     particle_acceleration[i] += pressure[i] / self.particle_densities[i].max(0.000001);
+            //     particle_acceleration[i] += viscosity[i];
+            // }
+            // particle_acceleration[1] += GRAVITY;
 
-            // Apply the acceleration
-            self.particle_velocities[i][0] += particle_acceleration[0];
-            self.particle_velocities[i][1] += particle_acceleration[1];
+            // // Apply the acceleration
+            // self.particle_velocities[i][0] += particle_acceleration[0];
+            // self.particle_velocities[i][1] += particle_acceleration[1];
 
             // Move the particle
             if self.particle_positions[i][0] < 0.0 {

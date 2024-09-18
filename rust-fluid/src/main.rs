@@ -29,8 +29,8 @@ const PARTICLE_RADIUS: f32 = 2.5; // The radius of the particles
 const PARTICLE_AMOUNT_X: u32 = 100; // The number of particles in the x direction
 const PARTICLE_AMOUNT_Y: u32 = 50; // The number of particles in the y direction
 const RADIUS_OF_INFLUENCE: f32 = 150.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
-const TARGET_DENSITY: f32 = 0.4; // The target density of the fluid
-const PRESURE_MULTIPLIER: f32 = 0.00001; // The multiplier for the pressure force
+const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
+const PRESURE_MULTIPLIER: f32 = 100.0; // The multiplier for the pressure force
 const GRAVITY: f32 = 0.2; // The strength of gravity
 const LOOK_AHEAD_TIME: f32 = 1.0 / 60.0; // The time to look ahead when calculating the predicted position
 const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
@@ -738,7 +738,7 @@ impl<'a> State<'a> {
         if self.frame_count % 10 == 0 {
             let elapsed_time = start_time.elapsed();
             println!(
-                "fps: {}",
+                "fps (try going back to older data reading): {}",
                 1.0 / elapsed_time.as_micros() as f32 * 1000.0 * 1000.0
             );
             self.frame_count = 0;

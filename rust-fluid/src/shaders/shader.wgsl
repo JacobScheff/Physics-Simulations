@@ -58,18 +58,45 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         return;
     }
 
+    // Update the density of the particle
     let density = get_density(particle_positions[index]);
     particle_densities[index] = density;
 
+    // Calculate the forces on the particle
     let forces: vec4<f32> = calculate_forces(index);
     let pressure_force: vec2<f32> = forces.xy;
     let viscosity_force: vec2<f32> = forces.zw;
     let gravity_force: vec2<f32> = vec2<f32>(0.0, GRAVITY);
 
+    // Accelerate the particle
     var particle_acceleration: vec2<f32> = (pressure_force) / max(particle_densities[index], 0.000001);
     particle_acceleration = particle_acceleration + viscosity_force;
     particle_acceleration = particle_acceleration + gravity_force;
     particle_velocities[index] = particle_velocities[index] + particle_acceleration;
+
+    // Move the particle
+    if particle_positions[index][0] < 0.0 {
+        particle_positions[index][0] = 0.0;
+        particle_velocities[index][0] = -particle_velocities[index][0] * DAMPENING;
+    }
+
+    if particle_positions[index][0] > SCREEN_SIZE.x {
+        particle_positions[index][0] = SCREEN_SIZE.x;
+        particle_velocities[index][0] = -particle_velocities[index][0] * DAMPENING;
+    }
+    
+    if particle_positions[index][1] < 0.0 {
+        particle_positions[index][1] = 0.0;
+        particle_velocities[index][1] = -particle_velocities[index][1] * DAMPENING;
+    }
+
+    if particle_positions[index][1] > SCREEN_SIZE.y {
+        particle_positions[index][1] = SCREEN_SIZE.y;
+        particle_velocities[index][1] = -particle_velocities[index][1] * DAMPENING;
+    }
+    
+    particle_positions[index][0] += particle_velocities[index][0];
+    particle_positions[index][1] += particle_velocities[index][1];
 }
 
 @fragment

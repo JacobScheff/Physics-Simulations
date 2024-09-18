@@ -661,47 +661,7 @@ impl<'a> State<'a> {
         pollster::block_on(self.update_velocities_from_buffer());
         pollster::block_on(self.update_densities_from_buffer());
 
-        // Update the particles based on forces and then move them
-        for i in 0..self.particle_positions.len() {
-            // Calculate the forces
-            // let forces: ((f32, f32), (f32, f32)) = self.calculate_forces(i);
-            // let pressure: [f32; 2] = forces.0.into();
-            // let viscosity: [f32; 2] = forces.1.into();
-
-            // Calculate the acceleration
-            // let mut particle_acceleration: [f32; 2] = [0.0, 0.0];
-            // for i in 0..2 {
-            //     particle_acceleration[i] += pressure[i] / self.particle_densities[i].max(0.000001);
-            //     particle_acceleration[i] += viscosity[i];
-            // }
-            // particle_acceleration[1] += GRAVITY;
-
-            // // Apply the acceleration
-            // self.particle_velocities[i][0] += particle_acceleration[0];
-            // self.particle_velocities[i][1] += particle_acceleration[1];
-
-            // Move the particle
-            if self.particle_positions[i][0] < 0.0 {
-                self.particle_positions[i][0] = 0.0;
-                self.particle_velocities[i][0] = -self.particle_velocities[i][0] * DAMPENING;
-            }
-            if self.particle_positions[i][0] > SCREEN_SIZE.0 as f32 {
-                self.particle_positions[i][0] = SCREEN_SIZE.0 as f32;
-                self.particle_velocities[i][0] = -self.particle_velocities[i][0] * DAMPENING;
-            }
-
-            if self.particle_positions[i][1] < 0.0 {
-                self.particle_positions[i][1] = 0.0;
-                self.particle_velocities[i][1] = -self.particle_velocities[i][1] * DAMPENING;
-            }
-            if self.particle_positions[i][1] > SCREEN_SIZE.1 as f32 {
-                self.particle_positions[i][1] = SCREEN_SIZE.1 as f32;
-                self.particle_velocities[i][1] = -self.particle_velocities[i][1] * DAMPENING;
-            }
-            self.particle_positions[i][0] += self.particle_velocities[i][0];
-            self.particle_positions[i][1] += self.particle_velocities[i][1];
-        }
-
+        // Sort the particles into their grid cells
         pollster::block_on(self.sort_particles());
 
         // Dispatch the compute shader

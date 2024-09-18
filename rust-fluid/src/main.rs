@@ -132,9 +132,13 @@ impl<'a> State<'a> {
             let data = buffer_slice.get_mapped_range();
             let positions: &[f32] = bytemuck::cast_slice(&data);
             // Update the particle positions
-            for i in 0..self.particle_positions.len() {
-                self.particle_positions[i] = [positions[i * 2], positions[i * 2 + 1]];
-            }
+            // for i in 0..self.particle_positions.len() {
+            //     self.particle_positions[i] = [positions[i * 2], positions[i * 2 + 1]];
+            // }
+            self.particle_positions = positions
+                .chunks(2)
+                .map(|chunk| [chunk[0], chunk[1]])
+                .collect();
 
             drop(data);
             self.position_reading_buffer.unmap();
@@ -177,9 +181,13 @@ impl<'a> State<'a> {
             let data = buffer_slice.get_mapped_range();
             let velocities: &[f32] = bytemuck::cast_slice(&data);
             // Update the particle velocities
-            for i in 0..self.particle_velocities.len() {
-                self.particle_velocities[i] = [velocities[i * 2], velocities[i * 2 + 1]];
-            }
+            // for i in 0..self.particle_velocities.len() {
+            //     self.particle_velocities[i] = [velocities[i * 2], velocities[i * 2 + 1]];
+            // }
+            self.particle_velocities = velocities
+                .chunks(2)
+                .map(|chunk| [chunk[0], chunk[1]])
+                .collect();
 
             drop(data);
             self.velocity_reading_buffer.unmap();
@@ -221,10 +229,11 @@ impl<'a> State<'a> {
         if let Ok(()) = receiver.receive().await.unwrap() {
             let data = buffer_slice.get_mapped_range();
             let densities: &[f32] = bytemuck::cast_slice(&data);
-            // Update the particle densities
-            for i in 0..self.particle_densities.len() {
-                self.particle_densities[i] = densities[i];
-            }
+            // // Update the particle densities
+            // for i in 0..self.particle_densities.len() {
+            //     self.particle_densities[i] = densities[i];
+            // }
+            self.particle_densities = densities.to_vec();
 
             drop(data);
             self.density_reading_buffer.unmap();

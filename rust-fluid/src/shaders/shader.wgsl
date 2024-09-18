@@ -27,7 +27,7 @@ const LOOK_AHEAD_TIME: f32 = 1.0 / 60.0; // The time to look ahead when calculat
 const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 
-const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x / GRID_SIZE.x + 0.5), i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.y / GRID_SIZE.y + 0.5));
+const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / (SCREEN_SIZE.x / GRID_SIZE.x) + 0.5), i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.y * GRID_SIZE.y + 0.5));
 @group(0) @binding(0) var<storage, read_write> particle_positions: array<vec2<f32>, u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y)>;
 @group(0) @binding(1) var<storage, read> particle_radii: array<f32>;
 @group(0) @binding(2) var<storage, read_write> particle_velocities: array<vec2<f32>, u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y)>;

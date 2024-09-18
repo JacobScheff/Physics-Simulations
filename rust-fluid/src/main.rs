@@ -37,8 +37,8 @@ const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 
 const grids_to_check: (i32, i32) = (
-    (RADIUS_OF_INFLUENCE / SCREEN_SIZE.0 as f32 / GRID_SIZE.0 as f32 + 0.5) as i32,
-    (RADIUS_OF_INFLUENCE / SCREEN_SIZE.1 as f32 / GRID_SIZE.1 as f32 + 0.5) as i32,
+    (RADIUS_OF_INFLUENCE / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32 + 0.5) as i32,
+    (RADIUS_OF_INFLUENCE / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32 + 0.5) as i32,
 );
 
 const WORKGROUP_SIZE: u32 = 10;

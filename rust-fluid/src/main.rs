@@ -1,4 +1,5 @@
 use core::f32;
+use std::collections::HashMap;
 
 use renderer_backend::{
     bind_group_layout_generator, compute_pipeline_builder::ComputePipelineBuilder,
@@ -87,7 +88,10 @@ impl<'a> State<'a> {
         x + y * GRID_SIZE.0
     }
 
-    const GRID_DIV_SCREEN_SIZE: (f32, f32) = ( GRID_SIZE.0 as f32 / SCREEN_SIZE.0 as f32, GRID_SIZE.1 as f32 / SCREEN_SIZE.1 as f32);
+    const GRID_DIV_SCREEN_SIZE: (f32, f32) = (
+        GRID_SIZE.0 as f32 / SCREEN_SIZE.0 as f32,
+        GRID_SIZE.1 as f32 / SCREEN_SIZE.1 as f32,
+    );
     fn pos_to_grid(&self, pos: [f32; 2]) -> (i32, i32) {
         let x = (pos[0] * Self::GRID_DIV_SCREEN_SIZE.0)
             .min(GRID_SIZE.0 as f32 - 1.0)
@@ -255,28 +259,53 @@ impl<'a> State<'a> {
         let mut new_densities: Vec<f32> = Vec::with_capacity(self.particle_densities.len());
         let mut lookup_table = vec![-1; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
 
-        let mut index_map: Vec<Vec<Vec<i32>>> =
-            vec![vec![vec![]; GRID_SIZE.1 as usize]; GRID_SIZE.0 as usize];
+        let mut index_map: HashMap<(i32, i32), Vec<i32>> = HashMap::new();
+
+        // let mut index_map: Vec<Vec<Vec<i32>>> =
+        //     vec![vec![vec![]; GRID_SIZE.1 as usize]; GRID_SIZE.0 as usize];
         for i in 0..self.particle_positions.len() {
             let grid = self.pos_to_grid(self.particle_positions[i]);
-            index_map[grid.0 as usize][grid.1 as usize].push(i as i32);
+            index_map.entry(grid).or_insert(vec![]).push(i as i32);
         }
 
         // Iterate over all grid cells
+        // for i in 0..GRID_SIZE.0 {
+        //     for j in 0..GRID_SIZE.1 {
+        //         let grid_index = i + j * GRID_SIZE.0;
+        //         let mut index = -1;
+
+        //         // Iterate over all particles in the grid cell
+        //         for k in 0..index_map[i as usize][j as usize].len() {
+        //             let particle_index = index_map[i as usize][j as usize][k] as usize;
+        //             new_positions.push(self.particle_positions[particle_index]);
+        //             new_velocities.push(self.particle_velocities[particle_index]);
+        //             new_radii.push(self.particle_radii[particle_index]);
+        //             new_densities.push(self.particle_densities[particle_index]);
+        //             if index == -1 {
+        //                 index = new_positions.len() as i32 - 1;
+        //             }
+        //         }
+
+        //         lookup_table[grid_index as usize] = index;
+        //     }
+        // }
+
         for i in 0..GRID_SIZE.0 {
             for j in 0..GRID_SIZE.1 {
                 let grid_index = i + j * GRID_SIZE.0;
                 let mut index = -1;
 
-                // Iterate over all particles in the grid cell
-                for k in 0..index_map[i as usize][j as usize].len() {
-                    let particle_index = index_map[i as usize][j as usize][k] as usize;
-                    new_positions.push(self.particle_positions[particle_index]);
-                    new_velocities.push(self.particle_velocities[particle_index]);
-                    new_radii.push(self.particle_radii[particle_index]);
-                    new_densities.push(self.particle_densities[particle_index]);
-                    if index == -1 {
-                        index = new_positions.len() as i32 - 1;
+                // Check if the grid cell exists in the HashMap:
+                if let Some(particle_indices) = index_map.get(&(i, j)) {
+                    for &particle_index in particle_indices {
+                        let particle_index = particle_index as usize;
+                        new_positions.push(self.particle_positions[particle_index]);
+                        new_velocities.push(self.particle_velocities[particle_index]);
+                        new_radii.push(self.particle_radii[particle_index]);
+                        new_densities.push(self.particle_densities[particle_index]);
+                        if index == -1 {
+                            index = new_positions.len() as i32 - 1;
+                        }
                     }
                 }
 

@@ -209,6 +209,9 @@ fn get_density(pos: vec2<f32>) -> f32 {
             for (var i = starting_index; i < ending_index; i=i+1){
                 let distance = length(pos - (particle_positions[i] + particle_velocities[i] * LOOK_AHEAD_TIME));
                 if distance <= RADIUS_OF_INFLUENCE {
+                    if distance == 0.0 {
+                        continue;
+                    }
                     let influence = smoothing_kernel(distance);
                     density += influence * 3.141592653589 * particle_radii[i] * particle_radii[i];
                 }

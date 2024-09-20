@@ -30,11 +30,11 @@ const PARTICLE_AMOUNT_X: u32 = 100; // The number of particles in the x directio
 const PARTICLE_AMOUNT_Y: u32 = 50; // The number of particles in the y direction
 const PADDING: f32 = 100.0; // The padding around the screen
 const RADIUS_OF_INFLUENCE: f32 = 150.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
-const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
-const PRESURE_MULTIPLIER: f32 = 100.0; // The multiplier for the pressure force
+const TARGET_DENSITY: f32 = 0.02; // The target density of the fluid
+const PRESURE_MULTIPLIER: f32 = 500.0; // The multiplier for the pressure force
 const GRAVITY: f32 = 0.1; // The strength of gravity
 const LOOK_AHEAD_TIME: f32 = 0.0; // 1.0 / 60.0; // The time to look ahead when calculating the predicted position
-const VISCOSITY: f32 = 0.0; // The viscosity of the fluid
+const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 
 const grids_to_check: (i32, i32) = (

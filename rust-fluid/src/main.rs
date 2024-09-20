@@ -268,28 +268,6 @@ impl<'a> State<'a> {
             index_map.entry(grid).or_insert(vec![]).push(i as i32);
         }
 
-        // Iterate over all grid cells
-        // for i in 0..GRID_SIZE.0 {
-        //     for j in 0..GRID_SIZE.1 {
-        //         let grid_index = i + j * GRID_SIZE.0;
-        //         let mut index = -1;
-
-        //         // Iterate over all particles in the grid cell
-        //         for k in 0..index_map[i as usize][j as usize].len() {
-        //             let particle_index = index_map[i as usize][j as usize][k] as usize;
-        //             new_positions.push(self.particle_positions[particle_index]);
-        //             new_velocities.push(self.particle_velocities[particle_index]);
-        //             new_radii.push(self.particle_radii[particle_index]);
-        //             new_densities.push(self.particle_densities[particle_index]);
-        //             if index == -1 {
-        //                 index = new_positions.len() as i32 - 1;
-        //             }
-        //         }
-
-        //         lookup_table[grid_index as usize] = index;
-        //     }
-        // }
-
         for i in 0..GRID_SIZE.0 {
             for j in 0..GRID_SIZE.1 {
                 let grid_index = i + j * GRID_SIZE.0;

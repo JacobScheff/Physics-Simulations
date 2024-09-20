@@ -77,12 +77,12 @@ struct State<'a> {
 
 impl<'a> State<'a> {
     fn pos_to_grid_index(&self, pos: (f32, f32)) -> i32 {
-        let x = (pos.0 / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32)
-            .min(GRID_SIZE.0 as f32 - 1.0)
-            .max(0.0) as i32;
-        let y = (pos.1 / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32)
-            .min(GRID_SIZE.1 as f32 - 1.0)
-            .max(0.0) as i32;
+        let x = ((pos.0 / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32) as i32)
+            .min(GRID_SIZE.0 - 1)
+            .max(0) as i32;
+        let y = ((pos.1 / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32) as i32)
+            .min(GRID_SIZE.1 - 1)
+            .max(0) as i32;
 
         x + y * GRID_SIZE.0
     }

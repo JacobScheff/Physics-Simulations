@@ -203,35 +203,6 @@ fn get_density(pos: vec2<f32>) -> f32 {
         }
     }
 
-    // let grid = pos_to_grid(pos);
-
-    // for (var gx: i32 = -grids_to_check.x; gx <= grids_to_check.x; gx=gx+1){
-    //     for(var gy: i32 = -grids_to_check.y; gy <=grids_to_check.y; gy=gy+1){
-    //         let first_grid_index = grid_to_index(grid_add(grid, Grid(gx, gy)));
-    //         if first_grid_index < 0 || first_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
-    //             continue;
-    //         }
-            
-    //         let starting_index = particle_lookup[first_grid_index];
-    //         var ending_index = -1;
-
-    //         let next_grid_index = first_grid_index + 1;
-    //         if next_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
-    //             ending_index = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y);
-    //         }
-    //         else {
-    //             ending_index = particle_lookup[next_grid_index];
-    //         }
-
-    //         for (var i = starting_index; i < ending_index; i=i+1){
-    //             let distance = length(pos - (particle_positions[i] + particle_velocities[i] * LOOK_AHEAD_TIME));
-    //             let influence = smoothing_kernel(distance);
-    //             density += influence * 3.141592653589 * particle_radii[i] * particle_radii[i];
-    //         }
-
-    //     }
-    // }
-
     return density;
 }
 

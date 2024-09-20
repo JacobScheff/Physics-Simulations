@@ -32,9 +32,9 @@ const PADDING: f32 = 100.0; // The padding around the screen
 const RADIUS_OF_INFLUENCE: f32 = 150.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
 const PRESURE_MULTIPLIER: f32 = 100.0; // The multiplier for the pressure force
-const GRAVITY: f32 = 0.2; // The strength of gravity
+const GRAVITY: f32 = 0.1; // The strength of gravity
 const LOOK_AHEAD_TIME: f32 = 0.0; // 1.0 / 60.0; // The time to look ahead when calculating the predicted position
-const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
+const VISCOSITY: f32 = 0.0; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 
 const grids_to_check: (i32, i32) = (
@@ -414,7 +414,7 @@ impl<'a> State<'a> {
             for j in 0..PARTICLE_AMOUNT_Y {
                 // let x = SCREEN_SIZE.0 as f32 / (PARTICLE_AMOUNT_X + 1) as f32 * i as f32 + OFFSET.0;
                 // let y = SCREEN_SIZE.1 as f32 / (PARTICLE_AMOUNT_Y + 1) as f32 * j as f32 + OFFSET.1;
-                    
+
                 let x = (i as f32 + 0.5) * (SCREEN_SIZE.0 as f32 - 2.0 * PADDING)
                     / PARTICLE_AMOUNT_X as f32
                     + PADDING;
@@ -424,7 +424,10 @@ impl<'a> State<'a> {
 
                 particle_positions.push([x, y]);
                 // particle_velocities.push([0.0, 0.0]);
-                particle_velocities.push([rand::thread_rng().gen_range(-1.0..1.0), rand::thread_rng().gen_range(-1.0..1.0)]);
+                particle_velocities.push([
+                    rand::thread_rng().gen_range(-1.0..1.0),
+                    rand::thread_rng().gen_range(-1.0..1.0),
+                ]);
                 particle_radii.push(PARTICLE_RADIUS);
                 particle_densities.push(0.0);
             }
@@ -677,6 +680,55 @@ impl<'a> State<'a> {
         pollster::block_on(self.update_position_from_buffer());
         pollster::block_on(self.update_velocities_from_buffer());
         pollster::block_on(self.update_densities_from_buffer());
+
+        // Move the particle
+        // if self.particle_positions[index][0] < 0.0 {
+        //     particle_positions[index][0] = 0.0;
+        //     particle_velocities[index][0] = -particle_velocities[index][0] * DAMPENING;
+        // }
+
+        // if particle_positions[index][0] > SCREEN_SIZE.x {
+        //     particle_positions[index][0] = SCREEN_SIZE.x;
+        //     particle_velocities[index][0] = -particle_velocities[index][0] * DAMPENING;
+        // }
+
+        // if particle_positions[index][1] < 0.0 {
+        //     particle_positions[index][1] = 0.0;
+        //     particle_velocities[index][1] = -particle_velocities[index][1] * DAMPENING;
+        // }
+
+        // if particle_positions[index][1] > SCREEN_SIZE.y {
+        //     particle_positions[index][1] = SCREEN_SIZE.y;
+        //     particle_velocities[index][1] = -particle_velocities[index][1] * DAMPENING;
+        // }
+
+        // particle_positions[index][0] += particle_velocities[index][0];
+        // particle_positions[index][1] += particle_velocities[index][1];
+
+        for i in 0..self.particle_positions.len() {
+            if self.particle_positions[i][0] < 0.0 {
+                self.particle_positions[i][0] = 0.0;
+                self.particle_velocities[i][0] = -self.particle_velocities[i][0] * DAMPENING;
+            }
+
+            if self.particle_positions[i][0] > SCREEN_SIZE.0 as f32 {
+                self.particle_positions[i][0] = SCREEN_SIZE.0 as f32;
+                self.particle_velocities[i][0] = -self.particle_velocities[i][0] * DAMPENING;
+            }
+
+            if self.particle_positions[i][1] < 0.0 {
+                self.particle_positions[i][1] = 0.0;
+                self.particle_velocities[i][1] = -self.particle_velocities[i][1] * DAMPENING;
+            }
+
+            if self.particle_positions[i][1] > SCREEN_SIZE.1 as f32 {
+                self.particle_positions[i][1] = SCREEN_SIZE.1 as f32;
+                self.particle_velocities[i][1] = -self.particle_velocities[i][1] * DAMPENING;
+            }
+
+            self.particle_positions[i][0] += self.particle_velocities[i][0];
+            self.particle_positions[i][1] += self.particle_velocities[i][1];
+        }
 
         // Sort the particles into their grid cells
         pollster::block_on(self.sort_particles());

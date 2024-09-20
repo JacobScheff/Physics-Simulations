@@ -22,9 +22,9 @@ const PARTICLE_AMOUNT_Y: u32 = 50; // The number of particles in the y direction
 const RADIUS_OF_INFLUENCE: f32 = 150.0; // MUST BE DIVISIBLE BY SCREEN_SIZE - The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
 const PRESURE_MULTIPLIER: f32 = 100.0; // The multiplier for the pressure force
-const GRAVITY: f32 = 0.2; // The strength of gravity
+const GRAVITY: f32 = 0.1; // The strength of gravity
 const LOOK_AHEAD_TIME: f32 = 0.0; // 1.0 / 60.0; // The time to look ahead when calculating the predicted position
-const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
+const VISCOSITY: f32 = 0.0; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 
 const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_SIZE.x + 0.5), i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.y * GRID_SIZE.y + 0.5));
@@ -69,34 +69,34 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let gravity_force: vec2<f32> = vec2<f32>(0.0, GRAVITY);
 
     // Accelerate the particle
-    var particle_acceleration: vec2<f32> = (pressure_force) / max(particle_densities[index], 0.000001);
+    var particle_acceleration: vec2<f32> = (pressure_force) / max(density, 0.000001);
     particle_acceleration = particle_acceleration + viscosity_force;
     particle_acceleration = particle_acceleration + gravity_force;
     particle_velocities[index] = particle_velocities[index] + particle_acceleration;
 
-    // Move the particle
-    if particle_positions[index][0] < 0.0 {
-        particle_positions[index][0] = 0.0;
-        particle_velocities[index][0] = -particle_velocities[index][0] * DAMPENING;
-    }
+    // // Move the particle
+    // if particle_positions[index][0] < 0.0 {
+    //     particle_positions[index][0] = 0.0;
+    //     particle_velocities[index][0] = -particle_velocities[index][0] * DAMPENING;
+    // }
 
-    if particle_positions[index][0] > SCREEN_SIZE.x {
-        particle_positions[index][0] = SCREEN_SIZE.x;
-        particle_velocities[index][0] = -particle_velocities[index][0] * DAMPENING;
-    }
+    // if particle_positions[index][0] > SCREEN_SIZE.x {
+    //     particle_positions[index][0] = SCREEN_SIZE.x;
+    //     particle_velocities[index][0] = -particle_velocities[index][0] * DAMPENING;
+    // }
     
-    if particle_positions[index][1] < 0.0 {
-        particle_positions[index][1] = 0.0;
-        particle_velocities[index][1] = -particle_velocities[index][1] * DAMPENING;
-    }
+    // if particle_positions[index][1] < 0.0 {
+    //     particle_positions[index][1] = 0.0;
+    //     particle_velocities[index][1] = -particle_velocities[index][1] * DAMPENING;
+    // }
 
-    if particle_positions[index][1] > SCREEN_SIZE.y {
-        particle_positions[index][1] = SCREEN_SIZE.y;
-        particle_velocities[index][1] = -particle_velocities[index][1] * DAMPENING;
-    }
+    // if particle_positions[index][1] > SCREEN_SIZE.y {
+    //     particle_positions[index][1] = SCREEN_SIZE.y;
+    //     particle_velocities[index][1] = -particle_velocities[index][1] * DAMPENING;
+    // }
     
-    particle_positions[index][0] += particle_velocities[index][0];
-    particle_positions[index][1] += particle_velocities[index][1];
+    // particle_positions[index][0] += particle_velocities[index][0];
+    // particle_positions[index][1] += particle_velocities[index][1];
 }
 
 @fragment
@@ -194,8 +194,10 @@ fn get_density(pos: vec2<f32>) -> f32 {
 
             for (var i = starting_index; i < ending_index; i=i+1){
                 let distance = length(pos - (particle_positions[i] + particle_velocities[i] * LOOK_AHEAD_TIME));
-                let influence = smoothing_kernel(distance);
-                density += influence * 3.141592653589 * particle_radii[i] * particle_radii[i];
+                if distance <= RADIUS_OF_INFLUENCE {
+                    let influence = smoothing_kernel(distance);
+                    density += influence * 3.141592653589 * particle_radii[i] * particle_radii[i];
+                }
             }
 
         }

@@ -87,11 +87,12 @@ impl<'a> State<'a> {
         x + y * GRID_SIZE.0
     }
 
-    fn pos_to_grid(&self, pos: (f32, f32)) -> (i32, i32) {
-        let x = (pos.0 / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32)
+    const GRID_DIV_SCREEN_SIZE: (f32, f32) = ( GRID_SIZE.0 as f32 / SCREEN_SIZE.0 as f32, GRID_SIZE.1 as f32 / SCREEN_SIZE.1 as f32);
+    fn pos_to_grid(&self, pos: [f32; 2]) -> (i32, i32) {
+        let x = (pos[0] * Self::GRID_DIV_SCREEN_SIZE.0)
             .min(GRID_SIZE.0 as f32 - 1.0)
             .max(0.0) as i32;
-        let y = (pos.1 / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32)
+        let y = (pos[1] * Self::GRID_DIV_SCREEN_SIZE.1)
             .min(GRID_SIZE.1 as f32 - 1.0)
             .max(0.0) as i32;
 
@@ -247,20 +248,19 @@ impl<'a> State<'a> {
     }
 
     async fn sort_particles(&mut self) {
-        // Map all particles to their grid cell
+        // Create a new list of particles
+        let mut new_positions: Vec<[f32; 2]> = Vec::with_capacity(self.particle_positions.len());
+        let mut new_velocities: Vec<[f32; 2]> = Vec::with_capacity(self.particle_velocities.len());
+        let mut new_radii: Vec<f32> = Vec::with_capacity(self.particle_radii.len());
+        let mut new_densities: Vec<f32> = Vec::with_capacity(self.particle_densities.len());
+        let mut lookup_table = vec![-1; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
+
         let mut index_map: Vec<Vec<Vec<i32>>> =
             vec![vec![vec![]; GRID_SIZE.1 as usize]; GRID_SIZE.0 as usize];
         for i in 0..self.particle_positions.len() {
-            let grid = self.pos_to_grid(self.particle_positions[i].into());
+            let grid = self.pos_to_grid(self.particle_positions[i]);
             index_map[grid.0 as usize][grid.1 as usize].push(i as i32);
         }
-
-        // Create a new list of particles
-        let mut new_positions: Vec<[f32; 2]> = vec![];
-        let mut new_velocities: Vec<[f32; 2]> = vec![];
-        let mut new_radii: Vec<f32> = vec![];
-        let mut new_densities: Vec<f32> = vec![];
-        let mut lookup_table = vec![-1; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
 
         // Iterate over all grid cells
         for i in 0..GRID_SIZE.0 {

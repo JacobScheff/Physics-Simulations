@@ -13,7 +13,7 @@ const DISPATCH_SIZE: vec2<u32> = vec2<u32>(
     u32(PARTICLE_AMOUNT_Y + WORKGROUP_SIZE - 1u) / u32(WORKGROUP_SIZE),
 );
 
-const SCREEN_SIZE: vec2<f32> = vec2<f32>(1800.0, 900.0); // Size of the screen
+const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
 const GRID_SIZE: vec2<f32> = vec2<f32>(40.0, 20.0);
 
 const PARTICLE_RADIUS: f32 = 2.5; // The radius of the particles

@@ -20,7 +20,7 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
-const SCREEN_SIZE: (u32, u32) = (1800, 900);
+const SCREEN_SIZE: (u32, u32) = (1200, 600);
 const TIME_BETWEEN_FRAMES: u64 = 10;
 const OFFSET: (f32, f32) = (10.0, 8.0); // How much to offset all the particle's starting positions
 const GRID_SIZE: (i32, i32) = (40, 20); // How many grid cells to divide the screen into
@@ -28,6 +28,7 @@ const GRID_SIZE: (i32, i32) = (40, 20); // How many grid cells to divide the scr
 const PARTICLE_RADIUS: f32 = 2.5; // The radius of the particles
 const PARTICLE_AMOUNT_X: u32 = 100; // The number of particles in the x direction
 const PARTICLE_AMOUNT_Y: u32 = 50; // The number of particles in the y direction
+const PADDING: f32 = 100.0; // The padding around the screen
 const RADIUS_OF_INFLUENCE: f32 = 150.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
 const PRESURE_MULTIPLIER: f32 = 100.0; // The multiplier for the pressure force
@@ -411,8 +412,15 @@ impl<'a> State<'a> {
         let mut particle_densities = vec![];
         for i in 0..PARTICLE_AMOUNT_X {
             for j in 0..PARTICLE_AMOUNT_Y {
-                let x = SCREEN_SIZE.0 as f32 / (PARTICLE_AMOUNT_X + 1) as f32 * i as f32 + OFFSET.0;
-                let y = SCREEN_SIZE.1 as f32 / (PARTICLE_AMOUNT_Y + 1) as f32 * j as f32 + OFFSET.1;
+                // let x = SCREEN_SIZE.0 as f32 / (PARTICLE_AMOUNT_X + 1) as f32 * i as f32 + OFFSET.0;
+                // let y = SCREEN_SIZE.1 as f32 / (PARTICLE_AMOUNT_Y + 1) as f32 * j as f32 + OFFSET.1;
+                    
+                let x = (i as f32 + 0.5) * (SCREEN_SIZE.0 as f32 - 2.0 * PADDING)
+                    / PARTICLE_AMOUNT_X as f32
+                    + PADDING;
+                let y = (j as f32 + 0.5) * (SCREEN_SIZE.1 as f32 - 2.0 * PADDING)
+                    / PARTICLE_AMOUNT_Y as f32
+                    + PADDING;
 
                 particle_positions.push([x, y]);
                 // particle_velocities.push([0.0, 0.0]);

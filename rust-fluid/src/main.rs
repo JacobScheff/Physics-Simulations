@@ -33,7 +33,7 @@ const RADIUS_OF_INFLUENCE: f32 = 150.0; // The radius of the sphere of influence
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
 const PRESURE_MULTIPLIER: f32 = 100.0; // The multiplier for the pressure force
 const GRAVITY: f32 = 0.2; // The strength of gravity
-const LOOK_AHEAD_TIME: f32 = 1.0 / 60.0; // The time to look ahead when calculating the predicted position
+const LOOK_AHEAD_TIME: f32 = 0.0; // 1.0 / 60.0; // The time to look ahead when calculating the predicted position
 const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 

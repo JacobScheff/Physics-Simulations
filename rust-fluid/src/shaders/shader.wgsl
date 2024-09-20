@@ -23,7 +23,7 @@ const RADIUS_OF_INFLUENCE: f32 = 150.0; // MUST BE DIVISIBLE BY SCREEN_SIZE - Th
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
 const PRESURE_MULTIPLIER: f32 = 100.0; // The multiplier for the pressure force
 const GRAVITY: f32 = 0.2; // The strength of gravity
-const LOOK_AHEAD_TIME: f32 = 1.0 / 60.0; // The time to look ahead when calculating the predicted position
+const LOOK_AHEAD_TIME: f32 = 0.0; // 1.0 / 60.0; // The time to look ahead when calculating the predicted position
 const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 
@@ -162,25 +162,34 @@ fn smoothing_kernel(distance: f32) -> f32 {
 
 fn get_density(pos: vec2<f32>) -> f32 {
     let grid = pos_to_grid(pos);
-
     var density = 0.0;
 
-    for (var gx: i32 = -grids_to_check.x; gx <= grids_to_check.x; gx=gx+1){
-        for(var gy: i32 = -grids_to_check.y; gy <=grids_to_check.y; gy=gy+1){
+    for (var gx: i32 = -1; gx <= 1; gx=gx+1){
+        for(var gy: i32 = -1; gy <=1; gy=gy+1){
+            if grid.x + gx < 0 || grid.x + gx >= i32(GRID_SIZE.x) || grid.y + gy < 0 || grid.y + gy >= i32(GRID_SIZE.y) {
+                continue;
+            }
             let first_grid_index = grid_to_index(grid_add(grid, Grid(gx, gy)));
             if first_grid_index < 0 || first_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
                 continue;
             }
             
             let starting_index = particle_lookup[first_grid_index];
+            if starting_index == -1 {
+                continue;
+            }
+            
             var ending_index = -1;
 
-            let next_grid_index = first_grid_index + 1;
-            if next_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
-                ending_index = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y);
+            // let next_grid_index = first_grid_index + 1;
+            for (var i = first_grid_index + 1; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
+                if particle_lookup[i] != -1 {
+                    ending_index = particle_lookup[i];
+                    break;
+                }
             }
-            else {
-                ending_index = particle_lookup[next_grid_index];
+            if ending_index == -1 {
+                ending_index = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y);
             }
 
             for (var i = starting_index; i < ending_index; i=i+1){
@@ -191,6 +200,35 @@ fn get_density(pos: vec2<f32>) -> f32 {
 
         }
     }
+
+    // let grid = pos_to_grid(pos);
+
+    // for (var gx: i32 = -grids_to_check.x; gx <= grids_to_check.x; gx=gx+1){
+    //     for(var gy: i32 = -grids_to_check.y; gy <=grids_to_check.y; gy=gy+1){
+    //         let first_grid_index = grid_to_index(grid_add(grid, Grid(gx, gy)));
+    //         if first_grid_index < 0 || first_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
+    //             continue;
+    //         }
+            
+    //         let starting_index = particle_lookup[first_grid_index];
+    //         var ending_index = -1;
+
+    //         let next_grid_index = first_grid_index + 1;
+    //         if next_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
+    //             ending_index = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y);
+    //         }
+    //         else {
+    //             ending_index = particle_lookup[next_grid_index];
+    //         }
+
+    //         for (var i = starting_index; i < ending_index; i=i+1){
+    //             let distance = length(pos - (particle_positions[i] + particle_velocities[i] * LOOK_AHEAD_TIME));
+    //             let influence = smoothing_kernel(distance);
+    //             density += influence * 3.141592653589 * particle_radii[i] * particle_radii[i];
+    //         }
+
+    //     }
+    // }
 
     return density;
 }

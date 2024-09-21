@@ -803,7 +803,7 @@ impl<'a> State<'a> {
         if self.frame_count % 10 == 0 {
             let elapsed_time = start_time.elapsed();
             println!(
-                "fps (try adding back look ahead time): {}",
+                "fps: {}",
                 1.0 / elapsed_time.as_micros() as f32 * 1000.0 * 1000.0
             );
             self.frame_count = 0;

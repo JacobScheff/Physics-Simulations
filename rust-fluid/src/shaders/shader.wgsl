@@ -21,10 +21,10 @@ const PARTICLE_AMOUNT_X: u32 = 192; // The number of particles in the x directio
 const PARTICLE_AMOUNT_Y: u32 = 96; // The number of particles in the y direction
 const RADIUS_OF_INFLUENCE: f32 = 75.0; // MUST BE DIVISIBLE BY SCREEN_SIZE - The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
-const PRESURE_MULTIPLIER: f32 = 300.0; // The multiplier for the pressure force
-const GRAVITY: f32 = 0.3; // The strength of gravity
+const PRESURE_MULTIPLIER: f32 = 500.0; // The multiplier for the pressure force
+const GRAVITY: f32 = 0.0; // The strength of gravity
 const LOOK_AHEAD_TIME: f32 = 1.0 / 60.0; // The time to look ahead when calculating the predicted position
-const VISCOSITY: f32 = 1.0; // The viscosity of the fluid
+const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 
 const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_SIZE.x + 0.5), i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.y * GRID_SIZE.y + 0.5));
@@ -145,10 +145,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     var speed_t: f32 = (speed - min_speed) / (max_speed - min_speed);
                     speed_t = min(max(speed_t, 0.0), 1.0);
                     let min_density: f32 = 0.0;
-                    let max_density: f32 = 0.3;
+                    let max_density: f32 = 0.4;
                     var density_t: f32 = (density - min_density) / (max_density - min_density);
                     density_t = min(max(density_t, 0.0), 1.0);
-                    let color: vec3<f32> = vec3<f32>(speed_t, density_t, 1.0 - speed_t);
+                    // let color: vec3<f32> = vec3<f32>(speed_t, density_t, 1.0 - speed_t);
+                    let color: vec3<f32> = vec3<f32>(0.2, density_t, 0.2);
                     
                     return vec4<f32>(color, 1.0);
                 }

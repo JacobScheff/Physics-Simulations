@@ -30,18 +30,18 @@ const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
 const PARTICLE_AMOUNT_X: u32 = 192; // The number of particles in the x direction
 const PARTICLE_AMOUNT_Y: u32 = 96; // The number of particles in the y direction
 const PADDING: f32 = 100.0; // The padding around the screen
-const RADIUS_OF_INFLUENCE: f32 = 75.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
-const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
-const PRESURE_MULTIPLIER: f32 = 100.0; // The multiplier for the pressure force
-const GRAVITY: f32 = 0.4; // The strength of gravity
-const LOOK_AHEAD_TIME: f32 = 1.0 / 60.0; // The time to look ahead when calculating the predicted position
-const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
+// const RADIUS_OF_INFLUENCE: f32 = 75.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
+// const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
+// const PRESURE_MULTIPLIER: f32 = 100.0; // The multiplier for the pressure force
+const GRAVITY: f32 = 0.0; // The strength of gravity
+// const LOOK_AHEAD_TIME: f32 = 1.0 / 60.0; // The time to look ahead when calculating the predicted position
+// const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 
-const grids_to_check: (i32, i32) = (
-    (RADIUS_OF_INFLUENCE / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32 + 0.5) as i32,
-    (RADIUS_OF_INFLUENCE / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32 + 0.5) as i32,
-);
+// const grids_to_check: (i32, i32) = (
+//     (RADIUS_OF_INFLUENCE / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32 + 0.5) as i32,
+//     (RADIUS_OF_INFLUENCE / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32 + 0.5) as i32,
+// );
 
 const WORKGROUP_SIZE: u32 = 10;
 const DISPATCH_SIZE: (u32, u32) = (
@@ -626,44 +626,44 @@ impl<'a> State<'a> {
         }
     }
 
-    fn density_to_pressure(&self, density: f32) -> f32 {
-        let density_error = density - TARGET_DENSITY;
-        return density_error * PRESURE_MULTIPLIER;
-    }
+    // fn density_to_pressure(&self, density: f32) -> f32 {
+    //     let density_error = density - TARGET_DENSITY;
+    //     return density_error * PRESURE_MULTIPLIER;
+    // }
 
-    fn smoothing_kernel(&self, distance: f32) -> f32 {
-        if distance >= RADIUS_OF_INFLUENCE {
-            return 0.0;
-        }
+    // fn smoothing_kernel(&self, distance: f32) -> f32 {
+    //     if distance >= RADIUS_OF_INFLUENCE {
+    //         return 0.0;
+    //     }
 
-        let volume = f32::consts::PI * RADIUS_OF_INFLUENCE.powi(4) / 6.0;
-        return (RADIUS_OF_INFLUENCE - distance) * (RADIUS_OF_INFLUENCE - distance) / volume;
-    }
+    //     let volume = f32::consts::PI * RADIUS_OF_INFLUENCE.powi(4) / 6.0;
+    //     return (RADIUS_OF_INFLUENCE - distance) * (RADIUS_OF_INFLUENCE - distance) / volume;
+    // }
 
-    fn smoothing_kernel_derivative(&self, distance: f32) -> f32 {
-        if distance >= RADIUS_OF_INFLUENCE {
-            return 0.0;
-        }
+    // fn smoothing_kernel_derivative(&self, distance: f32) -> f32 {
+    //     if distance >= RADIUS_OF_INFLUENCE {
+    //         return 0.0;
+    //     }
 
-        let scale = 12.0 / RADIUS_OF_INFLUENCE.powi(4) * f32::consts::PI;
-        return (RADIUS_OF_INFLUENCE - distance) * scale;
-    }
+    //     let scale = 12.0 / RADIUS_OF_INFLUENCE.powi(4) * f32::consts::PI;
+    //     return (RADIUS_OF_INFLUENCE - distance) * scale;
+    // }
 
-    fn viscosity_kernel(&self, distance: f32) -> f32 {
-        if distance >= RADIUS_OF_INFLUENCE {
-            return 0.0;
-        }
+    // fn viscosity_kernel(&self, distance: f32) -> f32 {
+    //     if distance >= RADIUS_OF_INFLUENCE {
+    //         return 0.0;
+    //     }
 
-        let volume = f32::consts::PI * RADIUS_OF_INFLUENCE.powi(8) / 4.0;
-        let value = RADIUS_OF_INFLUENCE * RADIUS_OF_INFLUENCE - distance * distance;
-        return value * value * value / volume;
-    }
+    //     let volume = f32::consts::PI * RADIUS_OF_INFLUENCE.powi(8) / 4.0;
+    //     let value = RADIUS_OF_INFLUENCE * RADIUS_OF_INFLUENCE - distance * distance;
+    //     return value * value * value / volume;
+    // }
 
-    fn calculate_shared_pressure(&self, density_a: f32, density_b: f32) -> f32 {
-        let pressure_a = self.density_to_pressure(density_a);
-        let pressure_b = self.density_to_pressure(density_b);
-        return (pressure_a + pressure_b) / 2.0;
-    }
+    // fn calculate_shared_pressure(&self, density_a: f32, density_b: f32) -> f32 {
+    //     let pressure_a = self.density_to_pressure(density_a);
+    //     let pressure_b = self.density_to_pressure(density_b);
+    //     return (pressure_a + pressure_b) / 2.0;
+    // }
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let start_time = std::time::Instant::now();

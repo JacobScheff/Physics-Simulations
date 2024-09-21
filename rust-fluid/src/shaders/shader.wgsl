@@ -20,10 +20,10 @@ const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
 const PARTICLE_AMOUNT_X: u32 = 192; // The number of particles in the x direction
 const PARTICLE_AMOUNT_Y: u32 = 96; // The number of particles in the y direction
 const RADIUS_OF_INFLUENCE: f32 = 75.0; // MUST BE DIVISIBLE BY SCREEN_SIZE - The radius of the sphere of influence. Also the radius to search for particles to calculate the density
-const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
-const PRESURE_MULTIPLIER: f32 = 100.0; // The multiplier for the pressure force
+const TARGET_DENSITY: f32 = 0.4; // The target density of the fluid
+const PRESURE_MULTIPLIER: f32 = 500.0; // The multiplier for the pressure force
 const GRAVITY: f32 = 0.4; // The strength of gravity
-const LOOK_AHEAD_TIME: f32 = 1.0 / 60.0; // The time to look ahead when calculating the predicted position
+const LOOK_AHEAD_TIME: f32 = 0.0; // 1.0 / 60.0; // The time to look ahead when calculating the predicted position
 const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 
@@ -266,6 +266,9 @@ fn calculate_forces(index: u32) {
 
                     // Pressure force
                     let pressure_force = dir * shared_pressure * slope * 3.141592653589 * PARTICLE_RADIUS * PARTICLE_RADIUS / max(density, 0.000001);
+                    if density == 0.0 {
+                        continue;
+                    }
 
                     // Viscosity force
                     let viscosity_influence = viscosity_kernel(distance);

@@ -676,10 +676,13 @@ impl<'a> State<'a> {
 
         // Apply forces and move the particles
         for i in 0..self.particle_positions.len() {
-            let acceleration = [
+            let mut acceleration = [
                 self.particle_forces[i][0] / self.particle_densities[i].max(0.0001),
                 self.particle_forces[i][1] / self.particle_densities[i].max(0.0001) + GRAVITY,
             ];
+            if self.particle_densities[i] == 0.0 {
+                acceleration = [0.0, 0.0];
+            }
             self.particle_velocities[i][0] += acceleration[0];
             self.particle_velocities[i][1] += acceleration[1];
 

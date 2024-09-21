@@ -69,11 +69,14 @@ struct State<'a> {
     particle_velocities_buffer: wgpu::Buffer,
     particle_densities: Vec<f32>,
     particle_densities_buffer: wgpu::Buffer,
+    particle_forces: Vec<[f32; 4]>,
+    particle_forces_buffer: wgpu::Buffer,
     particle_lookup: Vec<i32>,
     particle_lookup_buffer: wgpu::Buffer,
     position_reading_buffer: wgpu::Buffer,
     velocity_reading_buffer: wgpu::Buffer,
     density_reading_buffer: wgpu::Buffer,
+    force_reading_buffer: wgpu::Buffer,
 }
 
 impl<'a> State<'a> {
@@ -251,12 +254,62 @@ impl<'a> State<'a> {
         }
     }
 
+    async fn update_forces_from_buffer(&mut self) {
+        // Copy particle forces to force_reading_buffer
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Copy Encoder"),
+            });
+        encoder.copy_buffer_to_buffer(
+            &self.particle_forces_buffer,
+            0,
+            &self.force_reading_buffer,
+            0,
+            self.particle_forces_buffer.size(),
+        );
+        self.queue.submit(std::iter::once(encoder.finish()));
+
+        // Map force_reading_buffer for reading asynchronously
+        let buffer_slice = self.force_reading_buffer.slice(..);
+        let (sender, receiver) = futures_intrusive::channel::shared::oneshot_channel();
+        buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
+            sender.send(result).unwrap();
+        });
+
+        // Wait for the mapping to complete
+        self.device.poll(wgpu::Maintain::Wait);
+
+        // Check if the mapping was successful
+        if let Ok(()) = receiver.receive().await.unwrap() {
+            let data = buffer_slice.get_mapped_range();
+            let forces: &[f32] = bytemuck::cast_slice(&data);
+            // Update the particle forces
+            // for i in 0..self.particle_forces.len() {
+            //     self.particle_forces[i] = [forces[i * 4], forces[i * 4 + 1], forces[i * 4 + 2], forces[i * 4 + 3]];
+            // }
+            self.particle_forces = forces
+                .chunks(4)
+                .map(|chunk| [chunk[0], chunk[1], chunk[2], chunk[3]])
+                .collect();
+
+            drop(data);
+            self.force_reading_buffer.unmap();
+        } else {
+            // Handle mapping error
+            eprintln!("Error mapping buffer");
+            // return Err(wgpu::SurfaceError::Lost); // Or handle the error appropriately
+            return;
+        }
+    }
+
     async fn sort_particles(&mut self) {
         // Create a new list of particles
         let mut new_positions: Vec<[f32; 2]> = Vec::with_capacity(self.particle_positions.len());
         let mut new_velocities: Vec<[f32; 2]> = Vec::with_capacity(self.particle_velocities.len());
         let mut new_radii: Vec<f32> = Vec::with_capacity(self.particle_radii.len());
         let mut new_densities: Vec<f32> = Vec::with_capacity(self.particle_densities.len());
+        let mut new_forces: Vec<[f32; 4]> = Vec::with_capacity(self.particle_forces.len());
         let mut lookup_table = vec![-1; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
 
         // Create a HashMap to store the indices of the particles in each grid cell
@@ -279,6 +332,7 @@ impl<'a> State<'a> {
                         new_velocities.push(self.particle_velocities[particle_index]);
                         new_radii.push(self.particle_radii[particle_index]);
                         new_densities.push(self.particle_densities[particle_index]);
+                        new_forces.push(self.particle_forces[particle_index]);
                         if index == -1 {
                             index = new_positions.len() as i32 - 1;
                         }
@@ -293,6 +347,7 @@ impl<'a> State<'a> {
         self.particle_velocities = new_velocities;
         self.particle_radii = new_radii;
         self.particle_densities = new_densities;
+        self.particle_forces = new_forces;
         self.particle_lookup = lookup_table;
 
         self.queue.write_buffer(
@@ -317,6 +372,12 @@ impl<'a> State<'a> {
             &self.particle_densities_buffer,
             0,
             bytemuck::cast_slice(&self.particle_densities),
+        );
+
+        self.queue.write_buffer(
+            &self.particle_forces_buffer,
+            0,
+            bytemuck::cast_slice(&self.particle_forces),
         );
 
         self.queue.write_buffer(
@@ -415,6 +476,7 @@ impl<'a> State<'a> {
         let mut particle_velocities = vec![];
         let mut particle_radii = vec![];
         let mut particle_densities = vec![];
+        let mut particle_forces = vec![];
         for i in 0..PARTICLE_AMOUNT_X {
             for j in 0..PARTICLE_AMOUNT_Y {
                 // let x = SCREEN_SIZE.0 as f32 / (PARTICLE_AMOUNT_X + 1) as f32 * i as f32 + OFFSET.0;
@@ -435,6 +497,7 @@ impl<'a> State<'a> {
                 ]);
                 particle_radii.push(PARTICLE_RADIUS);
                 particle_densities.push(0.0);
+                particle_forces.push([0.0, 0.0, 0.0, 0.0]);
             }
         }
         let particle_lookup: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
@@ -475,6 +538,16 @@ impl<'a> State<'a> {
             contents: bytemuck::cast_slice(&particle_densities),
             usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
         });
+        let particle_forces_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Particle Forces Buffer Data"),
+            contents: bytemuck::cast_slice(&particle_forces),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
+        });
+        let force_reading_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Force Reading Buffer Data"),
+            contents: bytemuck::cast_slice(&particle_forces),
+            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
+        });
         let particle_lookup_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Particle Lookup Buffer Data"),
             contents: bytemuck::cast_slice(&particle_lookup),
@@ -503,6 +576,11 @@ impl<'a> State<'a> {
             bytemuck::cast_slice(&particle_densities),
         );
         queue.write_buffer(
+            &particle_forces_buffer,
+            0,
+            bytemuck::cast_slice(&particle_forces),
+        );
+        queue.write_buffer(
             &particle_lookup_buffer,
             0,
             bytemuck::cast_slice(&particle_lookup),
@@ -528,11 +606,14 @@ impl<'a> State<'a> {
             particle_velocities_buffer,
             particle_densities,
             particle_densities_buffer,
+            particle_forces,
+            particle_forces_buffer,
             particle_lookup,
             particle_lookup_buffer,
             position_reading_buffer,
             velocity_reading_buffer,
             density_reading_buffer,
+            force_reading_buffer,
         }
     }
 
@@ -584,100 +665,6 @@ impl<'a> State<'a> {
         return (pressure_a + pressure_b) / 2.0;
     }
 
-    // fn calculate_forces(&mut self, index: usize) -> ((f32, f32), (f32, f32)) {
-    //     let mut pressure_force = (0.0, 0.0);
-    //     let mut viscosity_force = (0.0, 0.0);
-    //     let position = (
-    //         self.particle_positions[index][0]
-    //             + self.particle_velocities[index][0] * LOOK_AHEAD_TIME,
-    //         self.particle_positions[index][1]
-    //             + self.particle_velocities[index][1] * LOOK_AHEAD_TIME,
-    //     );
-
-    //     let grid = self.pos_to_grid(position);
-
-    //     let density = self.particle_densities[index];
-
-    //     // for (let mut gx: i32 = -grids_to_check.x; gx <= grids_to_check.x; gx+=1){
-    //     for gx in -grids_to_check.0..=grids_to_check.0 {
-    //         for gy in -grids_to_check.1..=grids_to_check.1 {
-    //             let first_grid_index = self.grid_to_index((grid.0 + gx, grid.1 + gy));
-    //             if first_grid_index < 0 || first_grid_index >= GRID_SIZE.0 * GRID_SIZE.1 {
-    //                 continue;
-    //             }
-
-    //             let starting_index = self.particle_lookup[first_grid_index as usize];
-    //             let mut ending_index: i32 = -1;
-
-    //             let next_grid_index = first_grid_index + 1;
-    //             if next_grid_index >= (GRID_SIZE.0 * GRID_SIZE.1) {
-    //                 ending_index = PARTICLE_AMOUNT_X as i32 * PARTICLE_AMOUNT_Y as i32;
-    //             } else {
-    //                 ending_index = self.particle_lookup[next_grid_index as usize];
-    //             }
-
-    //             for i in starting_index..ending_index {
-    //                 if i == -1 || i == index as i32 || i >= self.particle_positions.len() as i32 {
-    //                     continue;
-    //                 }
-    //                 let offset = (
-    //                     position.0 - self.particle_positions[i as usize][0]
-    //                         + self.particle_velocities[i as usize][0] * LOOK_AHEAD_TIME,
-    //                     position.1 - self.particle_positions[i as usize][1]
-    //                         + self.particle_velocities[i as usize][1] * LOOK_AHEAD_TIME,
-    //                 );
-    //                 let distance = offset.0 * offset.0 + offset.1 * offset.1;
-    //                 if distance == 0.0 {
-    //                     continue;
-    //                 }
-    //                 let dir = (offset.0 / distance.sqrt(), offset.1 / distance.sqrt());
-
-    //                 let slope = self.smoothing_kernel_derivative(distance);
-    //                 let other_density = self.particle_densities[i as usize];
-    //                 let shared_pressure = self.calculate_shared_pressure(density, other_density);
-
-    //                 // Pressure force
-    //                 for i in 0..2 {
-    //                     pressure_force.0 = pressure_force.0
-    //                         + dir.0
-    //                             * shared_pressure
-    //                             * slope
-    //                             * 3.141592653589
-    //                             * PARTICLE_RADIUS
-    //                             * PARTICLE_RADIUS
-    //                             / density.max(0.000001);
-    //                     pressure_force.1 = pressure_force.1
-    //                         + dir.1
-    //                             * shared_pressure
-    //                             * slope
-    //                             * 3.141592653589
-    //                             * PARTICLE_RADIUS
-    //                             * PARTICLE_RADIUS
-    //                             / density.max(0.000001);
-    //                 }
-
-    //                 // Viscosity force
-    //                 let viscosity_influence = self.viscosity_kernel(distance);
-    //                 for i in 0..2 {
-    //                     viscosity_force.0 = viscosity_force.0
-    //                         + (self.particle_velocities[i as usize][0]
-    //                             - self.particle_velocities[index][0])
-    //                             * viscosity_influence;
-    //                     viscosity_force.1 = viscosity_force.1
-    //                         + (self.particle_velocities[i as usize][1]
-    //                             - self.particle_velocities[index][1])
-    //                             * viscosity_influence;
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     return (
-    //         pressure_force,
-    //         (viscosity_force.0 * VISCOSITY, viscosity_force.1 * VISCOSITY),
-    //     );
-    // }
-
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let start_time = std::time::Instant::now();
 
@@ -685,32 +672,12 @@ impl<'a> State<'a> {
         pollster::block_on(self.update_position_from_buffer());
         pollster::block_on(self.update_velocities_from_buffer());
         pollster::block_on(self.update_densities_from_buffer());
-
-        // Move the particle
-        // if self.particle_positions[index][0] < 0.0 {
-        //     particle_positions[index][0] = 0.0;
-        //     particle_velocities[index][0] = -particle_velocities[index][0] * DAMPENING;
-        // }
-
-        // if particle_positions[index][0] > SCREEN_SIZE.x {
-        //     particle_positions[index][0] = SCREEN_SIZE.x;
-        //     particle_velocities[index][0] = -particle_velocities[index][0] * DAMPENING;
-        // }
-
-        // if particle_positions[index][1] < 0.0 {
-        //     particle_positions[index][1] = 0.0;
-        //     particle_velocities[index][1] = -particle_velocities[index][1] * DAMPENING;
-        // }
-
-        // if particle_positions[index][1] > SCREEN_SIZE.y {
-        //     particle_positions[index][1] = SCREEN_SIZE.y;
-        //     particle_velocities[index][1] = -particle_velocities[index][1] * DAMPENING;
-        // }
-
-        // particle_positions[index][0] += particle_velocities[index][0];
-        // particle_positions[index][1] += particle_velocities[index][1];
+        pollster::block_on(self.update_forces_from_buffer());
 
         for i in 0..self.particle_positions.len() {
+            self.particle_positions[i][0] += self.particle_velocities[i][0];
+            self.particle_positions[i][1] += self.particle_velocities[i][1];
+
             if self.particle_positions[i][0] < 0.0 {
                 self.particle_positions[i][0] = 0.0;
                 self.particle_velocities[i][0] = -self.particle_velocities[i][0] * DAMPENING;
@@ -730,9 +697,6 @@ impl<'a> State<'a> {
                 self.particle_positions[i][1] = SCREEN_SIZE.1 as f32;
                 self.particle_velocities[i][1] = -self.particle_velocities[i][1] * DAMPENING;
             }
-
-            self.particle_positions[i][0] += self.particle_velocities[i][0];
-            self.particle_positions[i][1] += self.particle_velocities[i][1];
         }
 
         // Sort the particles into their grid cells

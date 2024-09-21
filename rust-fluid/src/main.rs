@@ -30,10 +30,10 @@ const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
 const PARTICLE_AMOUNT_X: u32 = 192; // The number of particles in the x direction
 const PARTICLE_AMOUNT_Y: u32 = 96; // The number of particles in the y direction
 const PADDING: f32 = 100.0; // The padding around the screen
-const RADIUS_OF_INFLUENCE: f32 = 150.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
-const TARGET_DENSITY: f32 = 0.002; // The target density of the fluid
-const PRESURE_MULTIPLIER: f32 = 500.0; // The multiplier for the pressure force
-const GRAVITY: f32 = 0.3; // The strength of gravity
+const RADIUS_OF_INFLUENCE: f32 = 75.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
+const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
+const PRESURE_MULTIPLIER: f32 = 100.0; // The multiplier for the pressure force
+const GRAVITY: f32 = 0.4; // The strength of gravity
 const LOOK_AHEAD_TIME: f32 = 1.0 / 60.0; // The time to look ahead when calculating the predicted position
 const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
@@ -678,7 +678,7 @@ impl<'a> State<'a> {
         for i in 0..self.particle_positions.len() {
             let acceleration = [
                 self.particle_forces[i][0] / self.particle_densities[i].max(0.0001),
-                self.particle_forces[i][1] / self.particle_densities[i].max(0.0001),
+                self.particle_forces[i][1] / self.particle_densities[i].max(0.0001) + GRAVITY,
             ];
             self.particle_velocities[i][0] += acceleration[0];
             self.particle_velocities[i][1] += acceleration[1];

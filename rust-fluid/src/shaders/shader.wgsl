@@ -21,8 +21,8 @@ const PARTICLE_AMOUNT_X: u32 = 192; // The number of particles in the x directio
 const PARTICLE_AMOUNT_Y: u32 = 96; // The number of particles in the y direction
 const RADIUS_OF_INFLUENCE: f32 = 75.0; // MUST BE DIVISIBLE BY SCREEN_SIZE - The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
-const PRESURE_MULTIPLIER: f32 = 500.0; // The multiplier for the pressure force
-const GRAVITY: f32 = 0.0; // The strength of gravity
+const PRESURE_MULTIPLIER: f32 = 100.0; // The multiplier for the pressure force
+const GRAVITY: f32 = 0.4; // The strength of gravity
 const LOOK_AHEAD_TIME: f32 = 1.0 / 60.0; // The time to look ahead when calculating the predicted position
 const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
@@ -127,15 +127,15 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     let max_density: f32 = 0.4;
                     var density_t: f32 = (density - min_density) / (max_density - min_density);
                     density_t = min(max(density_t, 0.0), 1.0);
-                    // let color: vec3<f32> = vec3<f32>(speed_t, density_t, 1.0 - speed_t);
+                    let color: vec3<f32> = vec3<f32>(speed_t, density_t, 1.0 - speed_t);
                     // let color: vec3<f32> = vec3<f32>(0.2, density_t, 0.2);
-                    let density_error = density - TARGET_DENSITY;
-                    var color: vec3<f32> = vec3<f32>(0.0, 0.0, 0.0);
-                    if density_error > 0.0 {
-                        color = vec3<f32>(density_error, 0.0, 0.0);
-                    } else {
-                        color = vec3<f32>(0.0, 0.0, -density_error);
-                    }
+                    // let density_error = density - TARGET_DENSITY;
+                    // var color: vec3<f32> = vec3<f32>(0.0, 0.0, 0.0);
+                    // if density_error > 0.0 {
+                    //     color = vec3<f32>(density_error, 0.0, 0.0);
+                    // } else {
+                    //     color = vec3<f32>(0.0, 0.0, -density_error);
+                    // }
                     
                     return vec4<f32>(color, 1.0);
                 }
@@ -254,11 +254,11 @@ fn calculate_forces(index: u32) {
                         continue;
                     }
                     let offset: vec2<f32> = position - (particle_positions[i] + particle_velocities[i] * LOOK_AHEAD_TIME);
-                    let distance = offset.x * offset.x + offset.y * offset.y;
+                    let distance = sqrt(offset.x * offset.x + offset.y * offset.y);
                     if distance == 0.0 {
                         continue;
                     }
-                    let dir = vec2<f32>(offset.x / sqrt(distance), offset.y / sqrt(distance));
+                    let dir = vec2<f32>(offset.x / distance, offset.y / distance);
 
                     let slope = smoothing_kernel_derivative(distance);
                     let other_density = particle_densities[i];

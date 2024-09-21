@@ -33,7 +33,7 @@ const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_
 @group(0) @binding(2) var<storage, read_write> particle_velocities: array<vec2<f32>, u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y)>;
 @group(0) @binding(3) var<storage, read> particle_lookup: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
 @group(0) @binding(4) var<storage, read_write> particle_densities: array<f32, u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y)>;
-@group(0) @binding(5) var<storage, read> particle_forces: array<vec4<f32>, u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y)>;
+@group(0) @binding(5) var<storage, read_write> particle_forces: array<vec4<f32>, u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y)>;
 
 @vertex
 fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
@@ -64,40 +64,18 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     particle_densities[index] = density;
 
     // Calculate the forces on the particle
-    let forces: vec4<f32> = calculate_forces(index);
-    let pressure_force: vec2<f32> = forces.xy;
-    let viscosity_force: vec2<f32> = forces.zw;
-    let gravity_force: vec2<f32> = vec2<f32>(0.0, GRAVITY);
+    particle_forces[index] = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    calculate_forces(index);
+    // let forces: vec4<f32> = calculate_forces(index);
+    // let pressure_force: vec2<f32> = forces.xy;
+    // let viscosity_force: vec2<f32> = forces.zw;
+    // let gravity_force: vec2<f32> = vec2<f32>(0.0, GRAVITY);
 
-    // Accelerate the particle
-    var particle_acceleration: vec2<f32> = (pressure_force) / max(density, 0.000001);
-    particle_acceleration = particle_acceleration + viscosity_force;
-    particle_acceleration = particle_acceleration + gravity_force;
-    particle_velocities[index] = particle_velocities[index] + particle_acceleration;
-
-    // // Move the particle
-    // if particle_positions[index][0] < 0.0 {
-    //     particle_positions[index][0] = 0.0;
-    //     particle_velocities[index][0] = -particle_velocities[index][0] * DAMPENING;
-    // }
-
-    // if particle_positions[index][0] > SCREEN_SIZE.x {
-    //     particle_positions[index][0] = SCREEN_SIZE.x;
-    //     particle_velocities[index][0] = -particle_velocities[index][0] * DAMPENING;
-    // }
-    
-    // if particle_positions[index][1] < 0.0 {
-    //     particle_positions[index][1] = 0.0;
-    //     particle_velocities[index][1] = -particle_velocities[index][1] * DAMPENING;
-    // }
-
-    // if particle_positions[index][1] > SCREEN_SIZE.y {
-    //     particle_positions[index][1] = SCREEN_SIZE.y;
-    //     particle_velocities[index][1] = -particle_velocities[index][1] * DAMPENING;
-    // }
-    
-    // particle_positions[index][0] += particle_velocities[index][0];
-    // particle_positions[index][1] += particle_velocities[index][1];
+    // // Accelerate the particle
+    // var particle_acceleration: vec2<f32> = (pressure_force) / max(density, 0.000001);
+    // particle_acceleration = particle_acceleration + viscosity_force;
+    // particle_acceleration = particle_acceleration + gravity_force;
+    // particle_velocities[index] = particle_velocities[index] + particle_acceleration;
 }
 
 @fragment
@@ -247,15 +225,7 @@ fn grid_add(grid: Grid, offset: Grid) -> Grid {
     return Grid(grid.x + offset.x, grid.y + offset.y);
 }
 
-fn calculate_forces(index: u32) -> vec4<f32> {
-        var pressure_force = vec2<f32>(0.0, 0.0);
-        var viscosity_force = vec2<f32>(0.0, 0.0);
-        // let position = (
-        //     self.particle_positions[index][0]
-        //         + self.particle_velocities[index][0] * LOOK_AHEAD_TIME,
-        //     self.particle_positions[index][1]
-        //         + self.particle_velocities[index][1] * LOOK_AHEAD_TIME,
-        // );
+fn calculate_forces(index: u32) {
         let position: vec2<f32> = particle_positions[index] + particle_velocities[index] * LOOK_AHEAD_TIME;
 
         let grid = pos_to_grid(position);
@@ -295,16 +265,20 @@ fn calculate_forces(index: u32) -> vec4<f32> {
                     let shared_pressure = calculate_shared_pressure(density, other_density);
 
                     // Pressure force
-                    pressure_force += dir * shared_pressure * slope * 3.141592653589 * PARTICLE_RADIUS * PARTICLE_RADIUS / max(density, 0.000001);
+                    let pressure_force = dir * shared_pressure * slope * 3.141592653589 * PARTICLE_RADIUS * PARTICLE_RADIUS / max(density, 0.000001);
 
                     // Viscosity force
                     let viscosity_influence = viscosity_kernel(distance);
-                    viscosity_force += (particle_velocities[i] - particle_velocities[index]) * viscosity_influence;
+                    let viscosity_force = (particle_velocities[i] - particle_velocities[index]) * viscosity_influence;
+
+                    // Apply the forces
+                    particle_forces[index] += vec4<f32>(pressure_force.x, pressure_force.y, viscosity_force.x, viscosity_force.y);
+                    particle_forces[i] -= vec4<f32>(pressure_force.x, pressure_force.y, viscosity_force.x, viscosity_force.y);
                 }
             }
         }
 
-        return vec4<f32>(pressure_force.x, pressure_force.y, viscosity_force.x, viscosity_force.y);
+        // return vec4<f32>(pressure_force.x, pressure_force.y, viscosity_force.x, viscosity_force.y);
     }
 
 fn smoothing_kernel_derivative(distance: f32) -> f32 {

@@ -674,7 +674,15 @@ impl<'a> State<'a> {
         pollster::block_on(self.update_densities_from_buffer());
         pollster::block_on(self.update_forces_from_buffer());
 
+        // Apply forces and move the particles
         for i in 0..self.particle_positions.len() {
+            let acceleration = [
+                self.particle_forces[i][0] / self.particle_densities[i].max(0.0001),
+                self.particle_forces[i][1] / self.particle_densities[i].max(0.0001),
+            ];
+            self.particle_velocities[i][0] += acceleration[0];
+            self.particle_velocities[i][1] += acceleration[1];
+
             self.particle_positions[i][0] += self.particle_velocities[i][0];
             self.particle_positions[i][1] += self.particle_velocities[i][1];
 
@@ -829,6 +837,10 @@ async fn run() {
                 binding: 4,
                 resource: state.particle_densities_buffer.as_entire_binding(),
             },
+            wgpu::BindGroupEntry {
+                binding: 5,
+                resource: state.particle_forces_buffer.as_entire_binding(),
+            },
         ],
     });
 
@@ -857,6 +869,10 @@ async fn run() {
             wgpu::BindGroupEntry {
                 binding: 4,
                 resource: state.particle_densities_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 5,
+                resource: state.particle_forces_buffer.as_entire_binding(),
             },
         ],
     });

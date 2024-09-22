@@ -309,7 +309,7 @@ impl<'a> State<'a> {
         let mut new_velocities: Vec<[f32; 2]> = Vec::with_capacity(self.particle_velocities.len());
         let mut new_radii: Vec<f32> = Vec::with_capacity(self.particle_radii.len());
         let mut new_densities: Vec<f32> = Vec::with_capacity(self.particle_densities.len());
-        let mut new_forces: Vec<[f32; 4]> = Vec::with_capacity(self.particle_forces.len());
+        let mut new_forces: Vec<[f32; 4]> = vec![[0.0, 0.0, 0.0, 0.0]; self.particle_forces.len()];
         let mut lookup_table = vec![-1; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
 
         // Create a HashMap to store the indices of the particles in each grid cell
@@ -332,7 +332,6 @@ impl<'a> State<'a> {
                         new_velocities.push(self.particle_velocities[particle_index]);
                         new_radii.push(self.particle_radii[particle_index]);
                         new_densities.push(self.particle_densities[particle_index]);
-                        new_forces.push(self.particle_forces[particle_index]);
                         if index == -1 {
                             index = new_positions.len() as i32 - 1;
                         }

@@ -57,7 +57,7 @@ struct State<'a> {
     size: PhysicalSize<u32>,
     window: &'a Window,
     render_pipeline: wgpu::RenderPipeline,
-    compute_pipeline: wgpu::ComputePipeline,
+    compute_density_pipeline: wgpu::ComputePipeline,
     compute_forces_pipeline: wgpu::ComputePipeline,
     render_bind_group: wgpu::BindGroup,
     compute_bind_group: wgpu::BindGroup,
@@ -446,12 +446,12 @@ impl<'a> State<'a> {
         let render_pipeline = render_pipeline_builder.build_pipeline(&device);
 
         // Pass bind group layout to compute pipeline builder
-        let mut compute_pipeline_builder = ComputePipelineBuilder::new();
-        compute_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main");
-        compute_pipeline_builder.set_bind_group_layout(
+        let mut compute_density_pipeline_builder = ComputePipelineBuilder::new();
+        compute_density_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_density");
+        compute_density_pipeline_builder.set_bind_group_layout(
             bind_group_layout_generator::get_bind_group_layout(&device, true),
         );
-        let compute_pipeline = compute_pipeline_builder.build_pipeline(&device);
+        let compute_density_pipeline = compute_density_pipeline_builder.build_pipeline(&device);
 
         // Pass bind group layout to compute forces pipeline builder
         let mut compute_forces_pipeline_builder = ComputePipelineBuilder::new();
@@ -471,11 +471,11 @@ impl<'a> State<'a> {
             entries: &[],
         });
 
-        let temp_compute_render_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Temporary Compute Bind Group"),
+        let temp_compute_density_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Temporary Compute Density Bind Group"),
             layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &[],
-                label: Some("Temporary Compute Bind Group Layout"),
+                label: Some("Temporary Compute Density Bind Group Layout"),
             }),
             entries: &[],
         });
@@ -612,10 +612,10 @@ impl<'a> State<'a> {
             config,
             size,
             render_pipeline,
-            compute_pipeline,
+            compute_density_pipeline,
             compute_forces_pipeline,
             render_bind_group: temp_render_bind_group,
-            compute_bind_group: temp_compute_render_bind_group,
+            compute_bind_group: temp_compute_density_bind_group,
             compute_fores_bind_group: temp_compute_forces_bind_group,
             frame_count: 0,
             particle_positions,
@@ -695,10 +695,10 @@ impl<'a> State<'a> {
         pollster::block_on(self.update_densities_from_buffer());
         pollster::block_on(self.update_forces_from_buffer());
         let update_elapsed_time = update_start_time.elapsed();
-        println!(
-            "Update time: {} ms",
-            update_elapsed_time.as_micros() as f32 / 1000.0
-        );
+        // println!(
+        //     "Update time: {} ms",
+        //     update_elapsed_time.as_micros() as f32 / 1000.0
+        // );
 
         // Apply forces and move the particles
         let move_start_time = std::time::Instant::now();
@@ -763,7 +763,7 @@ impl<'a> State<'a> {
                 label: Some("Compute Pass"),
                 timestamp_writes: None,
             });
-            compute_pass.set_pipeline(&self.compute_pipeline); // Assuming you have a compute pipeline
+            compute_pass.set_pipeline(&self.compute_density_pipeline);
             compute_pass.set_bind_group(0, &self.compute_bind_group, &[]);
             compute_pass.dispatch_workgroups(DISPATCH_SIZE.0, DISPATCH_SIZE.1, 1);
         }
@@ -853,10 +853,10 @@ impl<'a> State<'a> {
 
         if self.frame_count % 10 == 0 {
             let elapsed_time = start_time.elapsed();
-            // println!(
-            //     "fps: {}",
-            //     1.0 / elapsed_time.as_micros() as f32 * 1000.0 * 1000.0
-            // );
+            println!(
+                "fps (try sorting on GPU. It may be slower but it will remove the need to update CPU values from buffer since fourth compute shader can be used to move and accelerate the particles): {}",
+                1.0 / elapsed_time.as_micros() as f32 * 1000.0 * 1000.0
+            );
             // println!("Compute shaders and rendering time: {} ms", (density_elapsed_time.as_micros() as f32 + forces_elapsed_time.as_micros() as f32 + render_elapsed_time.as_micros() as f32) / 1000.0);
             self.frame_count = 0;
         }
@@ -998,10 +998,10 @@ async fn run() {
     state.render_pipeline = render_pipeline_builder.build_pipeline(&state.device);
 
     // Pass bind group layout to compute pipeline builder
-    let mut compute_pipeline_builder = ComputePipelineBuilder::new();
-    compute_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main");
-    compute_pipeline_builder.set_bind_group_layout(compute_bind_group_layout);
-    state.compute_pipeline = compute_pipeline_builder.build_pipeline(&state.device);
+    let mut compute_density_pipeline_builder = ComputePipelineBuilder::new();
+    compute_density_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_density");
+    compute_density_pipeline_builder.set_bind_group_layout(compute_bind_group_layout);
+    state.compute_density_pipeline = compute_density_pipeline_builder.build_pipeline(&state.device);
 
     // Pass bind group layout to compute forces pipeline builder
     let mut compute_forces_pipeline_builder = ComputePipelineBuilder::new();

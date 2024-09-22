@@ -19,6 +19,7 @@ const GRID_SIZE: vec2<f32> = vec2<f32>(40.0, 20.0);
 const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
 const PARTICLE_AMOUNT_X: u32 = 192; // The number of particles in the x direction
 const PARTICLE_AMOUNT_Y: u32 = 96; // The number of particles in the y direction
+const TOTAL_PARTICLES: i32 = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y); // The total number of particles
 const RADIUS_OF_INFLUENCE: f32 = 75.0; // MUST BE DIVISIBLE BY SCREEN_SIZE - The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.6; // The target density of the fluid
 const PRESURE_MULTIPLIER: f32 = 100.0; // The multiplier for the pressure force
@@ -28,12 +29,12 @@ const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 
 const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_SIZE.x + 0.5), i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.y * GRID_SIZE.y + 0.5));
-@group(0) @binding(0) var<storage, read_write> particle_positions: array<vec2<f32>, u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y)>;
+@group(0) @binding(0) var<storage, read_write> particle_positions: array<vec2<f32>, u32(TOTAL_PARTICLES)>;
 @group(0) @binding(1) var<storage, read> particle_radii: array<f32>;
-@group(0) @binding(2) var<storage, read_write> particle_velocities: array<vec2<f32>, u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y)>;
+@group(0) @binding(2) var<storage, read_write> particle_velocities: array<vec2<f32>, u32(TOTAL_PARTICLES)>;
 @group(0) @binding(3) var<storage, read> particle_lookup: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
-@group(0) @binding(4) var<storage, read_write> particle_densities: array<f32, u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y)>;
-@group(0) @binding(5) var<storage, read_write> particle_forces: array<vec4<f32>, u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y)>;
+@group(0) @binding(4) var<storage, read_write> particle_densities: array<f32, u32(TOTAL_PARTICLES)>;
+@group(0) @binding(5) var<storage, read_write> particle_forces: array<vec4<f32>, u32(TOTAL_PARTICLES)>;
 
 @vertex
 fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
@@ -55,7 +56,7 @@ fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
 fn main_density(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;
-    if index < 0 || index >= u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y) {
+    if index < 0 || index >= u32(TOTAL_PARTICLES) {
         return;
     }
 
@@ -67,12 +68,114 @@ fn main_density(@builtin(global_invocation_id) global_id: vec3<u32>) {
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
 fn main_forces(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;
-    if index < 0 || index >= u32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y) {
+    if index < 0 || index >= u32(TOTAL_PARTICLES) {
         return;
     }
     
     // Calculate the forces on the particle
     calculate_forces(index);
+}
+
+// async fn sort_particles(&mut self) {
+//         // Create a new list of particles
+//         let mut new_positions: Vec<[f32; 2]> = Vec::with_capacity(self.particle_positions.len());
+//         let mut new_velocities: Vec<[f32; 2]> = Vec::with_capacity(self.particle_velocities.len());
+//         let mut new_radii: Vec<f32> = Vec::with_capacity(self.particle_radii.len());
+//         let mut new_densities: Vec<f32> = Vec::with_capacity(self.particle_densities.len());
+//         let mut new_forces: Vec<[f32; 4]> = vec![[0.0, 0.0, 0.0, 0.0]; self.particle_forces.len()];
+//         let mut lookup_table = vec![-1; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
+
+//         // Create a HashMap to store the indices of the particles in each grid cell
+//         let mut index_map: HashMap<(i32, i32), Vec<i32>> = HashMap::new();
+//         for i in 0..self.particle_positions.len() {
+//             let grid = self.pos_to_grid(self.particle_positions[i]);
+//             index_map.entry(grid).or_insert(vec![]).push(i as i32);
+//         }
+
+//         for i in 0..GRID_SIZE.0 {
+//             for j in 0..GRID_SIZE.1 {
+//                 let grid_index = i + j * GRID_SIZE.0;
+//                 let mut index = -1;
+
+//                 // Check if the grid cell exists in the HashMap:
+//                 if let Some(particle_indices) = index_map.get(&(i, j)) {
+//                     for &particle_index in particle_indices {
+//                         let particle_index = particle_index as usize;
+//                         new_positions.push(self.particle_positions[particle_index]);
+//                         new_velocities.push(self.particle_velocities[particle_index]);
+//                         new_radii.push(self.particle_radii[particle_index]);
+//                         new_densities.push(self.particle_densities[particle_index]);
+//                         if index == -1 {
+//                             index = new_positions.len() as i32 - 1;
+//                         }
+//                     }
+//                 }
+
+//                 lookup_table[grid_index as usize] = index;
+//             }
+//         }
+
+//         self.particle_positions = new_positions;
+//         self.particle_velocities = new_velocities;
+//         self.particle_radii = new_radii;
+//         self.particle_densities = new_densities;
+//         self.particle_forces = new_forces;
+//         self.particle_lookup = lookup_table;
+
+//         self.queue.write_buffer(
+//             &self.particle_positions_buffer,
+//             0,
+//             bytemuck::cast_slice(&self.particle_positions),
+//         );
+
+//         self.queue.write_buffer(
+//             &self.particle_radii_buffer,
+//             0,
+//             bytemuck::cast_slice(&self.particle_radii),
+//         );
+
+//         self.queue.write_buffer(
+//             &self.particle_velocities_buffer,
+//             0,
+//             bytemuck::cast_slice(&self.particle_velocities),
+//         );
+
+//         self.queue.write_buffer(
+//             &self.particle_densities_buffer,
+//             0,
+//             bytemuck::cast_slice(&self.particle_densities),
+//         );
+
+//         self.queue.write_buffer(
+//             &self.particle_forces_buffer,
+//             0,
+//             bytemuck::cast_slice(&self.particle_forces),
+//         );
+
+//         self.queue.write_buffer(
+//             &self.particle_lookup_buffer,
+//             0,
+//             bytemuck::cast_slice(&self.particle_lookup),
+//         );
+//     }
+
+@compute @workgroup_size(1, 1, 1)
+fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    // Create a new list of particles
+    var new_positions: array<vec2<f32>, u32(TOTAL_PARTICLES)>;
+    var new_velocities: array<vec2<f32>, u32(TOTAL_PARTICLES)>;
+    var new_radii: array<f32, u32(TOTAL_PARTICLES)>;
+    var new_densities: array<f32, u32(TOTAL_PARTICLES)>;
+    var new_forces: array<vec4<f32>, u32(TOTAL_PARTICLES)>;
+    var lookup_table: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
+
+    // Create a map of the particles' grid's indices
+    var index_map: array<i32, u32(TOTAL_PARTICLES)>;
+    for (var i: u32 = 0; i < u32(TOTAL_PARTICLES); i=i+1){
+        let grid = pos_to_grid(particle_positions[i]);
+        let grid_index = grid_to_index(grid);
+        index_map[i] = grid_index;
+    }
 }
 
 @fragment
@@ -106,7 +209,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 }
             }
             if ending_index == -1 {
-                ending_index = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y);
+                ending_index = i32(TOTAL_PARTICLES);
             }
 
             for (var i = starting_index; i < ending_index; i=i+1){
@@ -187,7 +290,7 @@ fn get_density(pos: vec2<f32>) -> f32 {
                 }
             }
             if ending_index == -1 {
-                ending_index = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y);
+                ending_index = i32(TOTAL_PARTICLES);
             }
 
             for (var i = starting_index; i < ending_index; i=i+1){
@@ -241,13 +344,13 @@ fn calculate_forces(index: u32) {
 
                 let next_grid_index: i32 = first_grid_index + 1;
                 if next_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
-                    ending_index = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y);
+                    ending_index = i32(TOTAL_PARTICLES);
                 } else {
                     ending_index = particle_lookup[next_grid_index];
                 }
 
                 for(var i: i32 = starting_index; i < ending_index; i=i+1){
-                    if i == -1 || i == i32(index) || i >= i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y) {
+                    if i == -1 || i == i32(index) || i >= i32(TOTAL_PARTICLES) {
                         continue;
                     }
                     let offset: vec2<f32> = position - (particle_positions[i] + particle_velocities[i] * LOOK_AHEAD_TIME);

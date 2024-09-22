@@ -155,8 +155,8 @@ fn get_density(pos: vec2<f32>) -> f32 {
     let grid = pos_to_grid(pos);
     var density = 0.0;
 
-    for (var gx: i32 = -1; gx <= 1; gx=gx+1){
-        for(var gy: i32 = -1; gy <=1; gy=gy+1){
+    for (var gx: i32 = -grids_to_check.x; gx <= grids_to_check.x; gx=gx+1){
+        for(var gy: i32 = -grids_to_check.y; gy <= grids_to_check.y; gy=gy+1){
             if grid.x + gx < 0 || grid.x + gx >= i32(GRID_SIZE.x) || grid.y + gy < 0 || grid.y + gy >= i32(GRID_SIZE.y) {
                 continue;
             }

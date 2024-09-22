@@ -689,12 +689,19 @@ impl<'a> State<'a> {
         let start_time = std::time::Instant::now();
 
         // Update the particles from the buffers
+        let update_start_time = std::time::Instant::now();
         pollster::block_on(self.update_position_from_buffer());
         pollster::block_on(self.update_velocities_from_buffer());
         pollster::block_on(self.update_densities_from_buffer());
         pollster::block_on(self.update_forces_from_buffer());
+        let update_elapsed_time = update_start_time.elapsed();
+        println!(
+            "Update time: {} ms",
+            update_elapsed_time.as_micros() as f32 / 1000.0
+        );
 
         // Apply forces and move the particles
+        let move_start_time = std::time::Instant::now();
         for i in 0..self.particle_positions.len() {
             let mut acceleration = [
                 self.particle_forces[i][0] / self.particle_densities[i].max(0.0001),
@@ -729,9 +736,20 @@ impl<'a> State<'a> {
                 self.particle_velocities[i][1] = -self.particle_velocities[i][1] * DAMPENING;
             }
         }
+        let move_elapsed_time = move_start_time.elapsed();
+        // println!(
+        //     "Move time: {} ms",
+        //     move_elapsed_time.as_micros() as f32 / 1000.0
+        // );
 
         // Sort the particles into their grid cells
+        let sort_start_time = std::time::Instant::now();
         pollster::block_on(self.sort_particles());
+        let sort_elapsed_time = sort_start_time.elapsed();
+        // println!(
+        //     "Sort time: {} ms",
+        //     sort_elapsed_time.as_micros() as f32 / 1000.0
+        // );
 
         let density_start_time = std::time::Instant::now();
         // Dispatch the compute shader

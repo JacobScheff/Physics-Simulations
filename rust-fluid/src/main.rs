@@ -733,6 +733,7 @@ impl<'a> State<'a> {
         // Sort the particles into their grid cells
         pollster::block_on(self.sort_particles());
 
+        let density_start_time = std::time::Instant::now();
         // Dispatch the compute shader
         let mut encoder = self
             .device
@@ -751,7 +752,14 @@ impl<'a> State<'a> {
 
         self.queue.submit(std::iter::once(encoder.finish()));
 
+        let density_elapsed_time = density_start_time.elapsed();
+        // println!(
+        //     "Density calculation time: {} ms",
+        //     density_elapsed_time.as_micros() as f32 / 1000.0
+        // );
+
         // Dispatch the compute forces shader
+        let forces_start_time = std::time::Instant::now();
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -768,7 +776,13 @@ impl<'a> State<'a> {
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
+        let forces_elapsed_time = forces_start_time.elapsed();
+        // println!(
+        //     "Forces calculation time: {} ms",
+        //     forces_elapsed_time.as_micros() as f32 / 1000.0
+        // );
 
+        let render_start_time = std::time::Instant::now();
         let drawable = self.surface.get_current_texture()?;
         let image_view_descriptor = wgpu::TextureViewDescriptor::default();
         let image_view = drawable.texture.create_view(&image_view_descriptor);
@@ -811,14 +825,21 @@ impl<'a> State<'a> {
 
         self.queue.submit(std::iter::once(command_encoder.finish()));
 
+        let render_elapsed_time = render_start_time.elapsed();
+        // println!(
+        //     "Render time: {} ms",
+        //     render_elapsed_time.as_micros() as f32 / 1000.0
+        // );
+
         drawable.present();
 
         if self.frame_count % 10 == 0 {
             let elapsed_time = start_time.elapsed();
-            println!(
-                "fps: {}",
-                1.0 / elapsed_time.as_micros() as f32 * 1000.0 * 1000.0
-            );
+            // println!(
+            //     "fps: {}",
+            //     1.0 / elapsed_time.as_micros() as f32 * 1000.0 * 1000.0
+            // );
+            // println!("Compute shaders and rendering time: {} ms", (density_elapsed_time.as_micros() as f32 + forces_elapsed_time.as_micros() as f32 + render_elapsed_time.as_micros() as f32) / 1000.0);
             self.frame_count = 0;
         }
 

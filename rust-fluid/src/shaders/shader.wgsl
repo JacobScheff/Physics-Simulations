@@ -65,7 +65,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     particle_densities[index] = density;
 
     // Calculate the forces on the particle
-    // calculate_forces(index);
+    calculate_forces(index);
 }
 
 @fragment
@@ -271,7 +271,6 @@ fn calculate_forces(index: u32) {
             }
         }
 
-        // return vec4<f32>(pressure_force.x, pressure_force.y, viscosity_force.x, viscosity_force.y);
     }
 
 fn smoothing_kernel_derivative(distance: f32) -> f32 {

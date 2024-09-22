@@ -60,6 +60,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     // Update the density of the particle
+    // TODO: Make sure get_density doesn't need GRIDS_TO_CHECK
     let density = get_density(particle_positions[index]);
     particle_densities[index] = density;
 

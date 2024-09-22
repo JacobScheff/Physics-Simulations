@@ -489,11 +489,11 @@ impl<'a> State<'a> {
                     + PADDING;
 
                 particle_positions.push([x, y]);
-                // particle_velocities.push([0.0, 0.0]);
-                particle_velocities.push([
-                    rand::thread_rng().gen_range(-1.0..1.0),
-                    rand::thread_rng().gen_range(-1.0..1.0),
-                ]);
+                particle_velocities.push([0.0, 0.0]);
+                // particle_velocities.push([
+                //     rand::thread_rng().gen_range(-1.0..1.0),
+                //     rand::thread_rng().gen_range(-1.0..1.0),
+                // ]);
                 particle_radii.push(PARTICLE_RADIUS);
                 particle_densities.push(0.0);
                 particle_forces.push([0.0, 0.0, 0.0, 0.0]);

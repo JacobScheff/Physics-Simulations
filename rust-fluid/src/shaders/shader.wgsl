@@ -167,15 +167,61 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var new_radii: array<f32, u32(TOTAL_PARTICLES)>;
     var new_densities: array<f32, u32(TOTAL_PARTICLES)>;
     var new_forces: array<vec4<f32>, u32(TOTAL_PARTICLES)>;
-    var lookup_table: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
+    var lookup_table: array<i32, i32(GRID_SIZE.x * GRID_SIZE.y)>;
 
-    // Create a map of the particles' grid's indices
-    var index_map: array<i32, u32(TOTAL_PARTICLES)>;
-    for (var i: u32 = 0; i < u32(TOTAL_PARTICLES); i=i+1){
+    // Create a map of the particles' indices and grid's indices
+    var index_map: array<vec2<i32>, u32(TOTAL_PARTICLES)>;
+    for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
         let grid = pos_to_grid(particle_positions[i]);
         let grid_index = grid_to_index(grid);
-        index_map[i] = grid_index;
+        index_map[i] = vec2<i32>(grid_index, i);
     }
+
+    // Binary insetion sort the particles
+    for (var i: i32 = 1; i < TOTAL_PARTICLES; i=i+1){
+        let key = index_map[i];
+        var j = i - 1;
+        while (j >= 0 && index_map[j].x > key.x){
+            index_map[j + 1] = index_map[j];
+            j = j - 1;
+        }
+        index_map[j + 1] = key;
+    }
+
+    // Create the new arrays
+    for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
+        let particle_index = index_map[i].y;
+        new_positions[i] = particle_positions[particle_index];
+        new_velocities[i] = particle_velocities[particle_index];
+        new_radii[i] = particle_radii[particle_index];
+        new_densities[i] = particle_densities[particle_index];
+        new_forces[i] = particle_forces[particle_index];
+    }
+
+    // Initialize the new lookup table
+    for (var i: i32 = 0; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
+        lookup_table[i] = -1;
+    }
+
+    // Create the new lookup table
+    var last_grid_index = -1;
+    for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
+        let grid_index = index_map[i].x;
+        if grid_index != last_grid_index {
+            lookup_table[grid_index] = i;
+            last_grid_index = grid_index;
+        }
+    }
+
+    // Update the arrays
+    particle_positions = new_positions;
+    particle_velocities = new_velocities;
+    particle_radii = new_radii;
+    particle_densities = new_densities;
+    particle_forces = new_forces;
+    particle_lookup = lookup_table;
+
+    
 }
 
 @fragment

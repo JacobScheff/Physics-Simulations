@@ -162,26 +162,21 @@ fn main_forces(@builtin(global_invocation_id) global_id: vec3<u32>) {
 @compute @workgroup_size(1, 1, 1)
 fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
     // Create a new list of particles
-    // var new_positions: array<vec2<f32>, u32(TOTAL_PARTICLES)>;
-    // var new_velocities: array<vec2<f32>, u32(TOTAL_PARTICLES)>;
-    // var new_radii: array<f32, u32(TOTAL_PARTICLES)>;
-    // var new_densities: array<f32, u32(TOTAL_PARTICLES)>;
-    // var new_forces: array<vec4<f32>, u32(TOTAL_PARTICLES)>;
-    // var lookup_table: array<i32, i32(GRID_SIZE.x * GRID_SIZE.y)>;
+    var lookup_table: array<i32, i32(GRID_SIZE.x * GRID_SIZE.y)>;
 
     // Create a map of the particles' indices and grid's indices
-    var index_map: array<array<f32, 12>, u32(TOTAL_PARTICLES)>;
+    var index_map: array<array<f32, 8>, u32(TOTAL_PARTICLES)>;
     for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
         let grid = pos_to_grid(particle_positions[i]);
         let grid_index = grid_to_index(grid);
-        index_map[i] = array<f32, 12>(grid_index, i, new_positions[i].x, new_positions[i].y, new_velocities[i].x, new_velocities[i].y, new_radii[i], new_densities[i], 0, 0, 0, 0);
+        index_map[i] = array<f32, 8>(f32(grid_index), f32(i), particle_positions[i].x, particle_positions[i].y, particle_velocities[i].x, particle_velocities[i].y, particle_radii[i], particle_densities[i]);
     }
 
     // Binary insetion sort the particles
     for (var i: i32 = 1; i < TOTAL_PARTICLES; i=i+1){
         let key = index_map[i];
         var j = i - 1;
-        while (j >= 0 && index_map[j].x > key.x){
+        while (j >= 0 && index_map[j][0] > key[0]){
             index_map[j + 1] = index_map[j];
             j = j - 1;
         }
@@ -190,12 +185,12 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
     // Create the new arrays
     for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
-        let particle_index = index_map[i].y;
-        new_positions[i] = vec2<f32>(index_map[i][2], index_map[i][3]);
-        new_velocities[i] = vec2<f32>(index_map[i][4], index_map[i][5]);
-        new_radii[i] = particle_radii[particle_index];
-        new_densities[i] = particle_densities[particle_index];
-        new_forces[i] = particle_forces[particle_index]; // remember to se to 0
+        let particle_index = index_map[i][1];
+        particle_positions[i] = vec2<f32>(index_map[i][2], index_map[i][3]);
+        particle_velocities[i] = vec2<f32>(index_map[i][4], index_map[i][5]);
+        particle_radii[i] = index_map[i][6];
+        particle_densities[i] = index_map[i][7];
+        particle_forces[i] = vec4<f32>(0.0, 0.0, 0.0, 0.0);
     }
 
     // Initialize the new lookup table
@@ -206,22 +201,12 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
     // Create the new lookup table
     var last_grid_index = -1;
     for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
-        let grid_index = index_map[i].x;
+        let grid_index = i32(index_map[i][0]);
         if grid_index != last_grid_index {
             lookup_table[grid_index] = i;
             last_grid_index = grid_index;
         }
     }
-
-    // Update the arrays
-    particle_positions = new_positions;
-    particle_velocities = new_velocities;
-    particle_radii = new_radii;
-    particle_densities = new_densities;
-    particle_forces = new_forces;
-    particle_lookup = lookup_table;
-
-    
 }
 
 @fragment

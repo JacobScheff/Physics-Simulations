@@ -404,7 +404,7 @@ impl<'a> State<'a> {
         let adapter = instance
             .enumerate_adapters(wgpu::Backends::all())
             .into_iter()
-            .nth(0)
+            .nth(1)
             .unwrap();
         println!("{:?}", adapter.get_info());
 
@@ -721,43 +721,43 @@ impl<'a> State<'a> {
         //     update_elapsed_time.as_micros() as f32 / 1000.0
         // );
 
-        // Apply forces and move the particles
-        let move_start_time = std::time::Instant::now();
-        for i in 0..self.particle_positions.len() {
-            let mut acceleration = [
-                self.particle_forces[i][0] / self.particle_densities[i].max(0.0001),
-                self.particle_forces[i][1] / self.particle_densities[i].max(0.0001) + GRAVITY,
-            ];
-            if self.particle_densities[i] == 0.0 {
-                acceleration = [0.0, 0.0];
-            }
-            self.particle_velocities[i][0] += acceleration[0];
-            self.particle_velocities[i][1] += acceleration[1];
+        // // Apply forces and move the particles
+        // let move_start_time = std::time::Instant::now();
+        // for i in 0..self.particle_positions.len() {
+        //     let mut acceleration = [
+        //         self.particle_forces[i][0] / self.particle_densities[i].max(0.0001),
+        //         self.particle_forces[i][1] / self.particle_densities[i].max(0.0001) + GRAVITY,
+        //     ];
+        //     if self.particle_densities[i] == 0.0 {
+        //         acceleration = [0.0, 0.0];
+        //     }
+        //     self.particle_velocities[i][0] += acceleration[0];
+        //     self.particle_velocities[i][1] += acceleration[1];
 
-            self.particle_positions[i][0] += self.particle_velocities[i][0];
-            self.particle_positions[i][1] += self.particle_velocities[i][1];
+        //     self.particle_positions[i][0] += self.particle_velocities[i][0];
+        //     self.particle_positions[i][1] += self.particle_velocities[i][1];
 
-            if self.particle_positions[i][0] < 0.0 {
-                self.particle_positions[i][0] = 0.0;
-                self.particle_velocities[i][0] = -self.particle_velocities[i][0] * DAMPENING;
-            }
+        //     if self.particle_positions[i][0] < 0.0 {
+        //         self.particle_positions[i][0] = 0.0;
+        //         self.particle_velocities[i][0] = -self.particle_velocities[i][0] * DAMPENING;
+        //     }
 
-            if self.particle_positions[i][0] > SCREEN_SIZE.0 as f32 {
-                self.particle_positions[i][0] = SCREEN_SIZE.0 as f32;
-                self.particle_velocities[i][0] = -self.particle_velocities[i][0] * DAMPENING;
-            }
+        //     if self.particle_positions[i][0] > SCREEN_SIZE.0 as f32 {
+        //         self.particle_positions[i][0] = SCREEN_SIZE.0 as f32;
+        //         self.particle_velocities[i][0] = -self.particle_velocities[i][0] * DAMPENING;
+        //     }
 
-            if self.particle_positions[i][1] < 0.0 {
-                self.particle_positions[i][1] = 0.0;
-                self.particle_velocities[i][1] = -self.particle_velocities[i][1] * DAMPENING;
-            }
+        //     if self.particle_positions[i][1] < 0.0 {
+        //         self.particle_positions[i][1] = 0.0;
+        //         self.particle_velocities[i][1] = -self.particle_velocities[i][1] * DAMPENING;
+        //     }
 
-            if self.particle_positions[i][1] > SCREEN_SIZE.1 as f32 {
-                self.particle_positions[i][1] = SCREEN_SIZE.1 as f32;
-                self.particle_velocities[i][1] = -self.particle_velocities[i][1] * DAMPENING;
-            }
-        }
-        let move_elapsed_time = move_start_time.elapsed();
+        //     if self.particle_positions[i][1] > SCREEN_SIZE.1 as f32 {
+        //         self.particle_positions[i][1] = SCREEN_SIZE.1 as f32;
+        //         self.particle_velocities[i][1] = -self.particle_velocities[i][1] * DAMPENING;
+        //     }
+        // }
+        // let move_elapsed_time = move_start_time.elapsed();
         // println!(
         //     "Move time: {} ms",
         //     move_elapsed_time.as_micros() as f32 / 1000.0
@@ -1008,6 +1008,39 @@ async fn run() {
     state.compute_forces_bind_group = state.device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("Sphere Bind Group"),
         layout: &compute_forces_bind_group_layout,
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: state.particle_positions_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: state.particle_radii_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 2,
+                resource: state.particle_velocities_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 3,
+                resource: state.particle_lookup_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 4,
+                resource: state.particle_densities_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 5,
+                resource: state.particle_forces_buffer.as_entire_binding(),
+            },
+        ],
+    });
+
+    let compute_sort_bind_group_layout =
+        bind_group_layout_generator::get_bind_group_layout(&state.device, true);
+    state.compute_sort_bind_group = state.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("Sphere Bind Group"),
+        layout: &compute_sort_bind_group_layout,
         entries: &[
             wgpu::BindGroupEntry {
                 binding: 0,

@@ -14,7 +14,8 @@ const DISPATCH_SIZE: vec2<u32> = vec2<u32>(
 );
 
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
-const GRID_SIZE: vec2<f32> = vec2<f32>(40.0, 20.0);
+// const GRID_SIZE: vec2<f32> = vec2<f32>(40.0, 20.0);
+const GRID_SIZE: vec2<f32> = vec2<f32>(10.0, 5.0);
 
 const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
 const PARTICLE_AMOUNT_X: u32 = 192; // The number of particles in the x direction
@@ -165,28 +166,26 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var lookup_table: array<i32, i32(GRID_SIZE.x * GRID_SIZE.y)>;
 
     // Create a map of the particles' indices and grid's indices
-    var index_map: array<array<f32, 8>, u32(TOTAL_PARTICLES)>;
+    var index_map: array<vec2<i32>, u32(TOTAL_PARTICLES)>;
     for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
         let grid = pos_to_grid(particle_positions[i]);
         let grid_index = grid_to_index(grid);
-        index_map[i] = array<f32, 8>(f32(grid_index), f32(i), particle_positions[i].x, particle_positions[i].y, particle_velocities[i].x, particle_velocities[i].y, particle_radii[i], particle_densities[i]);
+        index_map[i] = vec2<i32>(grid_index, i);
     }
 
     // Binary insetion sort the particles
     for (var i: i32 = 1; i < TOTAL_PARTICLES; i=i+1){
-        // let key = index_map[i];
-        for (var j: i32 = 0; j < 5; j=j+1){
-            // if index_map[j][0] > key[0] {
-            //     break;
-            // }
-            index_map[0] = index_map[0];
+        let key = index_map[i];
+        let key_x = index_map[i].x;
+        var j = i - 1;
+        while (j >= 0){
+            let current_x = index_map[j].x;
+            if current_x <= key_x {
+                break;
+            }
+            // index_map[j + 1] = index_map[j];
+            j = j - 1;
         }
-        // for(var j: i32 = i - 1; j >= 0; j=j-1){
-        //     if index_map[j][0] <= key {
-        //         break;
-        //     }
-        //     index_map[j + 1] = index_map[j];
-        // }
         // index_map[j + 1] = key;
     }
 

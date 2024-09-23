@@ -59,9 +59,11 @@ struct State<'a> {
     render_pipeline: wgpu::RenderPipeline,
     compute_density_pipeline: wgpu::ComputePipeline,
     compute_forces_pipeline: wgpu::ComputePipeline,
+    compute_sort_pipeline: wgpu::ComputePipeline,
     render_bind_group: wgpu::BindGroup,
-    compute_bind_group: wgpu::BindGroup,
-    compute_fores_bind_group: wgpu::BindGroup,
+    compute_densities_bind_group: wgpu::BindGroup,
+    compute_forces_bind_group: wgpu::BindGroup,
+    compute_sort_bind_group: wgpu::BindGroup,
     frame_count: u32,
     particle_positions: Vec<[f32; 2]>,
     particle_positions_buffer: wgpu::Buffer,
@@ -402,7 +404,7 @@ impl<'a> State<'a> {
         let adapter = instance
             .enumerate_adapters(wgpu::Backends::all())
             .into_iter()
-            .nth(1)
+            .nth(0)
             .unwrap();
         println!("{:?}", adapter.get_info());
 
@@ -461,6 +463,14 @@ impl<'a> State<'a> {
         );
         let compute_forces_pipeline = compute_forces_pipeline_builder.build_pipeline(&device);
 
+        // Pass bind group layout to compute sort pipeline builder
+        let mut compute_sort_pipeline_builder = ComputePipelineBuilder::new();
+        compute_sort_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_sort");
+        compute_sort_pipeline_builder.set_bind_group_layout(
+            bind_group_layout_generator::get_bind_group_layout(&device, true),
+        );
+        let compute_sort_pipeline = compute_sort_pipeline_builder.build_pipeline(&device);
+
         // Create temporary bind groups
         let temp_render_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Temporary Render Bind Group"),
@@ -485,6 +495,15 @@ impl<'a> State<'a> {
             layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &[],
                 label: Some("Temporary Compute Forces Bind Group Layout"),
+            }),
+            entries: &[],
+        });
+
+        let temp_compute_sort_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Temporary Compute Sort Bind Group"),
+            layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[],
+                label: Some("Temporary Compute Sort Bind Group Layout"),
             }),
             entries: &[],
         });
@@ -614,9 +633,11 @@ impl<'a> State<'a> {
             render_pipeline,
             compute_density_pipeline,
             compute_forces_pipeline,
+            compute_sort_pipeline,
             render_bind_group: temp_render_bind_group,
-            compute_bind_group: temp_compute_density_bind_group,
-            compute_fores_bind_group: temp_compute_forces_bind_group,
+            compute_densities_bind_group: temp_compute_density_bind_group,
+            compute_forces_bind_group: temp_compute_forces_bind_group,
+            compute_sort_bind_group: temp_compute_sort_bind_group,
             frame_count: 0,
             particle_positions,
             particle_positions_buffer,
@@ -743,16 +764,16 @@ impl<'a> State<'a> {
         // );
 
         // Sort the particles into their grid cells
-        let sort_start_time = std::time::Instant::now();
-        pollster::block_on(self.sort_particles());
-        let sort_elapsed_time = sort_start_time.elapsed();
+        // let sort_start_time = std::time::Instant::now();
+        // pollster::block_on(self.sort_particles());
+        // let sort_elapsed_time = sort_start_time.elapsed();
         // println!(
         //     "Sort time: {} ms",
         //     sort_elapsed_time.as_micros() as f32 / 1000.0
         // );
 
         let density_start_time = std::time::Instant::now();
-        // Dispatch the compute shader
+        // Dispatch the compute density shader
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -764,7 +785,7 @@ impl<'a> State<'a> {
                 timestamp_writes: None,
             });
             compute_pass.set_pipeline(&self.compute_density_pipeline);
-            compute_pass.set_bind_group(0, &self.compute_bind_group, &[]);
+            compute_pass.set_bind_group(0, &self.compute_densities_bind_group, &[]);
             compute_pass.dispatch_workgroups(DISPATCH_SIZE.0, DISPATCH_SIZE.1, 1);
         }
 
@@ -789,7 +810,7 @@ impl<'a> State<'a> {
                 timestamp_writes: None,
             });
             compute_pass.set_pipeline(&self.compute_forces_pipeline); // Assuming you have a compute pipeline
-            compute_pass.set_bind_group(0, &self.compute_fores_bind_group, &[]);
+            compute_pass.set_bind_group(0, &self.compute_forces_bind_group, &[]);
             compute_pass.dispatch_workgroups(DISPATCH_SIZE.0, DISPATCH_SIZE.1, 1);
         }
 
@@ -800,6 +821,31 @@ impl<'a> State<'a> {
         //     forces_elapsed_time.as_micros() as f32 / 1000.0
         // );
 
+        // Dispatch the compute sort shader
+        let sort_start_time = std::time::Instant::now();
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Compute Sort Encoder"),
+            });
+        {
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("Compute Sort Pass"),
+                timestamp_writes: None,
+            });
+            compute_pass.set_pipeline(&self.compute_sort_pipeline); // Assuming you have a compute pipeline
+            compute_pass.set_bind_group(0, &self.compute_sort_bind_group, &[]);
+            compute_pass.dispatch_workgroups(1, 1, 1);
+        }
+
+        self.queue.submit(std::iter::once(encoder.finish()));
+        let sort_elapsed_time = sort_start_time.elapsed();
+        // println!(
+        //     "Sort calculation time: {} ms",
+        //     sort_elapsed_time.as_micros() as f32 / 1000.0
+        // );
+
+        // Render the particles
         let render_start_time = std::time::Instant::now();
         let drawable = self.surface.get_current_texture()?;
         let image_view_descriptor = wgpu::TextureViewDescriptor::default();
@@ -926,7 +972,7 @@ async fn run() {
 
     let compute_bind_group_layout =
         bind_group_layout_generator::get_bind_group_layout(&state.device, true);
-    state.compute_bind_group = state.device.create_bind_group(&wgpu::BindGroupDescriptor {
+    state.compute_densities_bind_group = state.device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("Sphere Bind Group"),
         layout: &compute_bind_group_layout,
         entries: &[
@@ -959,7 +1005,7 @@ async fn run() {
 
     let compute_forces_bind_group_layout =
         bind_group_layout_generator::get_bind_group_layout(&state.device, true);
-    state.compute_fores_bind_group = state.device.create_bind_group(&wgpu::BindGroupDescriptor {
+    state.compute_forces_bind_group = state.device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("Sphere Bind Group"),
         layout: &compute_forces_bind_group_layout,
         entries: &[

@@ -30,9 +30,9 @@ const DAMPENING: f32 = 0.95; // How much to slow down particles when they collid
 
 const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_SIZE.x + 0.5), i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.y * GRID_SIZE.y + 0.5));
 @group(0) @binding(0) var<storage, read_write> particle_positions: array<vec2<f32>, u32(TOTAL_PARTICLES)>;
-@group(0) @binding(1) var<storage, read> particle_radii: array<f32>;
+@group(0) @binding(1) var<storage, read_write> particle_radii: array<f32, u32(TOTAL_PARTICLES)>;
 @group(0) @binding(2) var<storage, read_write> particle_velocities: array<vec2<f32>, u32(TOTAL_PARTICLES)>;
-@group(0) @binding(3) var<storage, read> particle_lookup: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
+@group(0) @binding(3) var<storage, read_write> particle_lookup: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
 @group(0) @binding(4) var<storage, read_write> particle_densities: array<f32, u32(TOTAL_PARTICLES)>;
 @group(0) @binding(5) var<storage, read_write> particle_forces: array<vec4<f32>, u32(TOTAL_PARTICLES)>;
 

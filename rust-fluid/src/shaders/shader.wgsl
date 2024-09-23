@@ -174,39 +174,46 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
     // Binary insetion sort the particles
     for (var i: i32 = 1; i < TOTAL_PARTICLES; i=i+1){
-        let key = index_map[i];
-        var j = i - 1;
-        while (j >= 0 && index_map[j][0] > key[0]){
-            index_map[j + 1] = index_map[j];
-            j = j - 1;
+        // let key = index_map[i];
+        for (var j: i32 = 0; j < 5; j=j+1){
+            // if index_map[j][0] > key[0] {
+            //     break;
+            // }
+            index_map[0] = index_map[0];
         }
-        index_map[j + 1] = key;
+        // for(var j: i32 = i - 1; j >= 0; j=j-1){
+        //     if index_map[j][0] <= key {
+        //         break;
+        //     }
+        //     index_map[j + 1] = index_map[j];
+        // }
+        // index_map[j + 1] = key;
     }
 
-    // Create the new arrays
-    for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
-        let particle_index = index_map[i][1];
-        particle_positions[i] = vec2<f32>(index_map[i][2], index_map[i][3]);
-        particle_velocities[i] = vec2<f32>(index_map[i][4], index_map[i][5]);
-        particle_radii[i] = index_map[i][6];
-        particle_densities[i] = index_map[i][7];
-        particle_forces[i] = vec4<f32>(0.0, 0.0, 0.0, 0.0);
-    }
+    // // Create the new arrays
+    // for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
+    //     let particle_index = index_map[i][1];
+    //     particle_positions[i] = vec2<f32>(index_map[i][2], index_map[i][3]);
+    //     particle_velocities[i] = vec2<f32>(index_map[i][4], index_map[i][5]);
+    //     particle_radii[i] = index_map[i][6];
+    //     particle_densities[i] = index_map[i][7];
+    //     particle_forces[i] = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    // }
 
-    // Initialize the new lookup table
-    for (var i: i32 = 0; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
-        lookup_table[i] = -1;
-    }
+    // // Initialize the new lookup table
+    // for (var i: i32 = 0; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
+    //     lookup_table[i] = -1;
+    // }
 
-    // Create the new lookup table
-    var last_grid_index = -1;
-    for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
-        let grid_index = i32(index_map[i][0]);
-        if grid_index != last_grid_index {
-            lookup_table[grid_index] = i;
-            last_grid_index = grid_index;
-        }
-    }
+    // // Create the new lookup table
+    // var last_grid_index = -1;
+    // for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
+    //     let grid_index = i32(index_map[i][0]);
+    //     if grid_index != last_grid_index {
+    //         lookup_table[grid_index] = i;
+    //         last_grid_index = grid_index;
+    //     }
+    // }
 }
 
 @fragment

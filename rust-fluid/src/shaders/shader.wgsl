@@ -195,7 +195,7 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
         new_velocities[i] = vec2<f32>(index_map[i][4], index_map[i][5]);
         new_radii[i] = particle_radii[particle_index];
         new_densities[i] = particle_densities[particle_index];
-        new_forces[i] = particle_forces[particle_index];
+        new_forces[i] = particle_forces[particle_index]; // remember to se to 0
     }
 
     // Initialize the new lookup table

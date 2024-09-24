@@ -98,10 +98,12 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
         // Insert to the array on the left. Don't swap until the end
         for(var j: i32 = i - 1; j >= 0; j=j-1){
             let current_grid_index = i32(grid_index_map[j][0]);
-            if grid_index > current_grid_index {
-                let temp = grid_index_map[j + 1];
-                grid_index_map[j + 1] = grid_index_map[j];
-                grid_index_map[j] = temp;
+            if current_grid_index > grid_index {
+                // Swap the elements
+                let temp = grid_index_map[j];
+                grid_index_map[j] = grid_index_map[j + 1];
+                grid_index_map[j + 1] = temp;
+            } else {
                 break;
             }
         }
@@ -115,7 +117,7 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
     for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1) {
         if (visited[i]) { 
-            continue; 
+            continue;
         }
 
         var current_index: i32 = i;

@@ -92,30 +92,20 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
         particle_forces[i] = vec4<f32>(0.0, 0.0, 0.0, 0.0);
     }
 
-    // Bubble sort the particles
-    // for (var i: i32 = 0; i < TOTAL_PARTICLES - 1; i=i+1){
-    //     for (var j: i32 = 0; j < TOTAL_PARTICLES - i - 1; j=j+1){
-    //         if grid_index_map[j][0] > grid_index_map[j + 1][0] {
-    //             let temp = grid_index_map[j];
-    //     //         let temp_pos = particle_positions[j];
-    //     //         let temp_vel = particle_velocities[j];
-    //             let temp_rad = particle_radii[j];
-    //     //         let temp_den = particle_densities[j];
-
-    //             // grid_index_map[j] = grid_index_map[j + 1];
-    //     //         particle_positions[j] = particle_positions[j + 1];
-    //     //         particle_velocities[j] = particle_velocities[j + 1];
-    //     //         particle_radii[j] = particle_radii[j + 1];
-    //     //         particle_densities[j] = particle_densities[j + 1];
-
-    //             // grid_index_map[j + 1] = temp;
-    //     //         particle_positions[j + 1] = temp_pos;
-    //     //         particle_velocities[j + 1] = temp_vel;
-    //             // particle_radii[j + 1] = temp_rad;
-    //     //         particle_densities[j + 1] = temp_den;
-    //         }
-    //     }
-    // }
+    // Binary insertion sort the particles by swapping
+    for(var i: i32 = 1; i < TOTAL_PARTICLES; i=i+1){
+        let grid_index = i32(grid_index_map[i][0]);
+        // Insert to the array on the left. Don't swap until the end
+        for(var j: i32 = i; j > 0; j=j-1){
+            let current_grid_index = i32(grid_index_map[j][0]);
+            if grid_index > current_grid_index {
+                let temp = grid_index_map[j + 1];
+                grid_index_map[j + 1] = grid_index_map[j];
+                grid_index_map[j] = temp;
+                break;
+            }
+        }
+    }
 
     // // Initialize the new lookup table
     // for (var i: i32 = 0; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){

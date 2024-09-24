@@ -839,24 +839,24 @@ impl<'a> State<'a> {
         // );
 
         // // Dispatch the compute sort shader
-        // let sort_start_time = std::time::Instant::now();
-        // let mut encoder = self
-        //     .device
-        //     .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        //         label: Some("Compute Sort Encoder"),
-        //     });
-        // {
-        //     let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-        //         label: Some("Compute Sort Pass"),
-        //         timestamp_writes: None,
-        //     });
-        //     compute_pass.set_pipeline(&self.compute_sort_pipeline); // Assuming you have a compute pipeline
-        //     compute_pass.set_bind_group(0, &self.compute_sort_bind_group, &[]);
-        //     compute_pass.dispatch_workgroups(1, 1, 1);
-        // }
+        let sort_start_time = std::time::Instant::now();
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Compute Sort Encoder"),
+            });
+        {
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("Compute Sort Pass"),
+                timestamp_writes: None,
+            });
+            compute_pass.set_pipeline(&self.compute_sort_pipeline); // Assuming you have a compute pipeline
+            compute_pass.set_bind_group(0, &self.compute_sort_bind_group, &[]);
+            compute_pass.dispatch_workgroups(1, 1, 1);
+        }
 
-        // self.queue.submit(std::iter::once(encoder.finish()));
-        // let sort_elapsed_time = sort_start_time.elapsed();
+        self.queue.submit(std::iter::once(encoder.finish()));
+        let sort_elapsed_time = sort_start_time.elapsed();
         // println!(
         //     "Sort calculation time: {} ms",
         //     sort_elapsed_time.as_micros() as f32 / 1000.0

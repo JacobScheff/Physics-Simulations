@@ -96,7 +96,7 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
     for(var i: i32 = 1; i < TOTAL_PARTICLES; i=i+1){
         let grid_index = i32(grid_index_map[i][0]);
         // Insert to the array on the left. Don't swap until the end
-        for(var j: i32 = i; j > 0; j=j-1){
+        for(var j: i32 = i - 1; j >= 0; j=j-1){
             let current_grid_index = i32(grid_index_map[j][0]);
             if grid_index > current_grid_index {
                 let temp = grid_index_map[j + 1];

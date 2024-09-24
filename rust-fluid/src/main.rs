@@ -24,18 +24,18 @@ use winit::{
 const SCREEN_SIZE: (u32, u32) = (1200, 600);
 const TIME_BETWEEN_FRAMES: u64 = 10;
 const OFFSET: (f32, f32) = (10.0, 8.0); // How much to offset all the particle's starting positions
-const GRID_SIZE: (i32, i32) = (40 / 4, 20 / 4); // How many grid cells to divide the screen into
+const GRID_SIZE: (i32, i32) = (40, 20); // How many grid cells to divide the screen into
 
 const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
 const PARTICLE_AMOUNT_X: u32 = 192; // The number of particles in the x direction
 const PARTICLE_AMOUNT_Y: u32 = 96; // The number of particles in the y direction
 const PADDING: f32 = 100.0; // The padding around the screen
-// const RADIUS_OF_INFLUENCE: f32 = 75.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
-// const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
-// const PRESURE_MULTIPLIER: f32 = 100.0; // The multiplier for the pressure force
+                            // const RADIUS_OF_INFLUENCE: f32 = 75.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
+                            // const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
+                            // const PRESURE_MULTIPLIER: f32 = 100.0; // The multiplier for the pressure force
 const GRAVITY: f32 = 1.0; // The strength of gravity
-// const LOOK_AHEAD_TIME: f32 = 1.0 / 60.0; // The time to look ahead when calculating the predicted position
-// const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
+                          // const LOOK_AHEAD_TIME: f32 = 1.0 / 60.0; // The time to look ahead when calculating the predicted position
+                          // const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 
 // const grids_to_check: (i32, i32) = (
@@ -481,14 +481,15 @@ impl<'a> State<'a> {
             entries: &[],
         });
 
-        let temp_compute_density_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Temporary Compute Density Bind Group"),
-            layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        let temp_compute_density_bind_group =
+            device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Temporary Compute Density Bind Group"),
+                layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    entries: &[],
+                    label: Some("Temporary Compute Density Bind Group Layout"),
+                }),
                 entries: &[],
-                label: Some("Temporary Compute Density Bind Group Layout"),
-            }),
-            entries: &[],
-        });
+            });
 
         let temp_compute_forces_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Temporary Compute Forces Bind Group"),
@@ -765,7 +766,7 @@ impl<'a> State<'a> {
 
         // Sort the particles into their grid cells
         // let sort_start_time = std::time::Instant::now();
-        // pollster::block_on(self.sort_particles());
+        pollster::block_on(self.sort_particles());
         // let sort_elapsed_time = sort_start_time.elapsed();
         // println!(
         //     "Sort time: {} ms",
@@ -821,25 +822,25 @@ impl<'a> State<'a> {
         //     forces_elapsed_time.as_micros() as f32 / 1000.0
         // );
 
-        // Dispatch the compute sort shader
-        let sort_start_time = std::time::Instant::now();
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Compute Sort Encoder"),
-            });
-        {
-            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("Compute Sort Pass"),
-                timestamp_writes: None,
-            });
-            compute_pass.set_pipeline(&self.compute_sort_pipeline); // Assuming you have a compute pipeline
-            compute_pass.set_bind_group(0, &self.compute_sort_bind_group, &[]);
-            compute_pass.dispatch_workgroups(1, 1, 1);
-        }
+        // // Dispatch the compute sort shader
+        // let sort_start_time = std::time::Instant::now();
+        // let mut encoder = self
+        //     .device
+        //     .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        //         label: Some("Compute Sort Encoder"),
+        //     });
+        // {
+        //     let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+        //         label: Some("Compute Sort Pass"),
+        //         timestamp_writes: None,
+        //     });
+        //     compute_pass.set_pipeline(&self.compute_sort_pipeline); // Assuming you have a compute pipeline
+        //     compute_pass.set_bind_group(0, &self.compute_sort_bind_group, &[]);
+        //     compute_pass.dispatch_workgroups(1, 1, 1);
+        // }
 
-        self.queue.submit(std::iter::once(encoder.finish()));
-        let sort_elapsed_time = sort_start_time.elapsed();
+        // self.queue.submit(std::iter::once(encoder.finish()));
+        // let sort_elapsed_time = sort_start_time.elapsed();
         // println!(
         //     "Sort calculation time: {} ms",
         //     sort_elapsed_time.as_micros() as f32 / 1000.0
@@ -939,135 +940,19 @@ async fn run() {
 
     let render_bind_group_layout =
         bind_group_layout_generator::get_bind_group_layout(&state.device, false);
-    state.render_bind_group = state.device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("Sphere Bind Group"),
-        layout: &render_bind_group_layout,
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: state.particle_positions_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: state.particle_radii_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 2,
-                resource: state.particle_velocities_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 3,
-                resource: state.particle_lookup_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 4,
-                resource: state.particle_densities_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 5,
-                resource: state.particle_forces_buffer.as_entire_binding(),
-            },
-        ],
-    });
+    state.render_bind_group = create_bind_group(&mut state, &render_bind_group_layout);
 
     let compute_bind_group_layout =
         bind_group_layout_generator::get_bind_group_layout(&state.device, true);
-    state.compute_densities_bind_group = state.device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("Sphere Bind Group"),
-        layout: &compute_bind_group_layout,
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: state.particle_positions_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: state.particle_radii_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 2,
-                resource: state.particle_velocities_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 3,
-                resource: state.particle_lookup_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 4,
-                resource: state.particle_densities_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 5,
-                resource: state.particle_forces_buffer.as_entire_binding(),
-            },
-        ],
-    });
+    state.compute_densities_bind_group = create_bind_group(&mut state, &compute_bind_group_layout);
 
     let compute_forces_bind_group_layout =
         bind_group_layout_generator::get_bind_group_layout(&state.device, true);
-    state.compute_forces_bind_group = state.device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("Sphere Bind Group"),
-        layout: &compute_forces_bind_group_layout,
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: state.particle_positions_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: state.particle_radii_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 2,
-                resource: state.particle_velocities_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 3,
-                resource: state.particle_lookup_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 4,
-                resource: state.particle_densities_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 5,
-                resource: state.particle_forces_buffer.as_entire_binding(),
-            },
-        ],
-    });
+    state.compute_forces_bind_group = create_bind_group(&mut state, &compute_forces_bind_group_layout);
 
     let compute_sort_bind_group_layout =
         bind_group_layout_generator::get_bind_group_layout(&state.device, true);
-    state.compute_sort_bind_group = state.device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("Sphere Bind Group"),
-        layout: &compute_sort_bind_group_layout,
-        entries: &[
-            wgpu::BindGroupEntry {
-                binding: 0,
-                resource: state.particle_positions_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: state.particle_radii_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 2,
-                resource: state.particle_velocities_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 3,
-                resource: state.particle_lookup_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 4,
-                resource: state.particle_densities_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 5,
-                resource: state.particle_forces_buffer.as_entire_binding(),
-            },
-        ],
-    });
+    state.compute_sort_bind_group = create_bind_group(&mut state, &compute_sort_bind_group_layout);
 
     // Pass bind group layout to pipeline builder
     let mut render_pipeline_builder = PipelineBuilder::new();
@@ -1128,6 +1013,44 @@ async fn run() {
             _ => {}
         })
         .expect("Error!");
+}
+
+fn create_bind_group(
+    state: &mut State,
+    bind_group_layout: &wgpu::BindGroupLayout,
+) -> wgpu::BindGroup {
+    let bind_group = state.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("Sphere Bind Group"),
+        layout: bind_group_layout,
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: state.particle_positions_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: state.particle_radii_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 2,
+                resource: state.particle_velocities_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 3,
+                resource: state.particle_lookup_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 4,
+                resource: state.particle_densities_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 5,
+                resource: state.particle_forces_buffer.as_entire_binding(),
+            },
+        ],
+    });
+
+    bind_group
 }
 
 fn main() {

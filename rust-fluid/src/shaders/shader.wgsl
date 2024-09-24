@@ -14,8 +14,7 @@ const DISPATCH_SIZE: vec2<u32> = vec2<u32>(
 );
 
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
-// const GRID_SIZE: vec2<f32> = vec2<f32>(40.0, 20.0);
-const GRID_SIZE: vec2<f32> = vec2<f32>(10.0, 5.0);
+const GRID_SIZE: vec2<f32> = vec2<f32>(40.0, 20.0);
 
 const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
 const PARTICLE_AMOUNT_X: u32 = 192; // The number of particles in the x direction
@@ -173,21 +172,8 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
         index_map[i] = vec2<i32>(grid_index, i);
     }
 
-    // Binary insetion sort the particles
-    for (var i: i32 = 1; i < TOTAL_PARTICLES; i=i+1){
-        let key = index_map[i];
-        let key_x = index_map[i].x;
-        var j = i - 1;
-        while (j >= 0){
-            let current_x = index_map[j].x;
-            if current_x <= key_x {
-                break;
-            }
-            // index_map[j + 1] = index_map[j];
-            j = j - 1;
-        }
-        // index_map[j + 1] = key;
-    }
+    // Bubble sort the particles
+    
 
     // // Create the new arrays
     // for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){

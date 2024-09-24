@@ -166,40 +166,54 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var lookup_table: array<i32, i32(GRID_SIZE.x * GRID_SIZE.y)>;
 
     // Create a map of the particles' indices and grid's indices
-    var index_map: array<vec2<i32>, u32(TOTAL_PARTICLES)>;
     for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
         let grid = pos_to_grid(particle_positions[i]);
         let grid_index = grid_to_index(grid);
-        index_map[i] = vec2<i32>(grid_index, i);
+        grid_index_map[i] = grid_index;
+
+        // Reset the forces
+        particle_forces[i] = vec4<f32>(0.0, 0.0, 0.0, 0.0);
     }
 
     // Bubble sort the particles
-    
+    for (var i: i32 = 0; i < TOTAL_PARTICLES - 1; i=i+1){
+        for (var j: i32 = 0; j < TOTAL_PARTICLES - i - 1; j=j+1){
+            if grid_index_map[j] > grid_index_map[j + 1] {
+                let temp = grid_index_map[j];
+                let temp_pos = particle_positions[j];
+                let temp_vel = particle_velocities[j];
+                let temp_rad = particle_radii[j];
+                let temp_den = particle_densities[j];
 
-    // // Create the new arrays
-    // for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
-    //     let particle_index = index_map[i][1];
-    //     particle_positions[i] = vec2<f32>(index_map[i][2], index_map[i][3]);
-    //     particle_velocities[i] = vec2<f32>(index_map[i][4], index_map[i][5]);
-    //     particle_radii[i] = index_map[i][6];
-    //     particle_densities[i] = index_map[i][7];
-    //     particle_forces[i] = vec4<f32>(0.0, 0.0, 0.0, 0.0);
-    // }
+                grid_index_map[j] = grid_index_map[j + 1];
+                particle_positions[j] = particle_positions[j + 1];
+                particle_velocities[j] = particle_velocities[j + 1];
+                particle_radii[j] = particle_radii[j + 1];
+                particle_densities[j] = particle_densities[j + 1];
 
-    // // Initialize the new lookup table
-    // for (var i: i32 = 0; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
-    //     lookup_table[i] = -1;
-    // }
+                grid_index_map[j + 1] = temp;
+                particle_positions[j + 1] = temp_pos;
+                particle_velocities[j + 1] = temp_vel;
+                particle_radii[j + 1] = temp_rad;
+                particle_densities[j + 1] = temp_den;
+            }
+        }
+    }
 
-    // // Create the new lookup table
-    // var last_grid_index = -1;
-    // for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
-    //     let grid_index = i32(index_map[i][0]);
-    //     if grid_index != last_grid_index {
-    //         lookup_table[grid_index] = i;
-    //         last_grid_index = grid_index;
-    //     }
-    // }
+    // Initialize the new lookup table
+    for (var i: i32 = 0; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
+        lookup_table[i] = -1;
+    }
+
+    // Create the new lookup table
+    var last_grid_index = -1;
+    for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
+        let grid_index = i32(grid_index_map[i]);
+        if grid_index != last_grid_index {
+            lookup_table[grid_index] = i;
+            last_grid_index = grid_index;
+        }
+    }
 }
 
 @fragment

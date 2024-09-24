@@ -857,10 +857,10 @@ impl<'a> State<'a> {
 
         self.queue.submit(std::iter::once(encoder.finish()));
         let sort_elapsed_time = sort_start_time.elapsed();
-        // println!(
-        //     "Sort calculation time: {} ms",
-        //     sort_elapsed_time.as_micros() as f32 / 1000.0
-        // );
+        println!(
+            "Sort calculation time: {} ms",
+            sort_elapsed_time.as_micros() as f32 / 1000.0
+        );
 
         // Render the particles
         let render_start_time = std::time::Instant::now();
@@ -916,10 +916,10 @@ impl<'a> State<'a> {
 
         if self.frame_count % 10 == 0 {
             let elapsed_time = start_time.elapsed();
-            println!(
-                "fps (try sorting on GPU. It may be slower but it will remove the need to update CPU values from buffer since fourth compute shader can be used to move and accelerate the particles): {}",
-                1.0 / elapsed_time.as_micros() as f32 * 1000.0 * 1000.0
-            );
+            // println!(
+            //     "fps (try sorting on GPU. It may be slower but it will remove the need to update CPU values from buffer since fourth compute shader can be used to move and accelerate the particles): {}",
+            //     1.0 / elapsed_time.as_micros() as f32 * 1000.0 * 1000.0
+            // );
             // println!("Compute shaders and rendering time: {} ms", (density_elapsed_time.as_micros() as f32 + forces_elapsed_time.as_micros() as f32 + render_elapsed_time.as_micros() as f32) / 1000.0);
             self.frame_count = 0;
         }

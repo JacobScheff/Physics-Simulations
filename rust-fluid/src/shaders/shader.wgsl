@@ -107,20 +107,45 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
         }
     }
 
-    // // Initialize the new lookup table
-    // for (var i: i32 = 0; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
-    //     lookup_table[i] = -1;
-    // }
+    // for(var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
+    //     let temp_pos = particle_positions[i];
+    //     let temp_radius = particle_radii[i];
+    //     let temp_vel = particle_velocities[i];
+    //     let temp_density = particle_densities[i];
+        
+    //     let index = i;
+    //     while(true){
+    //         let grid_index = i32(grid_index_map[index][0]);
 
-    // Create the new lookup table
-    // var last_grid_index = -1;
-    // for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
-    //     let grid_index = i32(grid_index_map[i]);
-    //     if grid_index != last_grid_index {
-    //         lookup_table[grid_index] = i;
-    //         last_grid_index = grid_index;
+    //         // Store the original value
+    //         temp_pos = particle_positions[index];
+    //         temp_radius = particle_radii[index];
+    //         temp_vel = particle_velocities[index];
+    //         temp_density = particle_densities[index];
+
+    //         // Update the value
+    //         particle_positions[index] = particle_positions[grid_index];
+    //         particle_radii[index] = particle_radii[grid_index];
+    //         particle_velocities[index] = particle_velocities[grid_index];
+    //         particle_densities[index] = particle_densities[grid_index];
+
     //     }
     // }
+
+    // Initialize the new lookup table
+    for (var i: i32 = 0; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
+        lookup_table[i] = -1;
+    }
+
+    // Create the new lookup table
+    var last_grid_index = -1;
+    for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
+        let grid_index = i32(grid_index_map[i][0]);
+        if grid_index != last_grid_index {
+            lookup_table[grid_index] = i;
+            last_grid_index = grid_index;
+        }
+    }
 }
 
 @fragment

@@ -35,6 +35,7 @@ const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_
 @group(0) @binding(3) var<storage, read_write> particle_lookup: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
 @group(0) @binding(4) var<storage, read_write> particle_densities: array<f32, u32(TOTAL_PARTICLES)>;
 @group(0) @binding(5) var<storage, read_write> particle_forces: array<vec4<f32>, u32(TOTAL_PARTICLES)>;
+@group(0) @binding(6) var<storage, read_write> grid_index_map: array<i32, u32(TOTAL_PARTICLES)>;
 
 @vertex
 fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {

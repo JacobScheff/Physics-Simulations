@@ -77,24 +77,26 @@ struct State<'a> {
     particle_forces_buffer: wgpu::Buffer,
     particle_lookup: Vec<i32>,
     particle_lookup_buffer: wgpu::Buffer,
+    grid_index_map: Vec<i32>,
+    grid_index_map_buffer: wgpu::Buffer,
     position_reading_buffer: wgpu::Buffer,
     velocity_reading_buffer: wgpu::Buffer,
     density_reading_buffer: wgpu::Buffer,
     force_reading_buffer: wgpu::Buffer,
 }
 
+fn pos_to_grid_index(pos: (f32, f32)) -> i32 {
+    let x = ((pos.0 / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32) as i32)
+        .min(GRID_SIZE.0 - 1)
+        .max(0) as i32;
+    let y = ((pos.1 / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32) as i32)
+        .min(GRID_SIZE.1 - 1)
+        .max(0) as i32;
+
+    x + y * GRID_SIZE.0
+}
+
 impl<'a> State<'a> {
-    fn pos_to_grid_index(&self, pos: (f32, f32)) -> i32 {
-        let x = ((pos.0 / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32) as i32)
-            .min(GRID_SIZE.0 - 1)
-            .max(0) as i32;
-        let y = ((pos.1 / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32) as i32)
-            .min(GRID_SIZE.1 - 1)
-            .max(0) as i32;
-
-        x + y * GRID_SIZE.0
-    }
-
     const GRID_DIV_SCREEN_SIZE: (f32, f32) = (
         GRID_SIZE.0 as f32 / SCREEN_SIZE.0 as f32,
         GRID_SIZE.1 as f32 / SCREEN_SIZE.1 as f32,
@@ -515,6 +517,7 @@ impl<'a> State<'a> {
         let mut particle_radii = vec![];
         let mut particle_densities = vec![];
         let mut particle_forces = vec![];
+        let mut grid_index_map = vec![];
         for i in 0..PARTICLE_AMOUNT_X {
             for j in 0..PARTICLE_AMOUNT_Y {
                 // let x = SCREEN_SIZE.0 as f32 / (PARTICLE_AMOUNT_X + 1) as f32 * i as f32 + OFFSET.0;
@@ -536,6 +539,7 @@ impl<'a> State<'a> {
                 particle_radii.push(PARTICLE_RADIUS);
                 particle_densities.push(0.0);
                 particle_forces.push([0.0, 0.0, 0.0, 0.0]);
+                grid_index_map.push(pos_to_grid_index((x, y)));
             }
         }
         let particle_lookup: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
@@ -591,6 +595,11 @@ impl<'a> State<'a> {
             contents: bytemuck::cast_slice(&particle_lookup),
             usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
         });
+        let grid_index_map_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Grid Index Map Buffer Data"),
+            contents: bytemuck::cast_slice(&grid_index_map),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
+        });
 
         // Write data to buffers
         queue.write_buffer(
@@ -623,6 +632,11 @@ impl<'a> State<'a> {
             0,
             bytemuck::cast_slice(&particle_lookup),
         );
+        queue.write_buffer(
+            &grid_index_map_buffer,
+            0,
+            bytemuck::cast_slice(&grid_index_map),
+        );
 
         Self {
             window,
@@ -652,6 +666,8 @@ impl<'a> State<'a> {
             particle_forces_buffer,
             particle_lookup,
             particle_lookup_buffer,
+            grid_index_map,
+            grid_index_map_buffer,
             position_reading_buffer,
             velocity_reading_buffer,
             density_reading_buffer,
@@ -766,7 +782,7 @@ impl<'a> State<'a> {
 
         // Sort the particles into their grid cells
         // let sort_start_time = std::time::Instant::now();
-        pollster::block_on(self.sort_particles());
+        // pollster::block_on(self.sort_particles());
         // let sort_elapsed_time = sort_start_time.elapsed();
         // println!(
         //     "Sort time: {} ms",
@@ -1046,6 +1062,10 @@ fn create_bind_group(
             wgpu::BindGroupEntry {
                 binding: 5,
                 resource: state.particle_forces_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 6,
+                resource: state.grid_index_map_buffer.as_entire_binding(),
             },
         ],
     });

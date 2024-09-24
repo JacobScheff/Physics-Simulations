@@ -35,7 +35,7 @@ const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_
 @group(0) @binding(3) var<storage, read_write> particle_lookup: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
 @group(0) @binding(4) var<storage, read_write> particle_densities: array<f32, u32(TOTAL_PARTICLES)>;
 @group(0) @binding(5) var<storage, read_write> particle_forces: array<vec4<f32>, u32(TOTAL_PARTICLES)>;
-@group(0) @binding(6) var<storage, read_write> grid_index_map: array<i32, u32(TOTAL_PARTICLES)>;
+@group(0) @binding(6) var<storage, read_write> grid_index_map: array<array<i32, 2>, u32(TOTAL_PARTICLES)>;
 
 @vertex
 fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
@@ -77,89 +77,6 @@ fn main_forces(@builtin(global_invocation_id) global_id: vec3<u32>) {
     calculate_forces(index);
 }
 
-// async fn sort_particles(&mut self) {
-//         // Create a new list of particles
-//         let mut new_positions: Vec<[f32; 2]> = Vec::with_capacity(self.particle_positions.len());
-//         let mut new_velocities: Vec<[f32; 2]> = Vec::with_capacity(self.particle_velocities.len());
-//         let mut new_radii: Vec<f32> = Vec::with_capacity(self.particle_radii.len());
-//         let mut new_densities: Vec<f32> = Vec::with_capacity(self.particle_densities.len());
-//         let mut new_forces: Vec<[f32; 4]> = vec![[0.0, 0.0, 0.0, 0.0]; self.particle_forces.len()];
-//         let mut lookup_table = vec![-1; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
-
-//         // Create a HashMap to store the indices of the particles in each grid cell
-//         let mut index_map: HashMap<(i32, i32), Vec<i32>> = HashMap::new();
-//         for i in 0..self.particle_positions.len() {
-//             let grid = self.pos_to_grid(self.particle_positions[i]);
-//             index_map.entry(grid).or_insert(vec![]).push(i as i32);
-//         }
-
-//         for i in 0..GRID_SIZE.0 {
-//             for j in 0..GRID_SIZE.1 {
-//                 let grid_index = i + j * GRID_SIZE.0;
-//                 let mut index = -1;
-
-//                 // Check if the grid cell exists in the HashMap:
-//                 if let Some(particle_indices) = index_map.get(&(i, j)) {
-//                     for &particle_index in particle_indices {
-//                         let particle_index = particle_index as usize;
-//                         new_positions.push(self.particle_positions[particle_index]);
-//                         new_velocities.push(self.particle_velocities[particle_index]);
-//                         new_radii.push(self.particle_radii[particle_index]);
-//                         new_densities.push(self.particle_densities[particle_index]);
-//                         if index == -1 {
-//                             index = new_positions.len() as i32 - 1;
-//                         }
-//                     }
-//                 }
-
-//                 lookup_table[grid_index as usize] = index;
-//             }
-//         }
-
-//         self.particle_positions = new_positions;
-//         self.particle_velocities = new_velocities;
-//         self.particle_radii = new_radii;
-//         self.particle_densities = new_densities;
-//         self.particle_forces = new_forces;
-//         self.particle_lookup = lookup_table;
-
-//         self.queue.write_buffer(
-//             &self.particle_positions_buffer,
-//             0,
-//             bytemuck::cast_slice(&self.particle_positions),
-//         );
-
-//         self.queue.write_buffer(
-//             &self.particle_radii_buffer,
-//             0,
-//             bytemuck::cast_slice(&self.particle_radii),
-//         );
-
-//         self.queue.write_buffer(
-//             &self.particle_velocities_buffer,
-//             0,
-//             bytemuck::cast_slice(&self.particle_velocities),
-//         );
-
-//         self.queue.write_buffer(
-//             &self.particle_densities_buffer,
-//             0,
-//             bytemuck::cast_slice(&self.particle_densities),
-//         );
-
-//         self.queue.write_buffer(
-//             &self.particle_forces_buffer,
-//             0,
-//             bytemuck::cast_slice(&self.particle_forces),
-//         );
-
-//         self.queue.write_buffer(
-//             &self.particle_lookup_buffer,
-//             0,
-//             bytemuck::cast_slice(&self.particle_lookup),
-//         );
-//     }
-
 @compute @workgroup_size(1, 1, 1)
 fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
     // Create a new list of particles
@@ -169,51 +86,51 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
     for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
         let grid = pos_to_grid(particle_positions[i]);
         let grid_index = grid_to_index(grid);
-        grid_index_map[i] = grid_index;
+        grid_index_map[i] = array<i32, 2>(grid_index, i);
 
         // Reset the forces
         particle_forces[i] = vec4<f32>(0.0, 0.0, 0.0, 0.0);
     }
 
     // Bubble sort the particles
-    for (var i: i32 = 0; i < TOTAL_PARTICLES - 1; i=i+1){
-        for (var j: i32 = 0; j < TOTAL_PARTICLES - i - 1; j=j+1){
-            if grid_index_map[j] > grid_index_map[j + 1] {
-                let temp = grid_index_map[j];
-                let temp_pos = particle_positions[j];
-                let temp_vel = particle_velocities[j];
-                let temp_rad = particle_radii[j];
-                let temp_den = particle_densities[j];
+    // for (var i: i32 = 0; i < TOTAL_PARTICLES - 1; i=i+1){
+    //     for (var j: i32 = 0; j < TOTAL_PARTICLES - i - 1; j=j+1){
+    //         if grid_index_map[j][0] > grid_index_map[j + 1][0] {
+    //             let temp = grid_index_map[j];
+    //     //         let temp_pos = particle_positions[j];
+    //     //         let temp_vel = particle_velocities[j];
+    //             let temp_rad = particle_radii[j];
+    //     //         let temp_den = particle_densities[j];
 
-                grid_index_map[j] = grid_index_map[j + 1];
-                particle_positions[j] = particle_positions[j + 1];
-                particle_velocities[j] = particle_velocities[j + 1];
-                particle_radii[j] = particle_radii[j + 1];
-                particle_densities[j] = particle_densities[j + 1];
+    //             // grid_index_map[j] = grid_index_map[j + 1];
+    //     //         particle_positions[j] = particle_positions[j + 1];
+    //     //         particle_velocities[j] = particle_velocities[j + 1];
+    //     //         particle_radii[j] = particle_radii[j + 1];
+    //     //         particle_densities[j] = particle_densities[j + 1];
 
-                grid_index_map[j + 1] = temp;
-                particle_positions[j + 1] = temp_pos;
-                particle_velocities[j + 1] = temp_vel;
-                particle_radii[j + 1] = temp_rad;
-                particle_densities[j + 1] = temp_den;
-            }
-        }
-    }
+    //             // grid_index_map[j + 1] = temp;
+    //     //         particle_positions[j + 1] = temp_pos;
+    //     //         particle_velocities[j + 1] = temp_vel;
+    //             // particle_radii[j + 1] = temp_rad;
+    //     //         particle_densities[j + 1] = temp_den;
+    //         }
+    //     }
+    // }
 
-    // Initialize the new lookup table
-    for (var i: i32 = 0; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
-        lookup_table[i] = -1;
-    }
+    // // Initialize the new lookup table
+    // for (var i: i32 = 0; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
+    //     lookup_table[i] = -1;
+    // }
 
     // Create the new lookup table
-    var last_grid_index = -1;
-    for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
-        let grid_index = i32(grid_index_map[i]);
-        if grid_index != last_grid_index {
-            lookup_table[grid_index] = i;
-            last_grid_index = grid_index;
-        }
-    }
+    // var last_grid_index = -1;
+    // for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
+    //     let grid_index = i32(grid_index_map[i]);
+    //     if grid_index != last_grid_index {
+    //         lookup_table[grid_index] = i;
+    //         last_grid_index = grid_index;
+    //     }
+    // }
 }
 
 @fragment

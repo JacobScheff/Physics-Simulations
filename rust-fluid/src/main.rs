@@ -77,7 +77,7 @@ struct State<'a> {
     particle_forces_buffer: wgpu::Buffer,
     particle_lookup: Vec<i32>,
     particle_lookup_buffer: wgpu::Buffer,
-    grid_index_map: Vec<i32>,
+    grid_index_map: Vec<[i32; 2]>,
     grid_index_map_buffer: wgpu::Buffer,
     position_reading_buffer: wgpu::Buffer,
     velocity_reading_buffer: wgpu::Buffer,
@@ -539,7 +539,7 @@ impl<'a> State<'a> {
                 particle_radii.push(PARTICLE_RADIUS);
                 particle_densities.push(0.0);
                 particle_forces.push([0.0, 0.0, 0.0, 0.0]);
-                grid_index_map.push(pos_to_grid_index((x, y)));
+                grid_index_map.push([pos_to_grid_index((x, y)), (j + i * PARTICLE_AMOUNT_Y) as i32]);
             }
         }
         let particle_lookup: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
@@ -727,12 +727,12 @@ impl<'a> State<'a> {
         let start_time = std::time::Instant::now();
 
         // Update the particles from the buffers
-        let update_start_time = std::time::Instant::now();
-        pollster::block_on(self.update_position_from_buffer());
-        pollster::block_on(self.update_velocities_from_buffer());
-        pollster::block_on(self.update_densities_from_buffer());
-        pollster::block_on(self.update_forces_from_buffer());
-        let update_elapsed_time = update_start_time.elapsed();
+        // let update_start_time = std::time::Instant::now();
+        // pollster::block_on(self.update_position_from_buffer());
+        // pollster::block_on(self.update_velocities_from_buffer());
+        // pollster::block_on(self.update_densities_from_buffer());
+        // pollster::block_on(self.update_forces_from_buffer());
+        // let update_elapsed_time = update_start_time.elapsed();
         // println!(
         //     "Update time: {} ms",
         //     update_elapsed_time.as_micros() as f32 / 1000.0

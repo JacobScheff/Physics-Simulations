@@ -108,19 +108,42 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     // Update the particle positions, radii, velocities, and densities based on the new order without creating a new array
-    for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
-        let new_index = i32(grid_index_map[i][1]);
-        let old_index = i;
-        if new_index != old_index {
-            particle_positions[new_index] = particle_positions[old_index];
-            particle_radii[new_index] = particle_radii[old_index];
-            particle_velocities[new_index] = particle_velocities[old_index];
-            particle_densities[new_index] = particle_densities[old_index];
+    var visited: array<bool, u32(TOTAL_PARTICLES)>;
+    for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1) {
+        visited[i] = false; 
+    }
+
+    for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1) {
+        if (visited[i]) { 
+            continue; 
         }
 
-        // Update the grid index map
-        grid_index_map[new_index] = array<i32, 2>(i32(grid_index_map[i][0]), new_index);
-    }    
+        var current_index: i32 = i;
+        var target_index: i32 = i32(grid_index_map[current_index][1]);
+
+        while (target_index != i) {
+            // Swap elements at current_index and target_index
+            let temp_pos = particle_positions[current_index];
+            let temp_radius = particle_radii[current_index];
+            let temp_velocity = particle_velocities[current_index];
+            let temp_density = particle_densities[current_index];
+
+            particle_positions[current_index] = particle_positions[target_index];
+            particle_radii[current_index] = particle_radii[target_index];
+            particle_velocities[current_index] = particle_velocities[target_index];
+            particle_densities[current_index] = particle_densities[target_index];
+
+            particle_positions[target_index] = temp_pos;
+            particle_radii[target_index] = temp_radius;
+            particle_velocities[target_index] = temp_velocity;
+            particle_densities[target_index] = temp_density;
+
+            visited[current_index] = true;
+            current_index = target_index;
+            target_index = i32(grid_index_map[current_index][1]);
+        }
+        visited[current_index] = true; 
+    }
 
     // Initialize the new lookup table
     for (var i: i32 = 0; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){

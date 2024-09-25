@@ -28,7 +28,7 @@ const GRID_SIZE: (i32, i32) = (80, 40); // How many grid cells to divide the scr
 
 const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
 const PARTICLE_AMOUNT_X: u32 = 192; // The number of particles in the x direction
-const PARTICLE_AMOUNT_Y: u32 = 96 / 2; // The number of particles in the y direction
+const PARTICLE_AMOUNT_Y: u32 = 96; // The number of particles in the y direction
 const PADDING: f32 = 100.0; // The padding around the screen
                             // const RADIUS_OF_INFLUENCE: f32 = 75.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
                             // const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
@@ -907,10 +907,10 @@ impl<'a> State<'a> {
         self.queue.submit(std::iter::once(command_encoder.finish()));
 
         let render_elapsed_time = render_start_time.elapsed();
-        // println!(
-        //     "Render time: {} ms",
-        //     render_elapsed_time.as_micros() as f32 / 1000.0
-        // );
+        println!(
+            "Render time: {} ms",
+            render_elapsed_time.as_micros() as f32 / 1000.0
+        );
 
         drawable.present();
 
@@ -953,6 +953,7 @@ async fn run() {
     });
 
     let mut state = State::new(&window).await;
+    state.sort_particles().await;
 
     let render_bind_group_layout =
         bind_group_layout_generator::get_bind_group_layout(&state.device, false);
@@ -1016,7 +1017,9 @@ async fn run() {
                     elwt.exit();
                 }
 
-                WindowEvent::RedrawRequested => match state.render() {
+                WindowEvent::RedrawRequested => match {
+                    state.render()
+                } {
                     Ok(_) => {}
                     Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
                     Err(wgpu::SurfaceError::OutOfMemory) => elwt.exit(),

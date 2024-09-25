@@ -17,7 +17,7 @@ const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
 const GRID_SIZE: vec2<f32> = vec2<f32>(80.0, 40.0);
 
 const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
-const PARTICLE_AMOUNT_X: u32 = 192 / 2; // The number of particles in the x direction
+const PARTICLE_AMOUNT_X: u32 = 192; // The number of particles in the x direction
 const PARTICLE_AMOUNT_Y: u32 = 96; // The number of particles in the y direction
 const TOTAL_PARTICLES: i32 = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y); // The total number of particles
 const RADIUS_OF_INFLUENCE: f32 = 75.0; // MUST BE DIVISIBLE BY SCREEN_SIZE - The radius of the sphere of influence. Also the radius to search for particles to calculate the density
@@ -90,6 +90,20 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
         // Reset the forces
         particle_forces[i] = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    }
+
+    // Check if the particles are in the correct order
+    var in_order = true;
+    for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
+        let grid_index = i32(grid_index_map[i][0]);
+        if grid_index != i {
+            in_order = false;
+            break;
+        }
+    }
+
+    if in_order {
+        return;
     }
 
     // Binary insertion sort the particles by swapping
@@ -168,71 +182,71 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let x: f32 = in.pos.x;
-    let y: f32 = in.pos.y;
+    // let x: f32 = in.pos.x;
+    // let y: f32 = in.pos.y;
 
-    let grid = pos_to_grid(vec2<f32>(x, y));
-    for (var gx: i32 = -1; gx <= 1; gx=gx+1){
-        for(var gy: i32 = -1; gy <=1; gy=gy+1){
-            if grid.x + gx < 0 || grid.x + gx >= i32(GRID_SIZE.x) || grid.y + gy < 0 || grid.y + gy >= i32(GRID_SIZE.y) {
-                continue;
-            }
-            let first_grid_index = grid_to_index(grid_add(grid, Grid(gx, gy)));
-            if first_grid_index < 0 || first_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
-                continue;
-            }
+    // let grid = pos_to_grid(vec2<f32>(x, y));
+    // for (var gx: i32 = -1; gx <= 1; gx=gx+1){
+    //     for(var gy: i32 = -1; gy <=1; gy=gy+1){
+    //         if grid.x + gx < 0 || grid.x + gx >= i32(GRID_SIZE.x) || grid.y + gy < 0 || grid.y + gy >= i32(GRID_SIZE.y) {
+    //             continue;
+    //         }
+    //         let first_grid_index = grid_to_index(grid_add(grid, Grid(gx, gy)));
+    //         if first_grid_index < 0 || first_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
+    //             continue;
+    //         }
             
-            let starting_index = particle_lookup[first_grid_index];
-            if starting_index == -1 {
-                continue;
-            }
+    //         let starting_index = particle_lookup[first_grid_index];
+    //         if starting_index == -1 {
+    //             continue;
+    //         }
             
-            var ending_index = -1;
+    //         var ending_index = -1;
 
-            // let next_grid_index = first_grid_index + 1;
-            for (var i = first_grid_index + 1; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
-                if particle_lookup[i] != -1 {
-                    ending_index = particle_lookup[i];
-                    break;
-                }
-            }
-            if ending_index == -1 {
-                ending_index = i32(TOTAL_PARTICLES);
-            }
+    //         // let next_grid_index = first_grid_index + 1;
+    //         for (var i = first_grid_index + 1; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
+    //             if particle_lookup[i] != -1 {
+    //                 ending_index = particle_lookup[i];
+    //                 break;
+    //             }
+    //         }
+    //         if ending_index == -1 {
+    //             ending_index = i32(TOTAL_PARTICLES);
+    //         }
 
-            for (var i = starting_index; i < ending_index; i=i+1){
-            // for (var i = 0; i < TOTAL_PARTICLES; i=i+1){
+    //         for (var i = starting_index; i < ending_index; i=i+1){
+    //         // for (var i = 0; i < TOTAL_PARTICLES; i=i+1){
 
-                let d = (x - particle_positions[i].x) * (x - particle_positions[i].x) + (y - particle_positions[i].y) * (y - particle_positions[i].y);
-                if d < particle_radii[i] * particle_radii[i] {
-                    let speed = length(particle_velocities[i]);
-                    let density = particle_densities[i];
+    //             let d = (x - particle_positions[i].x) * (x - particle_positions[i].x) + (y - particle_positions[i].y) * (y - particle_positions[i].y);
+    //             if d < particle_radii[i] * particle_radii[i] {
+    //                 let speed = length(particle_velocities[i]);
+    //                 let density = particle_densities[i];
 
-                    // Create a gradient color
-                    let min_speed: f32 = 0.0;
-                    let max_speed: f32 = 20.0;
-                    var speed_t: f32 = (speed - min_speed) / (max_speed - min_speed);
-                    speed_t = min(max(speed_t, 0.0), 1.0);
-                    let min_density: f32 = 0.0;
-                    let max_density: f32 = 4.5;
-                    var density_t: f32 = (density - min_density) / (max_density - min_density);
-                    density_t = min(max(density_t, 0.0), 1.0);
-                    let color: vec3<f32> = vec3<f32>(speed_t, density_t, 1.0 - speed_t);
-                    // let color: vec3<f32> = vec3<f32>(0.2, density_t, 0.2);
-                    // let density_error = density - TARGET_DENSITY;
-                    // var color: vec3<f32> = vec3<f32>(0.0, 0.0, 0.0);
-                    // if density_error > 0.0 {
-                    //     color = vec3<f32>(density_error, 0.0, 0.0);
-                    // } else {
-                    //     color = vec3<f32>(0.0, 0.0, -density_error);
-                    // }
+    //                 // Create a gradient color
+    //                 let min_speed: f32 = 0.0;
+    //                 let max_speed: f32 = 20.0;
+    //                 var speed_t: f32 = (speed - min_speed) / (max_speed - min_speed);
+    //                 speed_t = min(max(speed_t, 0.0), 1.0);
+    //                 let min_density: f32 = 0.0;
+    //                 let max_density: f32 = 4.5;
+    //                 var density_t: f32 = (density - min_density) / (max_density - min_density);
+    //                 density_t = min(max(density_t, 0.0), 1.0);
+    //                 let color: vec3<f32> = vec3<f32>(speed_t, density_t, 1.0 - speed_t);
+    //                 // let color: vec3<f32> = vec3<f32>(0.2, density_t, 0.2);
+    //                 // let density_error = density - TARGET_DENSITY;
+    //                 // var color: vec3<f32> = vec3<f32>(0.0, 0.0, 0.0);
+    //                 // if density_error > 0.0 {
+    //                 //     color = vec3<f32>(density_error, 0.0, 0.0);
+    //                 // } else {
+    //                 //     color = vec3<f32>(0.0, 0.0, -density_error);
+    //                 // }
                     
-                    return vec4<f32>(color, 1.0);
-                }
-            }
+    //                 return vec4<f32>(color, 1.0);
+    //             }
+    //         }
 
-        }
-    }
+    //     }
+    // }
 
     return vec4<f32>(0.0, 0.0, 0.0, 1.0);
 }

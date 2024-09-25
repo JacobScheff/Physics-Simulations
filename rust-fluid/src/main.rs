@@ -914,7 +914,7 @@ impl<'a> State<'a> {
 
         drawable.present();
 
-        println!("Problem is probably with main_sort insertion sort, not updating positions");
+        // println!("Problem is probably with main_sort insertion sort, not updating positions");
 
         if self.frame_count % 10 == 0 {
             let elapsed_time = start_time.elapsed();

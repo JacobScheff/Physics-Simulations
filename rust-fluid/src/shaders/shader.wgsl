@@ -62,8 +62,9 @@ fn main_density(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     // Update the density of the particle
-    let density = get_density(particle_positions[index]);
-    particle_densities[index] = density;
+    let i = grid_index_map[index][1];
+    let density = get_density(particle_positions[i]);
+    particle_densities[i] = density;
 }
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
@@ -72,9 +73,11 @@ fn main_forces(@builtin(global_invocation_id) global_id: vec3<u32>) {
     if index < 0 || index >= u32(TOTAL_PARTICLES) {
         return;
     }
+
+    let i = grid_index_map[index][1];
     
     // Calculate the forces on the particle
-    calculate_forces(index);
+    calculate_forces(u32(i));
 }
 
 @compute @workgroup_size(1, 1, 1)
@@ -90,20 +93,6 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
         // Reset the forces
         particle_forces[i] = vec4<f32>(0.0, 0.0, 0.0, 0.0);
-    }
-
-    // Check if the particles are in the correct order
-    var in_order = true;
-    for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
-        let grid_index = i32(grid_index_map[i][0]);
-        if grid_index != i {
-            in_order = false;
-            break;
-        }
-    }
-
-    if in_order {
-        return;
     }
 
     // Binary insertion sort the particles by swapping
@@ -123,43 +112,43 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
         }
     }
 
-    // Update the particle positions, radii, velocities, and densities based on the new order without creating a new array
-    var visited: array<bool, u32(TOTAL_PARTICLES)>;
-    for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1) {
-        visited[i] = false; 
-    }
+    // // Update the particle positions, radii, velocities, and densities based on the new order without creating a new array
+    // var visited: array<bool, u32(TOTAL_PARTICLES)>;
+    // for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1) {
+    //     visited[i] = false; 
+    // }
 
-    for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1) {
-        if (visited[i]) { 
-            continue;
-        }
+    // for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1) {
+    //     if (visited[i]) { 
+    //         continue;
+    //     }
 
-        var current_index: i32 = i;
-        var target_index: i32 = i32(grid_index_map[current_index][1]);
+    //     var current_index: i32 = i;
+    //     var target_index: i32 = i32(grid_index_map[current_index][1]);
 
-        while (target_index != i) {
-            // Swap elements at current_index and target_index
-            let temp_pos = particle_positions[current_index];
-            let temp_radius = particle_radii[current_index];
-            let temp_velocity = particle_velocities[current_index];
-            let temp_density = particle_densities[current_index];
+    //     while (target_index != i) {
+    //         // Swap elements at current_index and target_index
+    //         let temp_pos = particle_positions[current_index];
+    //         let temp_radius = particle_radii[current_index];
+    //         let temp_velocity = particle_velocities[current_index];
+    //         let temp_density = particle_densities[current_index];
 
-            particle_positions[current_index] = particle_positions[target_index];
-            particle_radii[current_index] = particle_radii[target_index];
-            particle_velocities[current_index] = particle_velocities[target_index];
-            particle_densities[current_index] = particle_densities[target_index];
+    //         particle_positions[current_index] = particle_positions[target_index];
+    //         particle_radii[current_index] = particle_radii[target_index];
+    //         particle_velocities[current_index] = particle_velocities[target_index];
+    //         particle_densities[current_index] = particle_densities[target_index];
 
-            particle_positions[target_index] = temp_pos;
-            particle_radii[target_index] = temp_radius;
-            particle_velocities[target_index] = temp_velocity;
-            particle_densities[target_index] = temp_density;
+    //         particle_positions[target_index] = temp_pos;
+    //         particle_radii[target_index] = temp_radius;
+    //         particle_velocities[target_index] = temp_velocity;
+    //         particle_densities[target_index] = temp_density;
 
-            visited[current_index] = true;
-            current_index = target_index;
-            target_index = i32(grid_index_map[current_index][1]);
-        }
-        visited[current_index] = true; 
-    }
+    //         visited[current_index] = true;
+    //         current_index = target_index;
+    //         target_index = i32(grid_index_map[current_index][1]);
+    //     }
+    //     visited[current_index] = true; 
+    // }
 
     // Initialize the new lookup table
     for (var i: i32 = 0; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
@@ -298,13 +287,14 @@ fn get_density(pos: vec2<f32>) -> f32 {
             }
 
             for (var i = starting_index; i < ending_index; i=i+1){
-                let distance = length(pos - (particle_positions[i] + particle_velocities[i] * LOOK_AHEAD_TIME));
+                let index = grid_index_map[i][1];
+                let distance = length(pos - (particle_positions[index] + particle_velocities[index] * LOOK_AHEAD_TIME));
                 if distance <= RADIUS_OF_INFLUENCE {
                     if distance == 0.0 {
                         continue;
                     }
                     let influence = smoothing_kernel(distance);
-                    density += influence * 3.141592653589 * particle_radii[i] * particle_radii[i];
+                    density += influence * 3.141592653589 * particle_radii[index] * particle_radii[index];
                 }
             }
 
@@ -357,7 +347,8 @@ fn calculate_forces(index: u32) {
                     if i == -1 || i == i32(index) || i >= i32(TOTAL_PARTICLES) {
                         continue;
                     }
-                    let offset: vec2<f32> = position - (particle_positions[i] + particle_velocities[i] * LOOK_AHEAD_TIME);
+                    let lookup_i = grid_index_map[i][1];
+                    let offset: vec2<f32> = position - (particle_positions[lookup_i] + particle_velocities[lookup_i] * LOOK_AHEAD_TIME);
                     let distance = sqrt(offset.x * offset.x + offset.y * offset.y);
                     if distance == 0.0 {
                         continue;
@@ -365,7 +356,7 @@ fn calculate_forces(index: u32) {
                     let dir = vec2<f32>(offset.x / distance, offset.y / distance);
 
                     let slope = smoothing_kernel_derivative(distance);
-                    let other_density = particle_densities[i];
+                    let other_density = particle_densities[lookup_i];
                     let shared_pressure = calculate_shared_pressure(density, other_density);
 
                     // Pressure force
@@ -376,11 +367,11 @@ fn calculate_forces(index: u32) {
 
                     // Viscosity force
                     let viscosity_influence = viscosity_kernel(distance);
-                    let viscosity_force = (particle_velocities[i] - particle_velocities[index]) * viscosity_influence;
+                    let viscosity_force = (particle_velocities[lookup_i] - particle_velocities[index]) * viscosity_influence;
 
                     // Apply the forces
                     particle_forces[index] += vec4<f32>(pressure_force.x, pressure_force.y, viscosity_force.x, viscosity_force.y);
-                    particle_forces[i] -= vec4<f32>(pressure_force.x, pressure_force.y, viscosity_force.x, viscosity_force.y);
+                    particle_forces[lookup_i] -= vec4<f32>(pressure_force.x, pressure_force.y, viscosity_force.x, viscosity_force.y);
                 }
             }
         }

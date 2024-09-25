@@ -24,11 +24,11 @@ use winit::{
 const SCREEN_SIZE: (u32, u32) = (1200, 600);
 const TIME_BETWEEN_FRAMES: u64 = 10;
 const OFFSET: (f32, f32) = (10.0, 8.0); // How much to offset all the particle's starting positions
-const GRID_SIZE: (i32, i32) = (40, 20); // How many grid cells to divide the screen into
+const GRID_SIZE: (i32, i32) = (80, 40); // How many grid cells to divide the screen into
 
-const PARTICLE_RADIUS: f32 = 1.25 * 4.0; // The radius of the particles
-const PARTICLE_AMOUNT_X: u32 = 192 / 4; // The number of particles in the x direction
-const PARTICLE_AMOUNT_Y: u32 = 96 / 4; // The number of particles in the y direction
+const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
+const PARTICLE_AMOUNT_X: u32 = 192; // The number of particles in the x direction
+const PARTICLE_AMOUNT_Y: u32 = 96 / 2; // The number of particles in the y direction
 const PADDING: f32 = 100.0; // The padding around the screen
                             // const RADIUS_OF_INFLUENCE: f32 = 75.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
                             // const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
@@ -838,7 +838,7 @@ impl<'a> State<'a> {
         //     forces_elapsed_time.as_micros() as f32 / 1000.0
         // );
 
-        // // Dispatch the compute sort shader
+        // Dispatch the compute sort shader
         let sort_start_time = std::time::Instant::now();
         let mut encoder = self
             .device

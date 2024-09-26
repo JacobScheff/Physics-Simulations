@@ -26,9 +26,9 @@ const TIME_BETWEEN_FRAMES: u64 = 10;
 const OFFSET: (f32, f32) = (10.0, 8.0); // How much to offset all the particle's starting positions
 const GRID_SIZE: (i32, i32) = (80, 40); // How many grid cells to divide the screen into
 
-const PARTICLE_RADIUS: f32 = 1.25 * 2.0; // The radius of the particles
-const PARTICLE_AMOUNT_X: u32 = 192 / 2; // The number of particles in the x direction
-const PARTICLE_AMOUNT_Y: u32 = 96 / 2; // The number of particles in the y direction
+const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
+const PARTICLE_AMOUNT_X: u32 = 192; // The number of particles in the x direction
+const PARTICLE_AMOUNT_Y: u32 = 96; // The number of particles in the y direction
 const PADDING: f32 = 100.0; // The padding around the screen
                             // const RADIUS_OF_INFLUENCE: f32 = 75.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
                             // const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
@@ -857,54 +857,71 @@ impl<'a> State<'a> {
 
         self.queue.submit(std::iter::once(encoder.finish()));
         let sort_elapsed_time = sort_start_time.elapsed();
-        // println!(
-        //     "Sort calculation time: {} ms",
-        //     sort_elapsed_time.as_micros() as f32 / 1000.0
-        // );
+        println!(
+            "Sort calculation time: {} ms",
+            sort_elapsed_time.as_micros() as f32 / 1000.0
+        );
 
-        // // Render the particles
-        // let render_start_time = std::time::Instant::now();
-        // let image_view_descriptor = wgpu::TextureViewDescriptor::default();
+        // Render the particles
+        let render_start_time = std::time::Instant::now();
+        let drawable = self.surface.get_current_texture()?;
+        let image_view_descriptor = wgpu::TextureViewDescriptor::default();
+        let image_view = drawable.texture.create_view(&image_view_descriptor);
 
-        // let command_encoder_descriptor = wgpu::CommandEncoderDescriptor {
-        //     label: Some("Render Encoder"),
-        // };
-        // let mut command_encoder = self
-        //     .device
-        //     .create_command_encoder(&command_encoder_descriptor);
+        let command_encoder_descriptor = wgpu::CommandEncoderDescriptor {
+            label: Some("Render Encoder"),
+        };
+        let mut command_encoder = self
+            .device
+            .create_command_encoder(&command_encoder_descriptor);
+        let color_attachment = wgpu::RenderPassColorAttachment {
+            view: &image_view,
+            resolve_target: None,
+            ops: wgpu::Operations {
+                load: wgpu::LoadOp::Clear(wgpu::Color {
+                    r: 0.75,
+                    g: 0.5,
+                    b: 0.25,
+                    a: 1.0,
+                }),
+                store: wgpu::StoreOp::Store,
+            },
+        };
 
-        // let render_pass_descriptor = wgpu::RenderPassDescriptor {
-        //     label: Some("Render Pass"),
-        //     color_attachments: &[],
-        //     depth_stencil_attachment: None,
-        //     occlusion_query_set: None,
-        //     timestamp_writes: None,
-        // };
+        let render_pass_descriptor = wgpu::RenderPassDescriptor {
+            label: Some("Render Pass"),
+            color_attachments: &[Some(color_attachment)],
+            depth_stencil_attachment: None,
+            occlusion_query_set: None,
+            timestamp_writes: None,
+        };
 
-        // {
-        //     let mut render_pass = command_encoder.begin_render_pass(&render_pass_descriptor);
-        //     render_pass.set_pipeline(&self.render_pipeline);
-        //     render_pass.set_bind_group(0, &self.render_bind_group, &[]); // Access using self
-        //     render_pass.draw(0..3, 0..1); // Draw the first triangle
-        //     render_pass.draw(3..6, 0..1); // Draw the second triangle
-        // }
+        {
+            let mut render_pass = command_encoder.begin_render_pass(&render_pass_descriptor);
+            render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_bind_group(0, &self.render_bind_group, &[]); // Access using self
+            render_pass.draw(0..3, 0..1); // Draw the first triangle
+            render_pass.draw(3..6, 0..1); // Draw the second triangle
+        }
 
-        // self.queue.submit(std::iter::once(command_encoder.finish()));
+        self.queue.submit(std::iter::once(command_encoder.finish()));
 
-        // let render_elapsed_time = render_start_time.elapsed();
-        // println!(
-        //     "Render time: {} ms",
-        //     render_elapsed_time.as_micros() as f32 / 1000.0
-        // );
+        let render_elapsed_time = render_start_time.elapsed();
+        println!(
+            "Render time: {} ms",
+            render_elapsed_time.as_micros() as f32 / 1000.0
+        );
+
+        drawable.present();
 
         // println!("Problem is probably with main_sort insertion sort, not updating positions");
 
         if self.frame_count % 10 == 0 {
             let elapsed_time = start_time.elapsed();
-            println!(
-                "fps: {}",
-                1.0 / elapsed_time.as_micros() as f32 * 1000.0 * 1000.0
-            );
+            // println!(
+            //     "fps: {}",
+            //     1.0 / elapsed_time.as_micros() as f32 * 1000.0 * 1000.0
+            // );
             // println!("Compute shaders and rendering time: {} ms", (density_elapsed_time.as_micros() as f32 + forces_elapsed_time.as_micros() as f32 + render_elapsed_time.as_micros() as f32) / 1000.0);
             self.frame_count = 0;
         }

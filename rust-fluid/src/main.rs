@@ -926,6 +926,8 @@ impl<'a> State<'a> {
             self.frame_count = 0;
         }
 
+        println!("INCREASE DESIRED_FRAME_LATENCY!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+
         self.frame_count += 1;
 
         Ok(())

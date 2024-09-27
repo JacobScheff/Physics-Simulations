@@ -436,7 +436,7 @@ impl<'a> State<'a> {
             present_mode: surface_capabilities.present_modes[0],
             alpha_mode: surface_capabilities.alpha_modes[0],
             view_formats: vec![],
-            desired_maximum_frame_latency: 2,
+            desired_maximum_frame_latency: 4,
         };
         surface.configure(&device, &config);
 

@@ -99,7 +99,8 @@ fn main_move(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     particle_velocities[index] += acceleration;
-    particle_positions[index] += particle_velocities[index];
+    // particle_positions[index] += particle_velocities[index];
+    particle_positions[index] += vec2<f32>(0.1, 0.1);
 
     // Collide with the walls
     if particle_positions[index].x - radius < 0.0 {
@@ -127,6 +128,23 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
         let grid = pos_to_grid(particle_positions[i]);
         let grid_index = grid_to_index(grid);
         grid_index_map[i] = array<i32, 2>(grid_index, i);
+    }
+
+    // Insertion sort the particles by swapping
+    for(var i: i32 = 1; i < TOTAL_PARTICLES; i=i+1){
+        let grid_index = i32(grid_index_map[i][0]);
+        // Insert to the array on the left. Don't swap until the end
+        for(var j: i32 = i - 1; j >= 0; j=j-1){
+            let current_grid_index = i32(grid_index_map[j][0]);
+            if current_grid_index > grid_index {
+                // Swap the elements
+                let temp = grid_index_map[j];
+                grid_index_map[j] = grid_index_map[j + 1];
+                grid_index_map[j + 1] = temp;
+            } else {
+                break;
+            }
+        }
     }
 
     // Initialize the new lookup table

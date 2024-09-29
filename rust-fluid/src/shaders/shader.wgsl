@@ -14,7 +14,7 @@ const DISPATCH_SIZE: vec2<u32> = vec2<u32>(
 );
 
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
-const GRID_SIZE: vec2<f32> = vec2<f32>(80.0, 40.0);
+const GRID_SIZE: vec2<f32> = vec2<f32>(40.0, 20.0);
 
 const PARTICLE_RADIUS: f32 = 1.25 * 2; // The radius of the particles
 const PARTICLE_AMOUNT_X: u32 = 192 / 2; // The number of particles in the x direction
@@ -28,7 +28,7 @@ const LOOK_AHEAD_TIME: f32 = 0.0; // 1.0 / 60.0; // The time to look ahead when 
 const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 
-const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_SIZE.x + 0.5), i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.y * GRID_SIZE.y + 0.5));
+const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_SIZE.x + 1.0), i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.y * GRID_SIZE.y + 1.0));
 @group(0) @binding(0) var<storage, read_write> particle_positions: array<vec2<f32>, u32(TOTAL_PARTICLES)>;
 @group(0) @binding(1) var<storage, read_write> particle_radii: array<f32, u32(TOTAL_PARTICLES)>;
 @group(0) @binding(2) var<storage, read_write> particle_velocities: array<vec2<f32>, u32(TOTAL_PARTICLES)>;

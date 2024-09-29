@@ -79,6 +79,47 @@ fn main_forces(@builtin(global_invocation_id) global_id: vec3<u32>) {
     particle_forces[i] = calculate_forces(u32(i));
 }
 
+@compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
+fn main_move(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;
+    if index < 0 || index >= u32(TOTAL_PARTICLES) {
+        return;
+    }
+
+    // Move the particle
+    let i = grid_index_map[index][1];
+    let force = particle_forces[i];
+    let radius = particle_radii[i];
+    let density = particle_densities[i];
+
+    var acceleration = vec2<f32>(force.xy / max(density, 0.0001));
+    acceleration.y += GRAVITY;
+    if density == 0.0 {
+        acceleration = vec2<f32>(0.0, GRAVITY);
+    }
+
+    particle_velocities[i] += acceleration;
+    particle_positions[i] += particle_velocities[i];
+
+    // Collide with the walls
+    if particle_positions[i].x - radius < 0.0 {
+        particle_positions[i].x = radius;
+        particle_velocities[i].x = -particle_velocities[i].x * DAMPENING;
+    }
+    if particle_positions[i].x + radius > SCREEN_SIZE.x {
+        particle_positions[i].x = SCREEN_SIZE.x - radius;
+        particle_velocities[i].x = -particle_velocities[i].x * DAMPENING;
+    }
+    if particle_positions[i].y - radius < 0.0 {
+        particle_positions[i].y = radius;
+        particle_velocities[i].y = -particle_velocities[i].y * DAMPENING;
+    }
+    if particle_positions[i].y + radius > SCREEN_SIZE.y {
+        particle_positions[i].y = SCREEN_SIZE.y - radius;
+        particle_velocities[i].y = -particle_velocities[i].y * DAMPENING;
+    }
+}
+
 @compute @workgroup_size(1, 1, 1)
 fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
     // Create a map of the particles' indices and grid's indices

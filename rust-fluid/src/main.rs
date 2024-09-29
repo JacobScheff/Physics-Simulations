@@ -59,10 +59,12 @@ struct State<'a> {
     render_pipeline: wgpu::RenderPipeline,
     compute_density_pipeline: wgpu::ComputePipeline,
     compute_forces_pipeline: wgpu::ComputePipeline,
+    compute_move_pipeline: wgpu::ComputePipeline,
     compute_sort_pipeline: wgpu::ComputePipeline,
     render_bind_group: wgpu::BindGroup,
     compute_densities_bind_group: wgpu::BindGroup,
     compute_forces_bind_group: wgpu::BindGroup,
+    compute_move_bind_group: wgpu::BindGroup,
     compute_sort_bind_group: wgpu::BindGroup,
     frame_count: u32,
     particle_positions: Vec<[f32; 2]>,
@@ -156,7 +158,7 @@ impl<'a> State<'a> {
             present_mode: surface_capabilities.present_modes[0],
             alpha_mode: surface_capabilities.alpha_modes[0],
             view_formats: vec![],
-            desired_maximum_frame_latency: 4,
+            desired_maximum_frame_latency: 2,
         };
         surface.configure(&device, &config);
 
@@ -169,13 +171,21 @@ impl<'a> State<'a> {
         );
         let render_pipeline = render_pipeline_builder.build_pipeline(&device);
 
-        // Pass bind group layout to compute pipeline builder
+        // Pass bind group layout to compute density pipeline builder
         let mut compute_density_pipeline_builder = ComputePipelineBuilder::new();
         compute_density_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_density");
         compute_density_pipeline_builder.set_bind_group_layout(
             bind_group_layout_generator::get_bind_group_layout(&device, true),
         );
         let compute_density_pipeline = compute_density_pipeline_builder.build_pipeline(&device);
+
+        // Pass bind group layout to compute move pipeline builder
+        let mut compute_move_pipeline_builder = ComputePipelineBuilder::new();
+        compute_move_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_move");
+        compute_move_pipeline_builder.set_bind_group_layout(
+            bind_group_layout_generator::get_bind_group_layout(&device, true),
+        );
+        let compute_move_pipeline = compute_move_pipeline_builder.build_pipeline(&device);
 
         // Pass bind group layout to compute forces pipeline builder
         let mut compute_forces_pipeline_builder = ComputePipelineBuilder::new();
@@ -212,6 +222,15 @@ impl<'a> State<'a> {
                 }),
                 entries: &[],
             });
+
+        let temp_compute_move_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Temporary Compute Move Bind Group"),
+            layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[],
+                label: Some("Temporary Compute Move Bind Group Layout"),
+            }),
+            entries: &[],
+        });
 
         let temp_compute_forces_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Temporary Compute Forces Bind Group"),
@@ -348,10 +367,12 @@ impl<'a> State<'a> {
             render_pipeline,
             compute_density_pipeline,
             compute_forces_pipeline,
+            compute_move_pipeline,
             compute_sort_pipeline,
             render_bind_group: temp_render_bind_group,
             compute_densities_bind_group: temp_compute_density_bind_group,
             compute_forces_bind_group: temp_compute_forces_bind_group,
+            compute_move_bind_group: temp_compute_move_bind_group,
             compute_sort_bind_group: temp_compute_sort_bind_group,
             frame_count: 0,
             particle_positions,
@@ -422,48 +443,6 @@ impl<'a> State<'a> {
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let start_time = std::time::Instant::now();
 
-        // // Apply forces and move the particles
-        // let move_start_time = std::time::Instant::now();
-        // for i in 0..self.particle_positions.len() {
-        //     let mut acceleration = [
-        //         self.particle_forces[i][0] / self.particle_densities[i].max(0.0001),
-        //         self.particle_forces[i][1] / self.particle_densities[i].max(0.0001) + GRAVITY,
-        //     ];
-        //     if self.particle_densities[i] == 0.0 {
-        //         acceleration = [0.0, 0.0];
-        //     }
-        //     self.particle_velocities[i][0] += acceleration[0];
-        //     self.particle_velocities[i][1] += acceleration[1];
-
-        //     self.particle_positions[i][0] += self.particle_velocities[i][0];
-        //     self.particle_positions[i][1] += self.particle_velocities[i][1];
-
-        //     if self.particle_positions[i][0] < 0.0 {
-        //         self.particle_positions[i][0] = 0.0;
-        //         self.particle_velocities[i][0] = -self.particle_velocities[i][0] * DAMPENING;
-        //     }
-
-        //     if self.particle_positions[i][0] > SCREEN_SIZE.0 as f32 {
-        //         self.particle_positions[i][0] = SCREEN_SIZE.0 as f32;
-        //         self.particle_velocities[i][0] = -self.particle_velocities[i][0] * DAMPENING;
-        //     }
-
-        //     if self.particle_positions[i][1] < 0.0 {
-        //         self.particle_positions[i][1] = 0.0;
-        //         self.particle_velocities[i][1] = -self.particle_velocities[i][1] * DAMPENING;
-        //     }
-
-        //     if self.particle_positions[i][1] > SCREEN_SIZE.1 as f32 {
-        //         self.particle_positions[i][1] = SCREEN_SIZE.1 as f32;
-        //         self.particle_velocities[i][1] = -self.particle_velocities[i][1] * DAMPENING;
-        //     }
-        // }
-        // let move_elapsed_time = move_start_time.elapsed();
-        // println!(
-        //     "Move time: {} ms",
-        //     move_elapsed_time.as_micros() as f32 / 1000.0
-        // );
-
         // Dispatch the compute density shader
         let mut encoder = self
             .device
@@ -483,7 +462,6 @@ impl<'a> State<'a> {
         self.queue.submit(std::iter::once(encoder.finish()));
 
         // Dispatch the compute forces shader
-        let forces_start_time = std::time::Instant::now();
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -494,8 +472,26 @@ impl<'a> State<'a> {
                 label: Some("Compute Forces Pass"),
                 timestamp_writes: None,
             });
-            compute_pass.set_pipeline(&self.compute_forces_pipeline); // Assuming you have a compute pipeline
+            compute_pass.set_pipeline(&self.compute_forces_pipeline);
             compute_pass.set_bind_group(0, &self.compute_forces_bind_group, &[]);
+            compute_pass.dispatch_workgroups(DISPATCH_SIZE.0, DISPATCH_SIZE.1, 1);
+        }
+
+        self.queue.submit(std::iter::once(encoder.finish()));
+
+        // Dispatch the compute move shader
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Compute Move Encoder"),
+            });
+        {
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("Compute Move Pass"),
+                timestamp_writes: None,
+            });
+            compute_pass.set_pipeline(&self.compute_move_pipeline);
+            compute_pass.set_bind_group(0, &self.compute_densities_bind_group, &[]);
             compute_pass.dispatch_workgroups(DISPATCH_SIZE.0, DISPATCH_SIZE.1, 1);
         }
 
@@ -512,7 +508,7 @@ impl<'a> State<'a> {
                 label: Some("Compute Sort Pass"),
                 timestamp_writes: None,
             });
-            compute_pass.set_pipeline(&self.compute_sort_pipeline); // Assuming you have a compute pipeline
+            compute_pass.set_pipeline(&self.compute_sort_pipeline);
             compute_pass.set_bind_group(0, &self.compute_sort_bind_group, &[]);
             compute_pass.dispatch_workgroups(1, 1, 1);
         }
@@ -623,13 +619,17 @@ async fn run() {
         bind_group_layout_generator::get_bind_group_layout(&state.device, false);
     state.render_bind_group = create_bind_group(&mut state, &render_bind_group_layout);
 
-    let compute_bind_group_layout =
+    let compute_density_bind_group_layout =
         bind_group_layout_generator::get_bind_group_layout(&state.device, true);
-    state.compute_densities_bind_group = create_bind_group(&mut state, &compute_bind_group_layout);
+    state.compute_densities_bind_group = create_bind_group(&mut state, &compute_density_bind_group_layout);
 
     let compute_forces_bind_group_layout =
         bind_group_layout_generator::get_bind_group_layout(&state.device, true);
     state.compute_forces_bind_group = create_bind_group(&mut state, &compute_forces_bind_group_layout);
+
+    let compute_move_bind_group_layout =
+        bind_group_layout_generator::get_bind_group_layout(&state.device, true);
+    state.compute_densities_bind_group = create_bind_group(&mut state, &compute_move_bind_group_layout);
 
     let compute_sort_bind_group_layout =
         bind_group_layout_generator::get_bind_group_layout(&state.device, true);
@@ -645,7 +645,7 @@ async fn run() {
     // Pass bind group layout to compute pipeline builder
     let mut compute_density_pipeline_builder = ComputePipelineBuilder::new();
     compute_density_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_density");
-    compute_density_pipeline_builder.set_bind_group_layout(compute_bind_group_layout);
+    compute_density_pipeline_builder.set_bind_group_layout(compute_density_bind_group_layout);
     state.compute_density_pipeline = compute_density_pipeline_builder.build_pipeline(&state.device);
 
     // Pass bind group layout to compute forces pipeline builder
@@ -653,6 +653,12 @@ async fn run() {
     compute_forces_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_forces");
     compute_forces_pipeline_builder.set_bind_group_layout(compute_forces_bind_group_layout);
     state.compute_forces_pipeline = compute_forces_pipeline_builder.build_pipeline(&state.device);
+
+    // Pass bind group layout to compute move pipeline builder
+    let mut compute_move_pipeline_builder = ComputePipelineBuilder::new();
+    compute_move_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_move");
+    compute_move_pipeline_builder.set_bind_group_layout(compute_move_bind_group_layout);
+    state.compute_move_pipeline = compute_move_pipeline_builder.build_pipeline(&state.device);
 
     event_loop
         .run(move |event, elwt| match event {

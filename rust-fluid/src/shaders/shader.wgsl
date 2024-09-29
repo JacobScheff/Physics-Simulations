@@ -329,7 +329,7 @@ fn calculate_forces(index: u32) -> vec4<f32> {
                 let lookup_i = grid_index_map[i][1];
                 let offset: vec2<f32> = position - (particle_positions[lookup_i] + particle_velocities[lookup_i] * LOOK_AHEAD_TIME);
                 let distance = sqrt(offset.x * offset.x + offset.y * offset.y);
-                if distance == 0.0 {
+                if distance == 0.0 || distance > RADIUS_OF_INFLUENCE {
                     continue;
                 }
                 let dir = vec2<f32>(offset.x / distance, offset.y / distance);

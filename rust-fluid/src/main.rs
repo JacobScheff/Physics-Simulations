@@ -26,9 +26,9 @@ const TIME_BETWEEN_FRAMES: u64 = 10;
 const OFFSET: (f32, f32) = (10.0, 8.0); // How much to offset all the particle's starting positions
 const GRID_SIZE: (i32, i32) = (80, 40); // How many grid cells to divide the screen into
 
-const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
-const PARTICLE_AMOUNT_X: u32 = 192; // The number of particles in the x direction
-const PARTICLE_AMOUNT_Y: u32 = 96; // The number of particles in the y direction
+const PARTICLE_RADIUS: f32 = 1.25 * 2.0; // The radius of the particles
+const PARTICLE_AMOUNT_X: u32 = 192 / 2; // The number of particles in the x direction
+const PARTICLE_AMOUNT_Y: u32 = 96 / 2; // The number of particles in the y direction
 const PADDING: f32 = 100.0; // The padding around the screen
                             // const RADIUS_OF_INFLUENCE: f32 = 75.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
                             // const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid

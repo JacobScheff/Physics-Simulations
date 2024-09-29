@@ -87,36 +87,36 @@ fn main_move(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     // Move the particle
-    let i = grid_index_map[index][1];
-    let force = particle_forces[i];
-    let radius = particle_radii[i];
-    let density = particle_densities[i];
+    let force = particle_forces[index];
+    let radius = particle_radii[index];
+    let density = particle_densities[index];
 
     var acceleration = vec2<f32>(force.xy / max(density, 0.0001));
+    acceleration += force.zw;
     acceleration.y += GRAVITY;
     if density == 0.0 {
         acceleration = vec2<f32>(0.0, GRAVITY);
     }
 
-    particle_velocities[i] += acceleration;
-    particle_positions[i] += particle_velocities[i];
+    particle_velocities[index] += acceleration;
+    particle_positions[index] += particle_velocities[index];
 
     // Collide with the walls
-    if particle_positions[i].x - radius < 0.0 {
-        particle_positions[i].x = radius;
-        particle_velocities[i].x = -particle_velocities[i].x * DAMPENING;
+    if particle_positions[index].x - radius < 0.0 {
+        particle_positions[index].x = radius;
+        particle_velocities[index].x = -particle_velocities[index].x * DAMPENING;
     }
-    if particle_positions[i].x + radius > SCREEN_SIZE.x {
-        particle_positions[i].x = SCREEN_SIZE.x - radius;
-        particle_velocities[i].x = -particle_velocities[i].x * DAMPENING;
+    if particle_positions[index].x + radius > SCREEN_SIZE.x {
+        particle_positions[index].x = SCREEN_SIZE.x - radius;
+        particle_velocities[index].x = -particle_velocities[index].x * DAMPENING;
     }
-    if particle_positions[i].y - radius < 0.0 {
-        particle_positions[i].y = radius;
-        particle_velocities[i].y = -particle_velocities[i].y * DAMPENING;
+    if particle_positions[index].y - radius < 0.0 {
+        particle_positions[index].y = radius;
+        particle_velocities[index].y = -particle_velocities[index].y * DAMPENING;
     }
-    if particle_positions[i].y + radius > SCREEN_SIZE.y {
-        particle_positions[i].y = SCREEN_SIZE.y - radius;
-        particle_velocities[i].y = -particle_velocities[i].y * DAMPENING;
+    if particle_positions[index].y + radius > SCREEN_SIZE.y {
+        particle_positions[index].y = SCREEN_SIZE.y - radius;
+        particle_velocities[index].y = -particle_velocities[index].y * DAMPENING;
     }
 }
 
@@ -346,7 +346,8 @@ fn calculate_forces(index: u32) -> vec4<f32> {
                     
                 // Viscosity force
                 let viscosity_influence = viscosity_kernel(distance);
-                let viscosity_force = (particle_velocities[lookup_i] - particle_velocities[index]) * viscosity_influence;
+                var viscosity_force = (particle_velocities[lookup_i] - particle_velocities[index]) * viscosity_influence;
+                viscosity_force *= VISCOSITY;
 
                 // Apply the forces
                 forces += vec4<f32>(pressure_force.x, pressure_force.y, viscosity_force.x, viscosity_force.y);

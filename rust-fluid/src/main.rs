@@ -464,42 +464,42 @@ impl<'a> State<'a> {
         //     move_elapsed_time.as_micros() as f32 / 1000.0
         // );
 
-        // // Dispatch the compute density shader
-        // let mut encoder = self
-        //     .device
-        //     .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        //         label: Some("Compute Encoder"),
-        //     });
-        // {
-        //     let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-        //         label: Some("Compute Pass"),
-        //         timestamp_writes: None,
-        //     });
-        //     compute_pass.set_pipeline(&self.compute_density_pipeline);
-        //     compute_pass.set_bind_group(0, &self.compute_densities_bind_group, &[]);
-        //     compute_pass.dispatch_workgroups(DISPATCH_SIZE.0, DISPATCH_SIZE.1, 1);
-        // }
+        // Dispatch the compute density shader
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Compute Encoder"),
+            });
+        {
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("Compute Pass"),
+                timestamp_writes: None,
+            });
+            compute_pass.set_pipeline(&self.compute_density_pipeline);
+            compute_pass.set_bind_group(0, &self.compute_densities_bind_group, &[]);
+            compute_pass.dispatch_workgroups(DISPATCH_SIZE.0, DISPATCH_SIZE.1, 1);
+        }
 
-        // self.queue.submit(std::iter::once(encoder.finish()));
+        self.queue.submit(std::iter::once(encoder.finish()));
 
-        // // Dispatch the compute forces shader
-        // let forces_start_time = std::time::Instant::now();
-        // let mut encoder = self
-        //     .device
-        //     .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        //         label: Some("Compute Forces Encoder"),
-        //     });
-        // {
-        //     let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-        //         label: Some("Compute Forces Pass"),
-        //         timestamp_writes: None,
-        //     });
-        //     compute_pass.set_pipeline(&self.compute_forces_pipeline); // Assuming you have a compute pipeline
-        //     compute_pass.set_bind_group(0, &self.compute_forces_bind_group, &[]);
-        //     compute_pass.dispatch_workgroups(DISPATCH_SIZE.0, DISPATCH_SIZE.1, 1);
-        // }
+        // Dispatch the compute forces shader
+        let forces_start_time = std::time::Instant::now();
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Compute Forces Encoder"),
+            });
+        {
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("Compute Forces Pass"),
+                timestamp_writes: None,
+            });
+            compute_pass.set_pipeline(&self.compute_forces_pipeline); // Assuming you have a compute pipeline
+            compute_pass.set_bind_group(0, &self.compute_forces_bind_group, &[]);
+            compute_pass.dispatch_workgroups(DISPATCH_SIZE.0, DISPATCH_SIZE.1, 1);
+        }
 
-        // self.queue.submit(std::iter::once(encoder.finish()));
+        self.queue.submit(std::iter::once(encoder.finish()));
 
         // Dispatch the compute sort shader
         let mut encoder = self

@@ -16,13 +16,13 @@ const DISPATCH_SIZE: vec2<u32> = vec2<u32>(
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
 const GRID_SIZE: vec2<f32> = vec2<f32>(40.0, 20.0);
 
-const PARTICLE_RADIUS: f32 = 1.25 * 2; // The radius of the particles
-const PARTICLE_AMOUNT_X: u32 = 192 / 2; // The number of particles in the x direction
-const PARTICLE_AMOUNT_Y: u32 = 96 / 2; // The number of particles in the y direction
+const PARTICLE_RADIUS: f32 = 1.25 * 4; // The radius of the particles
+const PARTICLE_AMOUNT_X: u32 = 192 / 4; // The number of particles in the x direction
+const PARTICLE_AMOUNT_Y: u32 = 96 / 4; // The number of particles in the y direction
 const TOTAL_PARTICLES: i32 = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y); // The total number of particles
 const RADIUS_OF_INFLUENCE: f32 = 75.0; // MUST BE DIVISIBLE BY SCREEN_SIZE - The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.6; // The target density of the fluid
-const PRESURE_MULTIPLIER: f32 = 100.0; // The multiplier for the pressure force
+const PRESURE_MULTIPLIER: f32 = 10.0; // The multiplier for the pressure force
 const GRAVITY: f32 = 1.0; // The strength of gravity
 const LOOK_AHEAD_TIME: f32 = 0.0; // 1.0 / 60.0; // The time to look ahead when calculating the predicted position
 const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
@@ -99,8 +99,7 @@ fn main_move(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     particle_velocities[index] += acceleration;
-    // particle_positions[index] += particle_velocities[index];
-    particle_positions[index] += vec2<f32>(0.1, 0.1);
+    particle_positions[index] += particle_velocities[index];
 
     // Collide with the walls
     if particle_positions[index].x - radius < 0.0 {
@@ -345,6 +344,9 @@ fn calculate_forces(index: u32) -> vec4<f32> {
                     continue;
                 }
                 let lookup_i = grid_index_map[i][1];
+                if lookup_i == -1 || lookup_i == i32(index) {
+                    continue;
+                }
                 let offset: vec2<f32> = position - (particle_positions[lookup_i] + particle_velocities[lookup_i] * LOOK_AHEAD_TIME);
                 let distance = sqrt(offset.x * offset.x + offset.y * offset.y);
                 if distance == 0.0 || distance > RADIUS_OF_INFLUENCE {

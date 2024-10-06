@@ -68,7 +68,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
             // let next_grid_index = first_grid_index + 1;
             for (var i = first_grid_index + 1; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
-                if particle_lookup[i] != -1 {
+                if particle_lookup[i] != -1 && particle_lookup[i] > starting_index {
                     ending_index = particle_lookup[i];
                     break;
                 }
@@ -94,8 +94,6 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
                         particle_positions[index] += overlap * normalize(pos - other_pos);
                         particle_positions[i] -= overlap * normalize(pos - other_pos);
                     }
-
-                    storageBarrier();
                 }
             }
 
@@ -109,6 +107,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let y: f32 = in.pos.y;
 
     let grid = pos_to_grid(vec2<f32>(x, y));
+
     for (var gx: i32 = -1; gx <= 1; gx=gx+1){
         for(var gy: i32 = -1; gy <=1; gy=gy+1){
             let first_grid_index = grid_to_index(grid_add(grid, Grid(gx, gy)));
@@ -125,7 +124,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
             // let next_grid_index = first_grid_index + 1;
             for (var i = first_grid_index + 1; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
-                if particle_lookup[i] != -1 {
+                if particle_lookup[i] != -1 && particle_lookup[i] > starting_index {
                     ending_index = particle_lookup[i];
                     break;
                 }

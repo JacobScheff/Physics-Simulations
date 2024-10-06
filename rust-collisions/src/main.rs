@@ -186,6 +186,7 @@ impl<'a> State<'a> {
         }
     }
 
+    // NOTE: Add how many particles are in each grid cell to the particle_lookup buffer. Right now, it sometimes searches more in the shader than it needs to because it doesn't always know the end index
     async fn sort_particles(&mut self) {
         // Update the particle positions and velocities from the buffers
         self.update_position_from_buffer().await;

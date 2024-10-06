@@ -20,9 +20,10 @@ use winit::{
 
 const SCREEN_SIZE: (u32, u32) = (1200, 600);
 const TIME_BETWEEN_FRAMES: u64 = 10;
-const PARTICLE_COUNT_X: u32 = 25;
-const PARTICLE_COUNT_Y: u32 = 25;
+const PARTICLE_COUNT_X: u32 = 50;
+const PARTICLE_COUNT_Y: u32 = 50;
 const OFFSET: (f32, f32) = (10.0, 8.0); // How much to offset all the particle's starting positions
+const PADDING: f32 = 25.0;
 const GRID_SIZE: (i32, i32) = (20, 10); // How many grid cells to divide the screen into
 const PARTICLE_RADIUS: f32 = 1.0;
 
@@ -347,15 +348,24 @@ impl<'a> State<'a> {
         let mut particle_radii = vec![];
         for i in 0..PARTICLE_COUNT_X {
             for j in 0..PARTICLE_COUNT_Y {
-                let x = SCREEN_SIZE.0 as f32 / (PARTICLE_COUNT_X + 1) as f32 * i as f32 + OFFSET.0;
-                let y = SCREEN_SIZE.1 as f32 / (PARTICLE_COUNT_Y + 1) as f32 * j as f32 + OFFSET.1;
+                // let x = SCREEN_SIZE.0 as f32 / (PARTICLE_COUNT_X + 1) as f32 * i as f32 + OFFSET.0;
+                // let y = SCREEN_SIZE.1 as f32 / (PARTICLE_COUNT_Y + 1) as f32 * j as f32 + OFFSET.1;
+
+                let x = (i as f32 + 0.5) * (SCREEN_SIZE.0 as f32 - 2.0 * PADDING)
+                    / PARTICLE_COUNT_X as f32
+                    + PADDING;
+                let y = (j as f32 + 0.5) * (SCREEN_SIZE.1 as f32 - 2.0 * PADDING)
+                    / PARTICLE_COUNT_Y as f32
+                    + PADDING;
 
                 particle_positions.push([x, y]);
+
                 // particle_velocities.push([x / SCREEN_SIZE.0 as f32 * 2.0 - 1.0, y / SCREEN_SIZE.1 as f32 * 2.0 - 1.0]);
                 particle_velocities.push([
                     2.0 * (rand::random::<f32>() * 2.0 - 1.0),
                     2.0 * (rand::random::<f32>() * 2.0 - 1.0),
                 ]);
+                // particle_velocities.push([0.0, 0.0]);
                 particle_radii.push(PARTICLE_RADIUS);
             }
         }

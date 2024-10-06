@@ -93,7 +93,8 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
                     // If the particles are overlapping, move them apart
                     if d < (radius + particle_radii[i]) * (radius + particle_radii[i]) {
-                        let overlap = (radius + particle_radii[i]) - sqrt(d);
+                        var overlap = (radius + particle_radii[i]) - sqrt(d);
+                        overlap /= 2.0; // If both move 0.5x, then they move a total amount of 1x
                         particle_positions[index] += overlap * normalize(pos - other_pos);
                         particle_positions[i] -= overlap * normalize(pos - other_pos);
                     }

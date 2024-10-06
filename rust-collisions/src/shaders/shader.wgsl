@@ -60,14 +60,21 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
             }
             
             let starting_index = particle_lookup[first_grid_index];
+            if starting_index == -1 {
+                continue;
+            }
+
             var ending_index = -1;
 
-            let next_grid_index = first_grid_index + 1;
-            if next_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
-                ending_index = i32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y);
+            // let next_grid_index = first_grid_index + 1;
+            for (var i = first_grid_index + 1; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
+                if particle_lookup[i] != -1 {
+                    ending_index = particle_lookup[i];
+                    break;
+                }
             }
-            else {
-                ending_index = particle_lookup[next_grid_index];
+            if ending_index == -1 {
+                ending_index = i32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y);
             }
 
             for (var i = starting_index; i < ending_index; i=i+1){
@@ -87,6 +94,8 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
                         particle_positions[index] += overlap * normalize(pos - other_pos);
                         particle_positions[i] -= overlap * normalize(pos - other_pos);
                     }
+
+                    storageBarrier();
                 }
             }
 
@@ -108,14 +117,21 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             }
             
             let starting_index = particle_lookup[first_grid_index];
+            if starting_index == -1 {
+                continue;
+            }
+
             var ending_index = -1;
 
-            let next_grid_index = first_grid_index + 1;
-            if next_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
-                ending_index = i32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y);
+            // let next_grid_index = first_grid_index + 1;
+            for (var i = first_grid_index + 1; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
+                if particle_lookup[i] != -1 {
+                    ending_index = particle_lookup[i];
+                    break;
+                }
             }
-            else {
-                ending_index = particle_lookup[next_grid_index];
+            if ending_index == -1 {
+                ending_index = i32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y);
             }
 
             for (var i = starting_index; i < ending_index; i=i+1){

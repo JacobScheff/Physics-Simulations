@@ -8,17 +8,13 @@ struct Grid {
 }
 
 const WORKGROUP_SIZE: u32 = 10;
-const DISPATCH_SIZE: vec2<u32> = vec2<u32>(
-    u32(f32(PARTICLE_COUNT_X) / f32(WORKGROUP_SIZE) + 0.5),
-    u32(f32(PARTICLE_COUNT_Y) / f32(WORKGROUP_SIZE) + 0.5),
-);
 
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
 const FOV: f32 = 60.0 * 3.14159 / 180.0; // Field of view in radians
 const ASPECT_RATIO: f32 = SCREEN_SIZE.x / SCREEN_SIZE.y; // Aspect ratio of the screen
-const PARTICLE_COUNT_X: u32 = 5;
-const PARTICLE_COUNT_Y: u32 = 5;
-const GRID_SIZE: vec2<f32> = vec2<f32>(2.0, 1.0);
+const PARTICLE_COUNT_X: u32 = 25;
+const PARTICLE_COUNT_Y: u32 = 25;
+const GRID_SIZE: vec2<f32> = vec2<f32>(20.0, 10.0);
 
 @group(0) @binding(0) var<storage, read> frame_count: u32;
 @group(0) @binding(1) var<storage, read_write> particle_positions: array<vec2<f32>, u32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y)>;

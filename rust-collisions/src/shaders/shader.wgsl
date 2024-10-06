@@ -85,6 +85,10 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
                     let other_mass = 3.14159265359 * particle_radii[i] * particle_radii[i];
                     let other_radius = particle_radii[i];
 
+                    if d == 0.0 {
+                        continue;
+                    }
+
                     // particle_velocities[index] -= 2.0 * other_mass / (mass + other_mass) * dot(vel - other_vel, pos - other_pos) / length(pos - other_pos) / length(pos - other_pos) * (pos - other_pos);
                     // particle_velocities[i] -= 2.0 * mass / (mass + other_mass) * dot(other_vel - vel, other_pos - pos) / length(other_pos - pos) / length(other_pos - pos) * (other_pos - pos);
 

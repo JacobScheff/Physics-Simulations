@@ -11,7 +11,6 @@ const WORKGROUP_SIZE: u32 = 10;
 
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
 const FOV: f32 = 60.0 * 3.14159 / 180.0; // Field of view in radians
-const ASPECT_RATIO: f32 = SCREEN_SIZE.x / SCREEN_SIZE.y; // Aspect ratio of the screen
 const PARTICLE_COUNT_X: u32 = 100;
 const PARTICLE_COUNT_Y: u32 = 100;
 const GRID_SIZE: vec2<f32> = vec2<f32>(20.0, 10.0);
@@ -66,7 +65,6 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
             var ending_index = -1;
 
-            // let next_grid_index = first_grid_index + 1;
             for (var i = first_grid_index + 1; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
                 if particle_lookup[i] != -1 && particle_lookup[i] > starting_index {
                     ending_index = particle_lookup[i];
@@ -85,6 +83,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
                     let other_mass = 3.14159265359 * particle_radii[i] * particle_radii[i];
                     let other_radius = particle_radii[i];
 
+                    // Update the data
                     pos = particle_positions[index];
                     vel = particle_velocities[index];
                     mass = 3.14159265359 * particle_radii[index] * particle_radii[index];
@@ -105,6 +104,12 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
                         particle_positions[i] -= overlap * normalize(pos - other_pos);
                     }
                     storageBarrier();
+
+                    // Update the data
+                    pos = particle_positions[index];
+                    vel = particle_velocities[index];
+                    mass = 3.14159265359 * particle_radii[index] * particle_radii[index];
+                    radius = particle_radii[index];
                 }
             }
 
@@ -133,7 +138,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
             var ending_index = -1;
 
-            // let next_grid_index = first_grid_index + 1;
             for (var i = first_grid_index + 1; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
                 if particle_lookup[i] != -1 && particle_lookup[i] > starting_index {
                     ending_index = particle_lookup[i];

@@ -54,6 +54,8 @@ struct State<'a> {
     particle_velocities_buffer: wgpu::Buffer,
     particle_lookup: Vec<i32>,
     particle_lookup_buffer: wgpu::Buffer,
+    particle_counts: Vec<i32>,
+    particle_counts_buffer: wgpu::Buffer,
     position_reading_buffer: wgpu::Buffer,
     velocity_reading_buffer: wgpu::Buffer,
 }
@@ -206,6 +208,7 @@ impl<'a> State<'a> {
         let mut new_velocities: Vec<[f32; 2]> = vec![];
         let mut new_radii: Vec<f32> = vec![];
         let mut lookup_table = vec![-1; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
+        let mut new_counts: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
 
         // Iterate over all grid cells
         for i in 0..GRID_SIZE.0 {
@@ -222,6 +225,7 @@ impl<'a> State<'a> {
                     if index == -1 {
                         index = new_positions.len() as i32 - 1;
                     }
+                    new_counts[grid_index as usize] += 1;
                 }
 
                 lookup_table[grid_index as usize] = index;
@@ -232,6 +236,7 @@ impl<'a> State<'a> {
         self.particle_velocities = new_velocities;
         self.particle_radii = new_radii;
         self.particle_lookup = lookup_table;
+        self.particle_counts = new_counts;
 
         self.queue.write_buffer(
             &self.particle_positions_buffer,
@@ -255,6 +260,12 @@ impl<'a> State<'a> {
             &self.particle_lookup_buffer,
             0,
             bytemuck::cast_slice(&self.particle_lookup),
+        );
+
+        self.queue.write_buffer(
+            &self.particle_counts_buffer,
+            0,
+            bytemuck::cast_slice(&self.particle_counts),
         );
     }
 
@@ -370,6 +381,7 @@ impl<'a> State<'a> {
             }
         }
         let particle_lookup: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
+        let particle_counts: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
 
         // Buffer for particles
         let particle_positions_buffer = device.create_buffer_init(&BufferInitDescriptor {
@@ -402,6 +414,11 @@ impl<'a> State<'a> {
             contents: bytemuck::cast_slice(&particle_lookup),
             usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
         });
+        let particle_counts_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Particle Counts Buffer Data"),
+            contents: bytemuck::cast_slice(&particle_counts),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
+        });
 
         // Write data to buffers
         queue.write_buffer(
@@ -423,6 +440,11 @@ impl<'a> State<'a> {
             &particle_lookup_buffer,
             0,
             bytemuck::cast_slice(&particle_lookup),
+        );
+        queue.write_buffer(
+            &particle_counts_buffer,
+            0,
+            bytemuck::cast_slice(&particle_counts),
         );
 
         // Buffer for the frame count
@@ -453,6 +475,8 @@ impl<'a> State<'a> {
             particle_velocities_buffer,
             particle_lookup,
             particle_lookup_buffer,
+            particle_counts,
+            particle_counts_buffer,
             position_reading_buffer,
             velocity_reading_buffer,
         }
@@ -638,6 +662,10 @@ async fn run() {
                 binding: 4,
                 resource: state.particle_lookup_buffer.as_entire_binding(),
             },
+            wgpu::BindGroupEntry {
+                binding: 5,
+                resource: state.particle_counts_buffer.as_entire_binding(),
+            },
         ],
     });
 
@@ -666,6 +694,10 @@ async fn run() {
             wgpu::BindGroupEntry {
                 binding: 4,
                 resource: state.particle_lookup_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 5,
+                resource: state.particle_counts_buffer.as_entire_binding(),
             },
         ],
     });

@@ -20,6 +20,7 @@ const GRID_SIZE: vec2<f32> = vec2<f32>(20.0, 10.0);
 @group(0) @binding(2) var<storage, read> particle_radii: array<f32>;
 @group(0) @binding(3) var<storage, read_write> particle_velocities: array<vec2<f32>, u32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y)>;
 @group(0) @binding(4) var<storage, read> particle_lookup: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
+@group(0) @binding(5) var<storage, read> particle_counts: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
 
 @vertex
 fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
@@ -63,19 +64,9 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
                 continue;
             }
 
-            var ending_index = -1;
+            var ending_index = starting_index + particle_counts[first_grid_index];
 
-            for (var i = first_grid_index + 1; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
-                if particle_lookup[i] != -1 && particle_lookup[i] > starting_index {
-                    ending_index = particle_lookup[i];
-                    break;
-                }
-            }
-            if ending_index == -1 {
-                ending_index = i32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y);
-            }
-
-            for (var i = starting_index; i < ending_index; i=i+1){
+            for (var i = starting_index; i <= ending_index; i=i+1){
                 let other_pos = particle_positions[i];
                 let d = (pos.x - other_pos.x) * (pos.x - other_pos.x) + (pos.y - other_pos.y) * (pos.y - other_pos.y);
                 if d <= (radius + particle_radii[i]) * (radius + particle_radii[i]) && u32(i) != u32(index) {
@@ -136,19 +127,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 continue;
             }
 
-            var ending_index = -1;
+            var ending_index = starting_index + particle_counts[first_grid_index];
 
-            for (var i = first_grid_index + 1; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
-                if particle_lookup[i] != -1 && particle_lookup[i] > starting_index {
-                    ending_index = particle_lookup[i];
-                    break;
-                }
-            }
-            if ending_index == -1 {
-                ending_index = i32(PARTICLE_COUNT_X * PARTICLE_COUNT_Y);
-            }
-
-            for (var i = starting_index; i < ending_index; i=i+1){
+            for (var i = starting_index; i <= ending_index; i=i+1){
                 let d = (x - particle_positions[i].x) * (x - particle_positions[i].x) + (y - particle_positions[i].y) * (y - particle_positions[i].y);
                 if d < particle_radii[i] * particle_radii[i] {
                     return vec4<f32>(1.0, 1.0, 1.0, 1.0);

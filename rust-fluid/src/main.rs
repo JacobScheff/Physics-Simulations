@@ -79,6 +79,8 @@ struct State<'a> {
     particle_forces_buffer: wgpu::Buffer,
     particle_lookup: Vec<i32>,
     particle_lookup_buffer: wgpu::Buffer,
+    particle_counts: Vec<i32>,
+    particle_counts_buffer: wgpu::Buffer,
     grid_index_map: Vec<[i32; 2]>,
     grid_index_map_buffer: wgpu::Buffer,
 }
@@ -282,6 +284,7 @@ impl<'a> State<'a> {
             }
         }
         let particle_lookup: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
+        let particle_counts: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
 
         // Buffer for particles
         let particle_positions_buffer = device.create_buffer_init(&BufferInitDescriptor {
@@ -317,6 +320,11 @@ impl<'a> State<'a> {
         let grid_index_map_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Grid Index Map Buffer Data"),
             contents: bytemuck::cast_slice(&grid_index_map),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
+        });
+        let particle_counts_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Particle Counts Buffer Data"),
+            contents: bytemuck::cast_slice(&particle_counts),
             usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
         });
 
@@ -356,6 +364,11 @@ impl<'a> State<'a> {
             0,
             bytemuck::cast_slice(&grid_index_map),
         );
+        queue.write_buffer(
+            &particle_counts_buffer,
+            0,
+            bytemuck::cast_slice(&particle_counts),
+        );
 
         Self {
             window,
@@ -389,6 +402,8 @@ impl<'a> State<'a> {
             particle_lookup_buffer,
             grid_index_map,
             grid_index_map_buffer,
+            particle_counts,
+            particle_counts_buffer,
         }
     }
 
@@ -560,18 +575,18 @@ impl<'a> State<'a> {
         self.queue.submit(std::iter::once(command_encoder.finish()));
 
         let render_elapsed_time = render_start_time.elapsed();
-        println!(
-            "Render time: {} ms",
-            render_elapsed_time.as_micros() as f32 / 1000.0
-        );
+        // println!(
+        //     "Render time: {} ms",
+        //     render_elapsed_time.as_micros() as f32 / 1000.0
+        // );
 
         let start_present_time = std::time::Instant::now();
         drawable.present();
         let present_elapsed_time = start_present_time.elapsed();
-        println!(
-            "Present time: {} ms",
-            present_elapsed_time.as_micros() as f32 / 1000.0
-        );
+        // println!(
+        //     "Present time: {} ms",
+        //     present_elapsed_time.as_micros() as f32 / 1000.0
+        // );
 
         // println!("Problem is probably with main_sort insertion sort, not updating positions");
 
@@ -739,6 +754,10 @@ fn create_bind_group(
             wgpu::BindGroupEntry {
                 binding: 6,
                 resource: state.grid_index_map_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 7,
+                resource: state.particle_counts_buffer.as_entire_binding(),
             },
         ],
     });

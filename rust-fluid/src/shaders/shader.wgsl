@@ -36,6 +36,7 @@ const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_
 @group(0) @binding(4) var<storage, read_write> particle_densities: array<f32, u32(TOTAL_PARTICLES)>;
 @group(0) @binding(5) var<storage, read_write> particle_forces: array<vec4<f32>, u32(TOTAL_PARTICLES)>;
 @group(0) @binding(6) var<storage, read_write> grid_index_map: array<array<i32, 2>, u32(TOTAL_PARTICLES)>;
+@group(0) @binding(7) var<storage, read_write> particle_counts: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
 
 @vertex
 fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
@@ -146,15 +147,17 @@ fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
         }
     }
 
-    // Initialize the new lookup table
+    // Initialize the new lookup table and particle counts
     for (var i: i32 = 0; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
         particle_lookup[i] = -1;
+        particle_counts[i] = 0;
     }
 
-    // Create the new lookup table
+    // Create the new lookup table and particle counts
     var last_grid_index = -1;
     for (var i: i32 = 0; i < TOTAL_PARTICLES; i=i+1){
         let grid_index = i32(grid_index_map[i][0]);
+        particle_counts[grid_index] += 1;
         if grid_index != last_grid_index {
             particle_lookup[grid_index] = i;
             last_grid_index = grid_index;
@@ -183,20 +186,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 continue;
             }
             
-            var ending_index = -1;
+            var ending_index = starting_index + particle_counts[first_grid_index];
 
-            // let next_grid_index = first_grid_index + 1;
-            for (var i = first_grid_index + 1; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
-                if particle_lookup[i] != -1 {
-                    ending_index = particle_lookup[i];
-                    break;
-                }
-            }
-            if ending_index == -1 {
-                ending_index = i32(TOTAL_PARTICLES);
-            }
-
-            for (var i = starting_index; i < ending_index; i=i+1){
+            for (var i = starting_index; i <= ending_index; i=i+1){
                 let index = grid_index_map[i][1];
 
                 let d = (x - particle_positions[index].x) * (x - particle_positions[index].x) + (y - particle_positions[index].y) * (y - particle_positions[index].y);
@@ -267,19 +259,9 @@ fn get_density(pos: vec2<f32>) -> f32 {
                 continue;
             }
             
-            var ending_index = -1;
+            var ending_index = starting_index + particle_counts[first_grid_index];
 
-            for (var i = first_grid_index + 1; i < i32(GRID_SIZE.x * GRID_SIZE.y); i=i+1){
-                if particle_lookup[i] != -1 {
-                    ending_index = particle_lookup[i];
-                    break;
-                }
-            }
-            if ending_index == -1 {
-                ending_index = i32(TOTAL_PARTICLES);
-            }
-
-            for (var i = starting_index; i < ending_index; i=i+1){
+            for (var i = starting_index; i <= ending_index; i=i+1){
                 let index = grid_index_map[i][1];
                 let distance = length(pos - (particle_positions[index] + particle_velocities[index] * LOOK_AHEAD_TIME));
                 if distance <= RADIUS_OF_INFLUENCE {
@@ -330,16 +312,13 @@ fn calculate_forces(index: u32) -> vec4<f32> {
             }
 
             let starting_index = particle_lookup[first_grid_index];
-            var ending_index: i32 = -1;
-
-            let next_grid_index: i32 = first_grid_index + 1;
-            if next_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
-                ending_index = i32(TOTAL_PARTICLES);
-            } else {
-                ending_index = particle_lookup[next_grid_index];
+            if starting_index == -1 {
+                continue;
             }
+            
+            var ending_index: i32 = starting_index + particle_counts[first_grid_index];
 
-            for(var i: i32 = starting_index; i < ending_index; i=i+1){
+            for(var i: i32 = starting_index; i <= ending_index; i=i+1){
                 if i == -1 || i == i32(index) || i >= i32(TOTAL_PARTICLES) {
                     continue;
                 }

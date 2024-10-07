@@ -79,7 +79,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
             for (var i = starting_index; i < ending_index; i=i+1){
                 let other_pos = particle_positions[i];
-                let d = (pos.x - particle_positions[i].x) * (pos.x - particle_positions[i].x) + (pos.y - particle_positions[i].y) * (pos.y - particle_positions[i].y);
+                let d = (pos.x - other_pos.x) * (pos.x - other_pos.x) + (pos.y - other_pos.y) * (pos.y - other_pos.y);
                 if d <= (radius + particle_radii[i]) * (radius + particle_radii[i]) && u32(i) != u32(index) {
                     let other_vel = particle_velocities[i];
                     let other_mass = 3.14159265359 * particle_radii[i] * particle_radii[i];

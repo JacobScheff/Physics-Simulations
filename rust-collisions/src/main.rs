@@ -20,8 +20,8 @@ use winit::{
 
 const SCREEN_SIZE: (u32, u32) = (1200, 600);
 const TIME_BETWEEN_FRAMES: u64 = 10;
-const PARTICLE_COUNT_X: u32 = 50;
-const PARTICLE_COUNT_Y: u32 = 50;
+const PARTICLE_COUNT_X: u32 = 100;
+const PARTICLE_COUNT_Y: u32 = 100;
 const OFFSET: (f32, f32) = (10.0, 8.0); // How much to offset all the particle's starting positions
 const PADDING: f32 = 25.0;
 const GRID_SIZE: (i32, i32) = (20, 10); // How many grid cells to divide the screen into
@@ -566,6 +566,15 @@ impl<'a> State<'a> {
 
         if self.frame_count % 10 == 0 {
             let elapsed_time = start_time.elapsed();
+            // let mut total_kinetic_energy = 0.0;
+            // for i in 0..self.particle_velocities.len() {
+            //     total_kinetic_energy += (self.particle_velocities[i][0] * self.particle_velocities[i][0]
+            //         + self.particle_velocities[i][1] * self.particle_velocities[i][1]).powf(0.5);
+            // }
+            // println!(
+            //     "{}",
+            //     total_kinetic_energy
+            // );
             println!(
                 "fps: {}",
                 1.0 / elapsed_time.as_micros() as f32 * 1000.0 * 1000.0

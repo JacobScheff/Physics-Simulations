@@ -12,8 +12,8 @@ const WORKGROUP_SIZE: u32 = 10;
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
 const FOV: f32 = 60.0 * 3.14159 / 180.0; // Field of view in radians
 const ASPECT_RATIO: f32 = SCREEN_SIZE.x / SCREEN_SIZE.y; // Aspect ratio of the screen
-const PARTICLE_COUNT_X: u32 = 50;
-const PARTICLE_COUNT_Y: u32 = 50;
+const PARTICLE_COUNT_X: u32 = 100;
+const PARTICLE_COUNT_Y: u32 = 100;
 const GRID_SIZE: vec2<f32> = vec2<f32>(20.0, 10.0);
 
 @group(0) @binding(0) var<storage, read> frame_count: u32;
@@ -46,10 +46,10 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         return;
     }
 
-    let pos: vec2<f32> = particle_positions[index];
-    let vel = particle_velocities[index];
-    let mass = 3.14159265359 * particle_radii[index] * particle_radii[index];
-    let radius = particle_radii[index];
+    var pos: vec2<f32> = particle_positions[index];
+    var vel = particle_velocities[index];
+    var mass = 3.14159265359 * particle_radii[index] * particle_radii[index];
+    var radius = particle_radii[index];
 
     let grid = pos_to_grid(pos);
     for (var gx: i32 = -1; gx <= 1; gx=gx+1){
@@ -84,6 +84,11 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
                     let other_vel = particle_velocities[i];
                     let other_mass = 3.14159265359 * particle_radii[i] * particle_radii[i];
                     let other_radius = particle_radii[i];
+
+                    pos = particle_positions[index];
+                    vel = particle_velocities[index];
+                    mass = 3.14159265359 * particle_radii[index] * particle_radii[index];
+                    radius = particle_radii[index];
 
                     if d == 0.0 {
                         continue;

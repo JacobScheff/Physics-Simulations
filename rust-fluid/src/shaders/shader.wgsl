@@ -7,7 +7,7 @@ struct Grid {
     y: i32,
 }
 
-const WORKGROUP_SIZE: u32 = 10;
+const WORKGROUP_SIZE: u32 = 16;
 const DISPATCH_SIZE: vec2<u32> = vec2<u32>(
     u32(PARTICLE_AMOUNT_X + WORKGROUP_SIZE - 1u) / u32(WORKGROUP_SIZE),
     u32(PARTICLE_AMOUNT_Y + WORKGROUP_SIZE - 1u) / u32(WORKGROUP_SIZE),

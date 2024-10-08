@@ -43,7 +43,7 @@ const DAMPENING: f32 = 0.95; // How much to slow down particles when they collid
 //     (RADIUS_OF_INFLUENCE / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32 + 0.5) as i32,
 // );
 
-const WORKGROUP_SIZE: u32 = 10;
+const WORKGROUP_SIZE: u32 = 16;
 const DISPATCH_SIZE: (u32, u32) = (
     (PARTICLE_AMOUNT_X + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,
     (PARTICLE_AMOUNT_Y + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,

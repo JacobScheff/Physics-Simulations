@@ -84,6 +84,8 @@ struct State<'a> {
     particle_lookup_buffer: wgpu::Buffer,
     particle_counts: Vec<i32>,
     particle_counts_buffer: wgpu::Buffer,
+    mouse_info: [f32; 3], // 0-up; 1-down, x-pos, y-pos
+    mouse_info_buffer: wgpu::Buffer,
 }
 
 fn pos_to_grid_index(pos: (f32, f32)) -> i32 {
@@ -389,6 +391,14 @@ impl<'a> State<'a> {
             mapped_at_creation: false,
         });
 
+        // Mouse info
+        let mouse_info = [0.0, 0.0, 0.0];
+        let mouse_info_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Mouse Info Buffer Data"),
+            contents: bytemuck::cast_slice(&mouse_info),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
+        });
+
         Self {
             window,
             surface,
@@ -424,6 +434,8 @@ impl<'a> State<'a> {
             particle_lookup_buffer,
             particle_counts,
             particle_counts_buffer,
+            mouse_info,
+            mouse_info_buffer,
         }
     }
 
@@ -769,6 +781,13 @@ impl<'a> State<'a> {
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let start_time = std::time::Instant::now();
 
+        // Send mouse info to the GPU
+        self.queue.write_buffer(
+            &self.mouse_info_buffer,
+            0,
+            bytemuck::cast_slice(&[self.mouse_info]),
+        );
+
         // Dispatch the compute density shader
         let mut encoder = self
             .device
@@ -977,6 +996,17 @@ async fn run() {
             } if window_id == state.window.id() => match event {
                 WindowEvent::Resized(physical_size) => state.resize(*physical_size),
 
+                WindowEvent::CursorMoved { position, .. } => {
+                    state.mouse_info[1] = position.x as f32;
+                    state.mouse_info[2] = position.y as f32;
+                    // println!("Mouse position: {:?}", state.mouse_info);
+                }
+                WindowEvent::MouseInput { state: element_state, button, .. } => {
+                    if *button == MouseButton::Left {
+                        state.mouse_info[0] = if *element_state == ElementState::Pressed {1.0} else {0.0};
+                    }
+                }
+
                 WindowEvent::CloseRequested
                 | WindowEvent::KeyboardInput {
                     event:
@@ -1044,6 +1074,10 @@ fn create_bind_group(
             wgpu::BindGroupEntry {
                 binding: 6,
                 resource: state.particle_counts_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 7,
+                resource: state.mouse_info_buffer.as_entire_binding(),
             },
         ],
     });

@@ -36,6 +36,7 @@ const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_
 @group(0) @binding(4) var<storage, read_write> particle_densities: array<f32, u32(TOTAL_PARTICLES)>;
 @group(0) @binding(5) var<storage, read_write> particle_forces: array<vec4<f32>, u32(TOTAL_PARTICLES)>;
 @group(0) @binding(6) var<storage, read_write> particle_counts: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
+@group(0) @binding(7) var<storage, read> mouse_info: array<f32, 3>; // 0-Up; 1-Down, x-pos, y-pos
 
 @vertex
 fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
@@ -300,6 +301,18 @@ fn calculate_forces(index: u32) -> vec4<f32> {
                 // Apply the forces
                 forces += vec4<f32>(pressure_force.x, pressure_force.y, viscosity_force.x, viscosity_force.y);
             }
+        }
+    }
+
+    // Check for mouse interaction
+    if mouse_info[0] == 1.0 {
+        let mouse_pos = vec2<f32>(mouse_info[1], mouse_info[2]);
+        let offset = position - mouse_pos;
+        let distance = sqrt(offset.x * offset.x + offset.y * offset.y);
+        if distance < RADIUS_OF_INFLUENCE {
+            let dir = vec2<f32>(offset.x / distance, offset.y / distance);
+            var mouse_force = dir * smoothing_kernel(distance) * 100000.0;
+            forces += vec4<f32>(mouse_force.x, mouse_force.y, 0.0, 0.0);
         }
     }
 

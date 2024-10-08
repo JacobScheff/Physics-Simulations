@@ -16,16 +16,16 @@ const DISPATCH_SIZE: vec2<u32> = vec2<u32>(
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
 const GRID_SIZE: vec2<f32> = vec2<f32>(40.0, 20.0);
 
-const PARTICLE_RADIUS: f32 = 1.25 * 2; // The radius of the particles
-const PARTICLE_AMOUNT_X: u32 = 192 / 2; // The number of particles in the x direction
-const PARTICLE_AMOUNT_Y: u32 = 96 / 2; // The number of particles in the y direction
+const PARTICLE_RADIUS: f32 = 1.25 / 2.0; // The radius of the particles
+const PARTICLE_AMOUNT_X: u32 = 384; // The number of particles in the x direction
+const PARTICLE_AMOUNT_Y: u32 = 192; // The number of particles in the y direction
 const TOTAL_PARTICLES: i32 = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y); // The total number of particles
 const RADIUS_OF_INFLUENCE: f32 = 75.0; // MUST BE DIVISIBLE BY SCREEN_SIZE - The radius of the sphere of influence. Also the radius to search for particles to calculate the density
-const TARGET_DENSITY: f32 = 0.6; // The target density of the fluid
-const PRESURE_MULTIPLIER: f32 = 10.0; // The multiplier for the pressure force
-const GRAVITY: f32 = 1.0; // The strength of gravity
+const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
+const PRESURE_MULTIPLIER: f32 = 500.0; // The multiplier for the pressure force
+const GRAVITY: f32 = 0.2; // The strength of gravity
 const LOOK_AHEAD_TIME: f32 = 0.0; // 1.0 / 60.0; // The time to look ahead when calculating the predicted position
-const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
+const VISCOSITY: f32 = 0.0; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 
 const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_SIZE.x + 1.0), i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.y * GRID_SIZE.y + 1.0));

@@ -20,7 +20,7 @@ const PARTICLE_RADIUS: f32 = 1.25 / 2.0; // The radius of the particles
 const PARTICLE_AMOUNT_X: u32 = 384; // The number of particles in the x direction
 const PARTICLE_AMOUNT_Y: u32 = 192; // The number of particles in the y direction
 const TOTAL_PARTICLES: i32 = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y); // The total number of particles
-const RADIUS_OF_INFLUENCE: f32 = 75.0; // MUST BE DIVISIBLE BY SCREEN_SIZE - The radius of the sphere of influence. Also the radius to search for particles to calculate the density
+const RADIUS_OF_INFLUENCE: f32 = 75.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
 const PRESURE_MULTIPLIER: f32 = 500.0; // The multiplier for the pressure force
 const GRAVITY: f32 = 0.2; // The strength of gravity
@@ -149,11 +149,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
                     // Create a gradient color
                     let min_speed: f32 = 0.0;
-                    let max_speed: f32 = 20.0;
+                    let max_speed: f32 = 12.0;
                     var speed_t: f32 = (speed - min_speed) / (max_speed - min_speed);
                     speed_t = min(max(speed_t, 0.0), 1.0);
                     let min_density: f32 = 0.0;
-                    let max_density: f32 = 4.5;
+                    let max_density: f32 = 0.4;
                     var density_t: f32 = (density - min_density) / (max_density - min_density);
                     density_t = min(max(density_t, 0.0), 1.0);
                     let color: vec3<f32> = vec3<f32>(speed_t, density_t, 1.0 - speed_t);

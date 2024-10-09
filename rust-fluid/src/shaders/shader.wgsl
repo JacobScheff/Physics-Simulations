@@ -25,7 +25,7 @@ const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
 const PRESURE_MULTIPLIER: f32 = 500.0; // The multiplier for the pressure force
 const GRAVITY: f32 = 0.2; // The strength of gravity
 const LOOK_AHEAD_TIME: f32 = 0.0; // 1.0 / 60.0; // The time to look ahead when calculating the predicted position
-const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
+const VISCOSITY: f32 = 0.25; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 const dt: f32 = 1.0 / 20.0; // The time step
 
@@ -37,7 +37,7 @@ const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_
 @group(0) @binding(4) var<storage, read_write> particle_densities: array<f32, u32(TOTAL_PARTICLES)>;
 @group(0) @binding(5) var<storage, read_write> particle_forces: array<vec4<f32>, u32(TOTAL_PARTICLES)>;
 @group(0) @binding(6) var<storage, read_write> particle_counts: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
-@group(0) @binding(7) var<storage, read> mouse_info: array<f32, 3>; // 0-Up; 1-Down, x-pos, y-pos
+@group(0) @binding(7) var<storage, read> mouse_info: array<f32, 4>; // 0-Up; 1-Down, x-pos, y-pos, 0-Repel; 1-Attract
 
 @vertex
 fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
@@ -64,7 +64,7 @@ fn main_density(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     // Update the density of the particle
-    let density = get_density(particle_positions[index]);
+    let density = get_density(index);
     particle_densities[index] = density;
 }
 
@@ -193,7 +193,8 @@ fn smoothing_kernel(distance: f32) -> f32 {
     return (RADIUS_OF_INFLUENCE - distance) * (RADIUS_OF_INFLUENCE - distance) / volume;
 }
 
-fn get_density(pos: vec2<f32>) -> f32 {
+fn get_density(index: u32) -> f32 {
+    let pos: vec2<f32> = particle_positions[index];
     let grid = pos_to_grid(pos);
     var density = 0.0;
 
@@ -214,9 +215,9 @@ fn get_density(pos: vec2<f32>) -> f32 {
             
             var ending_index = starting_index + particle_counts[first_grid_index];
 
-            for (var i = starting_index; i <= ending_index; i=i+1){
+            for (var i: u32 = u32(starting_index); i <= u32(ending_index); i=i+1){
                 let distance = length(pos - (particle_positions[i] + particle_velocities[i] * LOOK_AHEAD_TIME));
-                if distance <= RADIUS_OF_INFLUENCE {
+                if distance <= RADIUS_OF_INFLUENCE && i != index {
                     if distance == 0.0 {
                         continue;
                     }
@@ -306,13 +307,16 @@ fn calculate_forces(index: u32) -> vec4<f32> {
     }
 
     // Check for mouse interaction
-    if mouse_info[0] == 1.0 {
+    if mouse_info[0] == 1.0 || mouse_info[3] == 1.0 {
         let mouse_pos = vec2<f32>(mouse_info[1], mouse_info[2]);
         let offset = position - mouse_pos;
         let distance = sqrt(offset.x * offset.x + offset.y * offset.y);
         if distance < RADIUS_OF_INFLUENCE {
             let dir = vec2<f32>(offset.x / distance, offset.y / distance);
             var mouse_force = dir * smoothing_kernel(distance) * 100000.0;
+            if mouse_info[3] == 1.0 {
+                mouse_force *= -0.05;
+            }
             forces += vec4<f32>(mouse_force.x, mouse_force.y, 0.0, 0.0);
         }
     }

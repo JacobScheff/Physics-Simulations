@@ -84,7 +84,7 @@ struct State<'a> {
     particle_lookup_buffer: wgpu::Buffer,
     particle_counts: Vec<i32>,
     particle_counts_buffer: wgpu::Buffer,
-    mouse_info: [f32; 3], // 0-up; 1-down, x-pos, y-pos
+    mouse_info: [f32; 4], // 0-up; 1-down, x-pos, y-pos, 0-Atttract; 1-Repel
     mouse_info_buffer: wgpu::Buffer,
 }
 
@@ -392,7 +392,7 @@ impl<'a> State<'a> {
         });
 
         // Mouse info
-        let mouse_info = [0.0, 0.0, 0.0];
+        let mouse_info = [0.0, 0.0, 0.0, 0.0];
         let mouse_info_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Mouse Info Buffer Data"),
             contents: bytemuck::cast_slice(&mouse_info),
@@ -1004,6 +1004,9 @@ async fn run() {
                 WindowEvent::MouseInput { state: element_state, button, .. } => {
                     if *button == MouseButton::Left {
                         state.mouse_info[0] = if *element_state == ElementState::Pressed {1.0} else {0.0};
+                    }
+                    if *button == MouseButton::Right {
+                        state.mouse_info[3] = if *element_state == ElementState::Pressed {1.0} else {0.0};
                     }
                 }
 

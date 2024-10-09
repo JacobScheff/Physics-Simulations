@@ -250,10 +250,10 @@ impl<'a> State<'a> {
                 // let y = SCREEN_SIZE.1 as f32 / (PARTICLE_AMOUNT_Y + 1) as f32 * j as f32 + OFFSET.1;
 
                 let x = (i as f32 + 0.5) * (SCREEN_SIZE.0 as f32 - 2.0 * PADDING)
-                    / PARTICLE_AMOUNT_X as f32
+                    / (PARTICLE_AMOUNT_X + 1) as f32
                     + PADDING;
                 let y = (j as f32 + 0.5) * (SCREEN_SIZE.1 as f32 - 2.0 * PADDING)
-                    / PARTICLE_AMOUNT_Y as f32
+                    / (PARTICLE_AMOUNT_Y + 1) as f32
                     + PADDING;
 
                 particle_positions.push([x, y]);

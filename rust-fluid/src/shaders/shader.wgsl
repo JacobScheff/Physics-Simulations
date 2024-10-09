@@ -217,10 +217,7 @@ fn get_density(index: u32) -> f32 {
 
             for (var i: u32 = u32(starting_index); i <= u32(ending_index); i=i+1){
                 let distance = length(pos - (particle_positions[i] + particle_velocities[i] * LOOK_AHEAD_TIME));
-                if distance <= RADIUS_OF_INFLUENCE && i != index {
-                    if distance == 0.0 {
-                        continue;
-                    }
+                if distance <= RADIUS_OF_INFLUENCE {
                     let influence = smoothing_kernel(distance);
                     density += influence * 3.141592653589 * particle_radii[i] * particle_radii[i];
                 }

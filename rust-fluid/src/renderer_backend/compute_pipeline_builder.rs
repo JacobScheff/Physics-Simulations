@@ -43,7 +43,7 @@ impl ComputePipelineBuilder {
         let shader_module = device.create_shader_module(shader_module_descriptor);
 
         // Create the bind group layout *before* building the pipeline
-        let bind_group_layout = bind_group_layout_generator::get_bind_group_layout(device, true);
+        let bind_group_layout = bind_group_layout_generator::get_bind_group_layout(device);
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Pipeline Layout"),

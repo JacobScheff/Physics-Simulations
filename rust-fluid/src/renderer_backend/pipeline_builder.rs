@@ -54,7 +54,7 @@ impl PipelineBuilder {
         let shader_module = device.create_shader_module(shader_module_descriptor);
 
         // Create the bind group layout *before* building the pipeline
-        let bind_group_layout = bind_group_layout_generator::get_bind_group_layout(device, false);
+        let bind_group_layout = bind_group_layout_generator::get_bind_group_layout(device);
         
         // Create the pipeline using the new bind group layout
         let pipeline_layout_descriptor = wgpu::PipelineLayoutDescriptor {

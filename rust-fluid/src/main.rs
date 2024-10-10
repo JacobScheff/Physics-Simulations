@@ -1,15 +1,12 @@
 use core::f32;
-use std::collections::HashMap;
 
 use renderer_backend::{
     bind_group_layout_generator, compute_pipeline_builder::ComputePipelineBuilder,
     pipeline_builder::PipelineBuilder,
 };
 mod renderer_backend;
-use cgmath::prelude::*;
-use rand::*;
+// use rand::Rng;
 use wgpu::{
-    core::device::global,
     util::{BufferInitDescriptor, DeviceExt},
     BufferUsages,
 };
@@ -23,25 +20,12 @@ use winit::{
 
 const SCREEN_SIZE: (u32, u32) = (1200, 600);
 const TIME_BETWEEN_FRAMES: u64 = 2;
-const OFFSET: (f32, f32) = (10.0, 8.0); // How much to offset all the particle's starting positions
 const GRID_SIZE: (i32, i32) = (40, 20); // How many grid cells to divide the screen into
 
 const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
 const PARTICLE_AMOUNT_X: u32 = 192; // The number of particles in the x direction
 const PARTICLE_AMOUNT_Y: u32 = 96; // The number of particles in the y direction
 const PADDING: f32 = 50.0; // The padding around the screen
-                            // const RADIUS_OF_INFLUENCE: f32 = 75.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
-                            // const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
-                            // const PRESURE_MULTIPLIER: f32 = 100.0; // The multiplier for the pressure force
-const GRAVITY: f32 = 1.0; // The strength of gravity
-                          // const LOOK_AHEAD_TIME: f32 = 1.0 / 60.0; // The time to look ahead when calculating the predicted position
-                          // const VISCOSITY: f32 = 0.5; // The viscosity of the fluid
-const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
-
-// const grids_to_check: (i32, i32) = (
-//     (RADIUS_OF_INFLUENCE / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32 + 0.5) as i32,
-//     (RADIUS_OF_INFLUENCE / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32 + 0.5) as i32,
-// );
 
 const WORKGROUP_SIZE: u32 = 16;
 const DISPATCH_SIZE: (u32, u32) = (
@@ -115,10 +99,6 @@ impl<'a> State<'a> {
         (x, y)
     }
 
-    fn grid_to_index(&self, grid: (i32, i32)) -> i32 {
-        grid.0 + grid.1 * GRID_SIZE.0
-    }
-
     async fn new(window: &'a Window) -> Self {
         let size = window.inner_size();
 
@@ -172,7 +152,7 @@ impl<'a> State<'a> {
         render_pipeline_builder.set_shader_module("shaders/shader.wgsl", "vs_main", "fs_main");
         render_pipeline_builder.set_pixel_format(config.format);
         render_pipeline_builder.set_bind_group_layout(
-            bind_group_layout_generator::get_bind_group_layout(&device, false),
+            bind_group_layout_generator::get_bind_group_layout(&device),
         );
         let render_pipeline = render_pipeline_builder.build_pipeline(&device);
 
@@ -180,7 +160,7 @@ impl<'a> State<'a> {
         let mut compute_density_pipeline_builder = ComputePipelineBuilder::new();
         compute_density_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_density");
         compute_density_pipeline_builder.set_bind_group_layout(
-            bind_group_layout_generator::get_bind_group_layout(&device, true),
+            bind_group_layout_generator::get_bind_group_layout(&device),
         );
         let compute_density_pipeline = compute_density_pipeline_builder.build_pipeline(&device);
 
@@ -188,7 +168,7 @@ impl<'a> State<'a> {
         let mut compute_move_pipeline_builder = ComputePipelineBuilder::new();
         compute_move_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_move");
         compute_move_pipeline_builder.set_bind_group_layout(
-            bind_group_layout_generator::get_bind_group_layout(&device, true),
+            bind_group_layout_generator::get_bind_group_layout(&device),
         );
         let compute_move_pipeline = compute_move_pipeline_builder.build_pipeline(&device);
 
@@ -196,7 +176,7 @@ impl<'a> State<'a> {
         let mut compute_forces_pipeline_builder = ComputePipelineBuilder::new();
         compute_forces_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_forces");
         compute_forces_pipeline_builder.set_bind_group_layout(
-            bind_group_layout_generator::get_bind_group_layout(&device, true),
+            bind_group_layout_generator::get_bind_group_layout(&device),
         );
         let compute_forces_pipeline = compute_forces_pipeline_builder.build_pipeline(&device);
 
@@ -836,7 +816,7 @@ impl<'a> State<'a> {
                 timestamp_writes: None,
             });
             compute_pass.set_pipeline(&self.compute_move_pipeline);
-            compute_pass.set_bind_group(0, &self.compute_densities_bind_group, &[]);
+            compute_pass.set_bind_group(0, &self.compute_move_bind_group, &[]);
             compute_pass.dispatch_workgroups(DISPATCH_SIZE.0, DISPATCH_SIZE.1, 1);
         }
 
@@ -846,7 +826,6 @@ impl<'a> State<'a> {
         pollster::block_on(self.sort_particles());
 
         // Render the particles
-        let render_start_time = std::time::Instant::now();
         let drawable = self.surface.get_current_texture()?;
         let image_view_descriptor = wgpu::TextureViewDescriptor::default();
         let image_view = drawable.texture.create_view(&image_view_descriptor);
@@ -889,19 +868,7 @@ impl<'a> State<'a> {
 
         self.queue.submit(std::iter::once(command_encoder.finish()));
 
-        let render_elapsed_time = render_start_time.elapsed();
-        // println!(
-        //     "Render time: {} ms",
-        //     render_elapsed_time.as_micros() as f32 / 1000.0
-        // );
-
-        let start_present_time = std::time::Instant::now();
         drawable.present();
-        let present_elapsed_time = start_present_time.elapsed();
-        // println!(
-        //     "Present time: {} ms",
-        //     present_elapsed_time.as_micros() as f32 / 1000.0
-        // );
 
         if self.frame_count % 10 == 0 {
             let elapsed_time = start_time.elapsed();
@@ -944,19 +911,19 @@ async fn run() {
     let mut state = State::new(&window).await;
 
     let render_bind_group_layout =
-        bind_group_layout_generator::get_bind_group_layout(&state.device, false);
+        bind_group_layout_generator::get_bind_group_layout(&state.device);
     state.render_bind_group = create_bind_group(&mut state, &render_bind_group_layout);
 
     let compute_density_bind_group_layout =
-        bind_group_layout_generator::get_bind_group_layout(&state.device, true);
+        bind_group_layout_generator::get_bind_group_layout(&state.device);
     state.compute_densities_bind_group = create_bind_group(&mut state, &compute_density_bind_group_layout);
 
     let compute_forces_bind_group_layout =
-        bind_group_layout_generator::get_bind_group_layout(&state.device, true);
+        bind_group_layout_generator::get_bind_group_layout(&state.device);
     state.compute_forces_bind_group = create_bind_group(&mut state, &compute_forces_bind_group_layout);
 
     let compute_move_bind_group_layout =
-        bind_group_layout_generator::get_bind_group_layout(&state.device, true);
+        bind_group_layout_generator::get_bind_group_layout(&state.device);
     state.compute_densities_bind_group = create_bind_group(&mut state, &compute_move_bind_group_layout);
 
     // Pass bind group layout to pipeline builder

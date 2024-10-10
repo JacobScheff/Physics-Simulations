@@ -12,7 +12,6 @@ const WORKGROUP_SIZE: u32 = 16;
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
 const GRID_SIZE: vec2<f32> = vec2<f32>(40.0, 20.0);
 
-const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
 const PARTICLE_AMOUNT_X: u32 = 192; // The number of particles in the x direction
 const PARTICLE_AMOUNT_Y: u32 = 96; // The number of particles in the y direction
 const TOTAL_PARTICLES: i32 = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y); // The total number of particles
@@ -296,7 +295,7 @@ fn calculate_forces(index: u32) -> vec4<f32> {
                 let shared_pressure = calculate_shared_pressure(density, other_density);
 
                 // Pressure force
-                let pressure_force = dir * shared_pressure * slope * 3.141592653589 * PARTICLE_RADIUS * PARTICLE_RADIUS / max(density, 0.000001);
+                let pressure_force = dir * shared_pressure * slope * 3.141592653589 * particle_radii[i] * particle_radii[i] / max(density, 0.000001);
                 // if density == 0.0 {
                 //     continue;
                 // }

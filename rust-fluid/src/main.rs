@@ -984,6 +984,9 @@ async fn run() {
     compute_move_pipeline_builder.set_bind_group_layout(compute_move_bind_group_layout);
     state.compute_move_pipeline = compute_move_pipeline_builder.build_pipeline(&state.device);
 
+    // Sort the particles
+    pollster::block_on(state.sort_particles());
+
     event_loop
         .run(move |event, elwt| match event {
             Event::UserEvent(..) => {

@@ -23,7 +23,7 @@ const GRAVITY: f32 = 0.2; // The strength of gravity
 const LOOK_AHEAD_TIME: f32 = 0.0; // 1.0 / 60.0; // The time to look ahead when calculating the predicted position
 const VISCOSITY: f32 = 0.25; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
-const dt: f32 = 1.0 / 1000000.0; // 1.0 / 20.0; // The time step
+const dt: f32 = 1.0 / 20.0; // The time step
 
 const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_SIZE.x + 1.0), i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.y * GRID_SIZE.y + 1.0));
 @group(0) @binding(0) var<storage, read_write> particle_positions: array<vec2<f32>, u32(TOTAL_PARTICLES)>;
@@ -268,11 +268,8 @@ fn calculate_forces(index: u32) -> vec4<f32> {
                 if i == -1 || i == i32(index) || i >= i32(TOTAL_PARTICLES) {
                     continue;
                 }
-                if i == -1 || i == i32(index) {
-                    continue;
-                }
                 let offset: vec2<f32> = position - (particle_positions[i] + particle_velocities[i] * LOOK_AHEAD_TIME);
-                let distance = sqrt(offset.x * offset.x + offset.y * offset.y);
+                let distance: f32 = sqrt(offset.x * offset.x + offset.y * offset.y);
                 if distance == 0.0 || distance > RADIUS_OF_INFLUENCE {
                     continue;
                 }

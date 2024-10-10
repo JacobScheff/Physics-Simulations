@@ -924,7 +924,7 @@ async fn run() {
 
     let compute_move_bind_group_layout =
         bind_group_layout_generator::get_bind_group_layout(&state.device);
-    state.compute_densities_bind_group = create_bind_group(&mut state, &compute_move_bind_group_layout);
+    state.compute_move_bind_group = create_bind_group(&mut state, &compute_move_bind_group_layout);
 
     // Pass bind group layout to pipeline builder
     let mut render_pipeline_builder = PipelineBuilder::new();
@@ -1017,7 +1017,7 @@ fn create_bind_group(
     bind_group_layout: &wgpu::BindGroupLayout,
 ) -> wgpu::BindGroup {
     let bind_group = state.device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("Sphere Bind Group"),
+        label: Some("Particle Data Bind Group"),
         layout: bind_group_layout,
         entries: &[
             wgpu::BindGroupEntry {

@@ -18,7 +18,7 @@ const PARTICLE_AMOUNT_Y: u32 = 96; // The number of particles in the y direction
 const TOTAL_PARTICLES: i32 = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y); // The total number of particles
 const RADIUS_OF_INFLUENCE: f32 = 75.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
-const PRESURE_MULTIPLIER: f32 = 500.0; // The multiplier for the pressure force
+const PRESSURE_MULTIPLIER: f32 = 500.0; // The multiplier for the pressure force
 const GRAVITY: f32 = 0.2; // The strength of gravity
 const LOOK_AHEAD_TIME: f32 = 0.0; // 1.0 / 60.0; // The time to look ahead when calculating the predicted position
 const VISCOSITY: f32 = 0.25; // The viscosity of the fluid
@@ -177,7 +177,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
 fn density_to_pressure(density: f32) -> f32 {
     let density_error = density - TARGET_DENSITY;
-    return density_error * PRESURE_MULTIPLIER;
+    return density_error * PRESSURE_MULTIPLIER;
 }
 
 fn smoothing_kernel(distance: f32) -> f32 {

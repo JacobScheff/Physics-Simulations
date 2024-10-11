@@ -22,9 +22,9 @@ const SCREEN_SIZE: (u32, u32) = (1200, 600);
 const TIME_BETWEEN_FRAMES: u64 = 2;
 const GRID_SIZE: (i32, i32) = (40, 20); // How many grid cells to divide the screen into
 
-const PARTICLE_RADIUS: f32 = 1.25; // The radius of the particles
-const PARTICLE_AMOUNT_X: u32 = 192; // The number of particles in the x direction
-const PARTICLE_AMOUNT_Y: u32 = 96; // The number of particles in the y direction
+const PARTICLE_RADIUS: f32 = 1.25 / 2.0; // The radius of the particles
+const PARTICLE_AMOUNT_X: u32 = 192 * 2; // The number of particles in the x direction
+const PARTICLE_AMOUNT_Y: u32 = 96 * 2; // The number of particles in the y direction
 const PADDING: f32 = 50.0; // The padding around the screen
 
 const WORKGROUP_SIZE: u32 = 16;

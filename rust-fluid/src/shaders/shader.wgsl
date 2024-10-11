@@ -320,7 +320,10 @@ fn calculate_forces(index: u32) -> vec4<f32> {
             let dir = vec2<f32>(offset.x / distance, offset.y / distance);
             var mouse_force = dir * smoothing_kernel(distance) * 100000.0;
             if mouse_info[3] == 1.0 {
-                mouse_force *= -0.05;
+                mouse_force *= -0.05; // Attract
+            }
+            else {
+                mouse_force *= 0.5; // Repel
             }
             forces += vec4<f32>(mouse_force.x, mouse_force.y, 0.0, 0.0);
         }

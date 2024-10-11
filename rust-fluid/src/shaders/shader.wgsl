@@ -120,6 +120,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let x: f32 = in.pos.x;
     let y: f32 = in.pos.y;
 
+    var final_color: vec4<f32> = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+
     // let density = get_density(vec2<f32>(x, y));
 
     // let min_density: f32 = 0.0;
@@ -138,8 +140,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     // return vec4<f32>(color, 1.0);
 
     let grid = pos_to_grid(vec2<f32>(x, y));
-    for (var gx: i32 = -1; gx <= 1; gx=gx+1){
-        for(var gy: i32 = -1; gy <=1; gy=gy+1){
+    for (var g: i32 = -2; g <= 2; g=g+1){
+            var gx: i32 = g / 2;
+            var gy: i32 = g % 2;
             if grid.x + gx < 0 || grid.x + gx >= i32(GRID_SIZE.x) || grid.y + gy < 0 || grid.y + gy >= i32(GRID_SIZE.y) {
                 continue;
             }
@@ -181,14 +184,13 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     //     color = vec3<f32>(0.0, 0.0, -density_error);
                     // }
                     
-                    return vec4<f32>(color, 1.0);
+                    final_color = vec4<f32>(color, 1.0);
+                    break;
                 }
             }
-
-        }
     }
 
-    return vec4<f32>(0.0, 0.0, 0.0, 1.0);
+    return final_color;
 }
 
 fn density_to_pressure(density: f32) -> f32 {

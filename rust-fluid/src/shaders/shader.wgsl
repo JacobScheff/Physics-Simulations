@@ -278,8 +278,21 @@ fn calculate_forces(index: u32) -> vec4<f32> {
 
     let density: f32 = particle_densities[index];
 
-    for (var gx: i32 = -grids_to_check.x; gx <= grids_to_check.x; gx=gx+1){
-        for (var gy: i32 = -grids_to_check.y; gy <= grids_to_check.y; gy=gy+1){
+    // for (var gx: i32 = -grids_to_check.x; gx <= grids_to_check.x; gx=gx+1){
+    //     for (var gy: i32 = -grids_to_check.y; gy <= grids_to_check.y; gy=gy+1){
+        for (var g: i32 = 0; g <= grids_to_check.x * grids_to_check.y * 2 + 1; g=g+1){
+            let g_offset = g - grids_to_check.x * grids_to_check.y;
+            var gx: i32 = g_offset / 2;
+            var gy: i32 = abs(g_offset) % 2;
+            // Determine sign of gy
+            if g_offset < 0 {
+                gy = -gy;
+            }
+            
+            if grid.x + gx < 0 || grid.x + gx >= i32(GRID_SIZE.x) || grid.y + gy < 0 || grid.y + gy >= i32(GRID_SIZE.y) {
+                continue;
+            }
+            
             let first_grid_index: i32 = grid_to_index(grid_add(grid, Grid(gx, gy)));
             if (first_grid_index < 0 || first_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y)) {
                 continue;
@@ -321,8 +334,9 @@ fn calculate_forces(index: u32) -> vec4<f32> {
                 // Apply the forces
                 forces += vec4<f32>(pressure_force.x, pressure_force.y, viscosity_force.x, viscosity_force.y);
             }
+    //     }
+    // }
         }
-    }
 
     // Check for mouse interaction
     if mouse_info[0] == 1.0 || mouse_info[3] == 1.0 {

@@ -211,8 +211,17 @@ fn get_density(pos: vec2<f32>) -> f32 {
     let grid = pos_to_grid(pos);
     var density = 0.0;
 
-    for (var gx: i32 = -grids_to_check.x; gx <= grids_to_check.x; gx=gx+1){
-        for(var gy: i32 = -grids_to_check.y; gy <= grids_to_check.y; gy=gy+1){
+    // for (var gx: i32 = -grids_to_check.x; gx <= grids_to_check.x; gx=gx+1){
+    //     for(var gy: i32 = -grids_to_check.y; gy <= grids_to_check.y; gy=gy+1){
+        for (var g: i32 = 0; g <= grids_to_check.x * grids_to_check.y * 2 + 1; g=g+1){
+            let g_offset = g - grids_to_check.x * grids_to_check.y;
+            var gx: i32 = g_offset / 2;
+            var gy: i32 = abs(g_offset) % 2;
+            // Determine sign of gy
+            if g_offset < 0 {
+                gy = -gy;
+            }
+
             if grid.x + gx < 0 || grid.x + gx >= i32(GRID_SIZE.x) || grid.y + gy < 0 || grid.y + gy >= i32(GRID_SIZE.y) {
                 continue;
             }
@@ -237,7 +246,9 @@ fn get_density(pos: vec2<f32>) -> f32 {
             }
 
         }
-    }
+
+    //     }
+    // }
 
     return density;
 }

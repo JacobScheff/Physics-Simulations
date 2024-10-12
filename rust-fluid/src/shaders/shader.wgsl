@@ -15,14 +15,14 @@ const GRID_SIZE: vec2<f32> = vec2<f32>(40.0, 20.0);
 const PARTICLE_AMOUNT_X: u32 = 192 * 2; // The number of particles in the x direction
 const PARTICLE_AMOUNT_Y: u32 = 96 * 2; // The number of particles in the y direction
 const TOTAL_PARTICLES: i32 = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y); // The total number of particles
-const RADIUS_OF_INFLUENCE: f32 = 75.0 / 2.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
+const RADIUS_OF_INFLUENCE: f32 = 75.0 / 4.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
 const PRESSURE_MULTIPLIER: f32 = 500.0; // The multiplier for the pressure force
 const GRAVITY: f32 = 0.2; // The strength of gravity
 const LOOK_AHEAD_TIME: f32 = 1.0 / 60.0; // The time to look ahead when calculating the predicted position
 const VISCOSITY: f32 = 0.1; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
-const dt: f32 = 1.0 / 4.0; // The time step
+const dt: f32 = 1.0 / 8.0; // The time step
 
 const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_SIZE.x + 1.0), i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.y * GRID_SIZE.y + 1.0));
 @group(0) @binding(0) var<storage, read_write> particle_positions: array<vec2<f32>, u32(TOTAL_PARTICLES)>;
@@ -337,7 +337,7 @@ fn calculate_forces(index: u32) -> vec4<f32> {
             let dir = vec2<f32>(offset.x / distance, offset.y / distance);
             var mouse_force = dir * smoothing_kernel(distance) * 100000.0;
             if mouse_info[3] == 1.0 {
-                mouse_force *= -0.05; // Attract
+                mouse_force *= -0.005; // Attract
             }
             else {
                 mouse_force *= 0.5; // Repel

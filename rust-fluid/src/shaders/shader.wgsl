@@ -10,7 +10,7 @@ struct Grid {
 const WORKGROUP_SIZE: u32 = 16;
 
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
-const GRID_SIZE: vec2<f32> = vec2<f32>(40.0, 20.0);
+const GRID_SIZE: vec2<f32> = vec2<f32>(80.0, 40.0);
 
 const PARTICLE_AMOUNT_X: u32 = 192 * 2; // The number of particles in the x direction
 const PARTICLE_AMOUNT_Y: u32 = 96 * 2; // The number of particles in the y direction

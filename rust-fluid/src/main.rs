@@ -72,6 +72,7 @@ struct State<'a> {
     mouse_info_buffer: wgpu::Buffer,
 }
 
+#[allow(unused)]
 fn pos_to_grid_index(pos: (f32, f32)) -> i32 {
     let x = ((pos.0 / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32) as i32)
         .min(GRID_SIZE.0 - 1)
@@ -223,7 +224,6 @@ impl<'a> State<'a> {
         let mut particle_radii = vec![];
         let mut particle_densities = vec![];
         let mut particle_forces = vec![];
-        let mut grid_index_map = vec![];
         for i in 0..PARTICLE_AMOUNT_X {
             for j in 0..PARTICLE_AMOUNT_Y {
                 // let x = SCREEN_SIZE.0 as f32 / (PARTICLE_AMOUNT_X + 1) as f32 * i as f32 + OFFSET.0;
@@ -245,7 +245,6 @@ impl<'a> State<'a> {
                 particle_radii.push(PARTICLE_RADIUS);
                 particle_densities.push(0.0);
                 particle_forces.push([0.0, 0.0, 0.0, 0.0]);
-                grid_index_map.push([pos_to_grid_index((x, y)), (j + i * PARTICLE_AMOUNT_Y) as i32]);
             }
         }
         let particle_lookup: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
@@ -280,17 +279,12 @@ impl<'a> State<'a> {
         let particle_lookup_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Particle Lookup Buffer Data"),
             contents: bytemuck::cast_slice(&particle_lookup),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
-        });
-        let grid_index_map_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("Grid Index Map Buffer Data"),
-            contents: bytemuck::cast_slice(&grid_index_map),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
         });
         let particle_counts_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Particle Counts Buffer Data"),
             contents: bytemuck::cast_slice(&particle_counts),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
         });
 
         // Write data to buffers
@@ -323,11 +317,6 @@ impl<'a> State<'a> {
             &particle_lookup_buffer,
             0,
             bytemuck::cast_slice(&particle_lookup),
-        );
-        queue.write_buffer(
-            &grid_index_map_buffer,
-            0,
-            bytemuck::cast_slice(&grid_index_map),
         );
         queue.write_buffer(
             &particle_counts_buffer,
@@ -376,7 +365,7 @@ impl<'a> State<'a> {
         let mouse_info_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Mouse Info Buffer Data"),
             contents: bytemuck::cast_slice(&mouse_info),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
         });
 
         Self {

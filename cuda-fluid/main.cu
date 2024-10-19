@@ -237,6 +237,11 @@ int main(void)
     // Get start time
     auto start = std::chrono::high_resolution_clock::now();
 
+    // Copy data to the GPU
+    cudaMemcpy(d_particles, particles.data(), PARTICLE_AMOUNT * sizeof(Particle), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_particle_lookup, particle_lookup.data(), GRID_SIZE_X * GRID_SIZE_Y * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_particle_counts, particle_counts.data(), GRID_SIZE_X * GRID_SIZE_Y * sizeof(int), cudaMemcpyHostToDevice);
+
     // Get the number of blocks and threads
     int blockSize = 256;
     int numBlocks = (PARTICLE_AMOUNT + blockSize - 1) / blockSize;
@@ -247,11 +252,15 @@ int main(void)
     // Wait for GPU to finish before accessing on host
     // cudaDeviceSynchronize();
 
+    //Copy data back from GPU
+    cudaMemcpy(particles.data(), d_particles, PARTICLE_AMOUNT * sizeof(Particle), cudaMemcpyDeviceToHost);
+
     // Print end time in ms
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = end - start;
     std::cout << "Elapsed time in milliseconds : " << elapsed.count() << " ms" << std::endl;
 
+    // NOTE: DRAWING IS VERY SLOW
     std::vector<sf::CircleShape> circles;
     for (int i = 0; i < PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y; ++i)
     {

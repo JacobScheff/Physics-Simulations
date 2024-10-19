@@ -3,14 +3,15 @@
 #include <chrono>
 #include <array>
 
-// Kernel function to add the elements of two arrays
+// Kernel function to calculate densities
 __global__
-void add(int n, float *x, float *y)
-{
+void calculate_densities(float **positions, float *densities, float *radii, int PARTICLE_AMOUNT) {
   int index = blockIdx.x * blockDim.x + threadIdx.x;
-  int stride = blockDim.x * gridDim.x;
-  for (int i = index; i < n; i += stride)
-    y[i] = x[i] + y[i];
+  if (index >= PARTICLE_AMOUNT) return;
+
+  float density = 0.0;
+  
+  densities[index] = density;
 }
 
 int main(void)
@@ -44,7 +45,7 @@ int main(void)
     pressure_force[i] = new float[2];
     viscosity_force[i] = new float[2];
     positions[i][0] = (i + 0.5) * (SCREEN_SIZE[0] - 2.0 * PADDING) / PARTICLE_AMOUNT_X + PADDING;
-    positions[i][1] = (i + 0.5) * (SCREEN_SIZE[1] - 2.0 * PADDING) / PARTICLE_AMOUNT_Y + PADDING;
+    positions[i][1] = (i + 0.5) * (SCREEN_SIZE[1] - 2.0 *   PADDING) / PARTICLE_AMOUNT_Y + PADDING;
     velocities[i][0] = 0.0;
     velocities[i][1] = 0.0;
     densities[i] = 0.0;
@@ -58,18 +59,20 @@ int main(void)
   // Get start time
   auto start = std::chrono::high_resolution_clock::now();
 
-  // // // Run kernel on the GPU
-  // // int blockSize = 256;
-  // // int numBlocks = (N + blockSize - 1) / blockSize;
-  // // add<<<numBlocks, blockSize>>>(N, x, y);
+  // Get the number of blocks and threads
+  int blockSize = 256;
+  int numBlocks = (PARTICLE_AMOUNT + blockSize - 1) / blockSize;
+
+  // Calculate densities
+  calculate_densities<<<numBlocks, blockSize>>>(positions, densities, radii, PARTICLE_AMOUNT);
 
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
 
-  // Get end time
+  // Print end time in ms
   auto end = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<float> duration = end - start;
-  std::cout << "Time: " << duration.count() << "s" << std::endl;
+  std::chrono::duration<double, std::milli> elapsed = end - start;
+  std::cout << "Elapsed time in milliseconds : " << elapsed.count() << " ms" << std::endl;
 
   // Free memory
   cudaFree(positions);

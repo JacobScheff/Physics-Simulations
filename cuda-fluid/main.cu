@@ -247,10 +247,10 @@ int main(void)
     int numBlocks = (PARTICLE_AMOUNT + blockSize - 1) / blockSize;
 
     // Calculate densities
-    // calculate_densities<<<numBlocks, blockSize>>>(positions, velocities, densities, radii, particle_lookup, particle_counts, GRIDS_TO_CHECK[0], GRIDS_TO_CHECK[1], PARTICLE_AMOUNT);
+    calculate_densities<<<numBlocks, blockSize>>>(d_particles, d_particle_lookup, d_particle_counts, GRIDS_TO_CHECK[0], GRIDS_TO_CHECK[1], PARTICLE_AMOUNT);
 
     // Wait for GPU to finish before accessing on host
-    // cudaDeviceSynchronize();
+    cudaDeviceSynchronize();
 
     //Copy data back from GPU
     cudaMemcpy(particles.data(), d_particles, PARTICLE_AMOUNT * sizeof(Particle), cudaMemcpyDeviceToHost);

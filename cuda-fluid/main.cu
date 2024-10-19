@@ -12,10 +12,10 @@
 #define GRID_SIZE_X 80
 #define GRID_SIZE_Y 40
 
-int const TIME_BETWEEN_FRAMES = 2;
-float const PARTICLE_RADIUS = 1.25;                                // The radius of the particles
-int const PARTICLE_AMOUNT_X = 192;                                 // The number of particles in the x direction
-int const PARTICLE_AMOUNT_Y = 96;                                  // The number of particles in the y direction
+int const TIME_BETWEEN_FRAMES = 2;                                 // The time between frames in milliseconds
+float const PARTICLE_RADIUS = 1.25 / 2.0;                          // The radius of the particles
+int const PARTICLE_AMOUNT_X = 192 * 2;                             // The number of particles in the x direction
+int const PARTICLE_AMOUNT_Y = 96 * 2;                              // The number of particles in the y direction
 int const PARTICLE_AMOUNT = PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y; // The total number of particles
 float const PADDING = 50.0;                                        // The padding around the screen
 
@@ -103,7 +103,7 @@ __device__ float calculate_shared_pressure(float density_a, float density_b)
 }
 
 // Kernel function to calculate densities
-__global__ void calculate_densities(Particle* particles, int* particle_lookup, int* particle_counts, int GRIDS_TO_CHECK_X, int GRIDS_TO_CHECK_Y, int particle_amount)
+__global__ void calculate_densities(Particle *particles, int *particle_lookup, int *particle_counts, int GRIDS_TO_CHECK_X, int GRIDS_TO_CHECK_Y, int particle_amount)
 {
   int index = blockIdx.x * blockDim.x + threadIdx.x;
   if (index >= PARTICLE_AMOUNT)
@@ -150,7 +150,71 @@ __global__ void calculate_densities(Particle* particles, int* particle_lookup, i
   particles[index].density = density;
 }
 
-void sort(std::vector<Particle>& particles, std::vector<int>& particle_lookup, std::vector<int>& particle_counts)
+// Kernel function to calculate forces
+__global__ void calculate_forces(Particle *particles, int *particle_lookup, int *particle_counts, int GRIDS_TO_CHECK_X, int GRIDS_TO_CHECK_Y, int particle_amount)
+{
+  int index = blockIdx.x * blockDim.x + threadIdx.x;
+  if (index >= PARTICLE_AMOUNT)
+    return;
+
+  int *grid = pos_to_grid(particles[index].position.x, particles[index].position.y);
+  // sf::Vector2f pressure_force = {0.0, 0.0};
+  // sf::Vector2f viscosity_force = {0.0, 0.0};
+
+  for (int g = 0; g < (GRIDS_TO_CHECK_X * 2 + 1) * (GRIDS_TO_CHECK_Y * 2 + 1); g++)
+  {
+    int gx = g / (GRIDS_TO_CHECK_Y * 2 + 1) - GRIDS_TO_CHECK_X;
+    int gy = g % (GRIDS_TO_CHECK_Y * 2 + 1) - GRIDS_TO_CHECK_Y;
+
+    if (grid[0] + gx < 0 || grid[0] + gx >= GRID_SIZE_X || grid[1] + gy < 0 || grid[1] + gy >= GRID_SIZE_Y)
+    {
+      continue;
+    }
+
+    int first_grid_index = grid_to_index(grid[0] + gx, grid[1] + gy);
+    if (first_grid_index < 0 || first_grid_index >= GRID_SIZE_X * GRID_SIZE_Y)
+    {
+      continue;
+    }
+
+    int starting_index = particle_lookup[first_grid_index];
+    if (starting_index == -1)
+    {
+      continue;
+    }
+
+    int ending_index = starting_index + particle_counts[first_grid_index];
+
+    for (int i = starting_index; i <= ending_index; i++)
+    {
+      // sf::Vector2f offset = particles[i].position - particles[index].position;
+      // float distance = sqrt(offset.x * offset.x + offset.y * offset.y);
+      // if (distance == 0 || distance >= RADIUS_OF_INFLUENCE)
+      // {
+      //   continue;
+      // }
+      // sf::Vector2f dir = offset / distance;
+
+      // float slope = smoothing_kernel_derivative(distance);
+      // float shared_pressure = calculate_shared_pressure(particles[index].density, particles[i].density);
+
+      // float pressure_multiplier = shared_pressure * slope * 3.141592653589 * particles[i].radius * particles[i].radius / max(particles[index].density, 0.000001);
+      // sf::Vector2f local_pressure_force = dir * pressure_multiplier;
+
+      // sf::Vector2f local_viscosity_force = (particles[i].velocity - particles[index].velocity) * viscosity_kernel(distance);
+      // local_viscosity_force.x *= VISCOSITY;
+      // local_viscosity_force.y *= VISCOSITY;
+
+      // pressure_force += local_pressure_force;
+      // viscosity_force += local_viscosity_force;
+    }
+  }
+
+  particles[index].pressure_force = pressure_force;
+  particles[index].viscosity_force = viscosity_force;
+}
+
+void sort(std::vector<Particle> &particles, std::vector<int> &particle_lookup, std::vector<int> &particle_counts)
 {
   // Update the grid indices of the particles
   for (int i = 0; i < PARTICLE_AMOUNT; i++)
@@ -160,9 +224,8 @@ void sort(std::vector<Particle>& particles, std::vector<int>& particle_lookup, s
   }
 
   // Sort the particles based on grid index
-  std::sort(particles.begin(), particles.end(), [](const Particle& a, const Particle& b) {
-      return a.grid_index < b.grid_index;
-  });
+  std::sort(particles.begin(), particles.end(), [](const Particle &a, const Particle &b)
+            { return a.grid_index < b.grid_index; });
 
   // Update the particle lookup and counts
   for (int i = 0; i < GRID_SIZE_X * GRID_SIZE_Y; i++)
@@ -181,8 +244,10 @@ void sort(std::vector<Particle>& particles, std::vector<int>& particle_lookup, s
   }
 
   int currentGridIndex = -1;
-  for(int i = 0; i < PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y; ++i) {
-    if (particles[i].grid_index != currentGridIndex) {
+  for (int i = 0; i < PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y; ++i)
+  {
+    if (particles[i].grid_index != currentGridIndex)
+    {
       particle_lookup[particles[i].grid_index] = i;
       currentGridIndex = particles[i].grid_index;
     }
@@ -215,9 +280,9 @@ int main(void)
   }
 
   // Allocate Unified Memory – accessible from CPU or GPU
-  Particle* d_particles;
-  int* d_particle_lookup;
-  int* d_particle_counts;
+  Particle *d_particles;
+  int *d_particle_lookup;
+  int *d_particle_counts;
   cudaMalloc(&d_particles, PARTICLE_AMOUNT * sizeof(Particle));
   cudaMalloc(&d_particle_lookup, GRID_SIZE_X * GRID_SIZE_Y * sizeof(int));
   cudaMalloc(&d_particle_counts, GRID_SIZE_X * GRID_SIZE_Y * sizeof(int));
@@ -252,7 +317,7 @@ int main(void)
     // Wait for GPU to finish before accessing on host
     cudaDeviceSynchronize();
 
-    //Copy data back from GPU
+    // Copy data back from GPU
     cudaMemcpy(particles.data(), d_particles, PARTICLE_AMOUNT * sizeof(Particle), cudaMemcpyDeviceToHost);
 
     // Print end time in ms

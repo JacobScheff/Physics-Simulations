@@ -223,28 +223,29 @@ int main(void)
   cudaMallocManaged(&particle_counts, GRID_SIZE_C[0] * GRID_SIZE_C[1] * sizeof(int));
 
   // Initialize data
-  for (int i = 0; i < PARTICLE_AMOUNT; i++)
-  {
-    positions[i] = new float[2];
-    velocities[i] = new float[2];
-    pressure_force[i] = new float[2];
-    viscosity_force[i] = new float[2];
-    positions[i][0] = (i + 0.5) * (SCREEN_SIZE_C[0] - 2.0 * PADDING) / PARTICLE_AMOUNT_X + PADDING;
-    positions[i][1] = (i + 0.5) * (SCREEN_SIZE_C[1] - 2.0 * PADDING) / PARTICLE_AMOUNT_Y + PADDING;
-    velocities[i][0] = 0.0;
-    velocities[i][1] = 0.0;
-    densities[i] = 0.0;
-    radii[i] = PARTICLE_RADIUS;
-    pressure_force[i][0] = 0.0;
-    pressure_force[i][1] = 0.0;
-    viscosity_force[i][0] = 0.0;
-    viscosity_force[i][1] = 0.0;
-
-    if (i < GRID_SIZE_C[0] * GRID_SIZE_C[1])
-    {
-      particle_lookup[i] = -1;
-      particle_counts[i] = 0;
+  for(int i = 0; i < PARTICLE_AMOUNT_X; i++){
+    for(int j = 0; j < PARTICLE_AMOUNT_Y; j++){
+      int index = i + j * PARTICLE_AMOUNT_X;
+      positions[index] = new float[2];
+      velocities[index] = new float[2];
+      pressure_force[index] = new float[2];
+      viscosity_force[index] = new float[2];
+      positions[index][0] = (i + 0.5) * (SCREEN_SIZE_C[0] - 2.0 * PADDING) / PARTICLE_AMOUNT_X + PADDING;
+      positions[index][1] = (j + 0.5) * (SCREEN_SIZE_C[1] - 2.0 * PADDING) / PARTICLE_AMOUNT_Y + PADDING;
+      velocities[index][0] = 0.0;
+      velocities[index][1] = 0.0;
+      densities[index] = 0.0;
+      radii[index] = PARTICLE_RADIUS;
+      pressure_force[index][0] = 0.0;
+      pressure_force[index][1] = 0.0;
+      viscosity_force[index][0] = 0.0;
+      viscosity_force[index][1] = 0.0;
     }
+  }
+  
+  for(int i = 0; i < GRID_SIZE_C[0] * GRID_SIZE_C[1]; i++){
+    particle_lookup[i] = -1;
+    particle_counts[i] = 0;
   }
 
   // Sort the particles
@@ -280,7 +281,7 @@ int main(void)
     std::vector<sf::CircleShape> circles;
     for (int i = 0; i < PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y; ++i)
     {
-      sf::CircleShape circle(10.f); // Radius
+      sf::CircleShape circle(PARTICLE_RADIUS);
       circle.setFillColor(sf::Color::Blue);
       circle.setPosition(positions[i][0], positions[i][1]);
       circles.push_back(circle);

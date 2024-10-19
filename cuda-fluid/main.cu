@@ -21,7 +21,7 @@ float const PADDING = 50.0;                                        // The paddin
 #define TARGET_DENSITY 0.2; // The target density of the fluid
 #define PRESSURE_MULTIPLIER 500.0; // The multiplier for the pressure force
 #define GRAVITY 0.2; // The strength of gravity
-#define LOOK_AHEAD_TIME (1.0 / 60.0); // The time to look ahead when calculating the predicted position
+// TODO: ADD BACK // #define LOOK_AHEAD_TIME (1.0 / 60.0); // The time to look ahead when calculating the predicted position
 #define VISCOSITY 0.1; // The viscosity of the fluid
 #define DAMPENING 0.95; // How much to slow down particles when they collide with the walls
 #define dt (1.0 / 8.0); // The time step
@@ -44,8 +44,60 @@ int grid_to_index(int x, int y)
   return y * GRID_SIZE_X + x;
 }
 
+__device__
+float density_to_pressure(float density)
+{
+  float density_error = density - TARGET_DENSITY;
+  return density_error * PRESSURE_MULTIPLIER;
+}
+
+__device__
+float smoothing_kernel(float distance)
+{
+  if (distance >= RADIUS_OF_INFLUENCE)
+  {
+    return 0.0;
+  }
+
+  float volume = 3.141592653589 * pow(RADIUS_OF_INFLUENCE, 4.0) / 6.0;
+  return (RADIUS_OF_INFLUENCE - distance) * (RADIUS_OF_INFLUENCE - distance) / volume;
+}
+
+__device__
+float smoothing_kernel_derivative(float distance)
+{
+  if (distance >= RADIUS_OF_INFLUENCE)
+  {
+    return 0.0;
+  }
+
+  float scale = 12.0 / (pow(RADIUS_OF_INFLUENCE, 4.0) * 3.141592653589);
+  return (RADIUS_OF_INFLUENCE - distance) * scale;
+}
+
+__device__
+float viscosity_kernel(float distance)
+{
+  if (distance >= RADIUS_OF_INFLUENCE)
+  {
+    return 0.0;
+  }
+
+  float volume = 3.141592653589 * pow(RADIUS_OF_INFLUENCE, 8.0) / 4.0;
+  float value = RADIUS_OF_INFLUENCE * RADIUS_OF_INFLUENCE - distance * distance;
+  return value * value * value / volume;
+}
+
+__device__
+float calculate_shared_pressure(float density_a, float density_b)
+{
+  float pressure_a = density_to_pressure(density_a);
+  float pressure_b = density_to_pressure(density_b);
+  return (pressure_a + pressure_b) / 2.0;
+}
+
 // Kernel function to calculate densities
-__global__ void calculate_densities(float **positions, float *densities, float *radii, int *particle_lookup, int *particle_counts, int GRIDS_TO_CHECK_X, int GRIDS_TO_CHECK_Y, int particle_amount)
+__global__ void calculate_densities(float **positions, float **velocities, float *densities, float *radii, int *particle_lookup, int *particle_counts, int GRIDS_TO_CHECK_X, int GRIDS_TO_CHECK_Y, int particle_amount)
 {
   int index = blockIdx.x * blockDim.x + threadIdx.x;
   if (index >= PARTICLE_AMOUNT)
@@ -75,7 +127,11 @@ __global__ void calculate_densities(float **positions, float *densities, float *
     int ending_index = starting_index + particle_counts[first_grid_index];
 
     for(int i = starting_index; i <= ending_index; i++){
-      
+      float distance = sqrt(pow(positions[index][0] - positions[i][0], 2.0) + pow(positions[index][1] - positions[i][1], 2.0));
+      if(distance < RADIUS_OF_INFLUENCE){
+        float influence = smoothing_kernel(distance);
+        density += influence * 3.141592653589 * radii[i] * radii[i];
+      }
     }
   }
 
@@ -198,7 +254,7 @@ int main(void)
   int numBlocks = (PARTICLE_AMOUNT + blockSize - 1) / blockSize;
 
   // Calculate densities
-  calculate_densities<<<numBlocks, blockSize>>>(positions, densities, radii, particle_lookup, particle_counts, GRIDS_TO_CHECK[0], GRIDS_TO_CHECK[1], PARTICLE_AMOUNT);
+  calculate_densities<<<numBlocks, blockSize>>>(positions, velocities, densities, radii, particle_lookup, particle_counts, GRIDS_TO_CHECK[0], GRIDS_TO_CHECK[1], PARTICLE_AMOUNT);
 
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
@@ -221,56 +277,4 @@ int main(void)
   std::cout << "Hello, World!" << std::endl;
 
   return 0;
-}
-
-__device__
-float density_to_pressure(float density)
-{
-  float density_error = density - TARGET_DENSITY;
-  return density_error * PRESSURE_MULTIPLIER;
-}
-
-__device__
-float smoothing_kernel(float distance)
-{
-  if (distance >= RADIUS_OF_INFLUENCE)
-  {
-    return 0.0;
-  }
-
-  float volume = 3.141592653589 * pow(RADIUS_OF_INFLUENCE, 4.0) / 6.0;
-  return (RADIUS_OF_INFLUENCE - distance) * (RADIUS_OF_INFLUENCE - distance) / volume;
-}
-
-__device__
-float smoothing_kernel_derivative(float distance)
-{
-  if (distance >= RADIUS_OF_INFLUENCE)
-  {
-    return 0.0;
-  }
-
-  float scale = 12.0 / (pow(RADIUS_OF_INFLUENCE, 4.0) * 3.141592653589);
-  return (RADIUS_OF_INFLUENCE - distance) * scale;
-}
-
-__device__
-float viscosity_kernel(float distance)
-{
-  if (distance >= RADIUS_OF_INFLUENCE)
-  {
-    return 0.0;
-  }
-
-  float volume = 3.141592653589 * pow(RADIUS_OF_INFLUENCE, 8.0) / 4.0;
-  float value = RADIUS_OF_INFLUENCE * RADIUS_OF_INFLUENCE - distance * distance;
-  return value * value * value / volume;
-}
-
-__device__
-float calculate_shared_pressure(float density_a, float density_b)
-{
-  float pressure_a = density_to_pressure(density_a);
-  float pressure_b = density_to_pressure(density_b);
-  return (pressure_a + pressure_b) / 2.0;
 }

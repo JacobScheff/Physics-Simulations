@@ -17,14 +17,14 @@ int const PARTICLE_AMOUNT_Y = 96;                                  // The number
 int const PARTICLE_AMOUNT = PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y; // The total number of particles
 float const PADDING = 50.0;                                        // The padding around the screen
 
-float const RADIUS_OF_INFLUENCE = 75.0 / 4.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
-float const TARGET_DENSITY = 0.2; // The target density of the fluid
-float const PRESSURE_MULTIPLIER = 500.0; // The multiplier for the pressure force
-float const GRAVITY = 0.2; // The strength of gravity
-float const LOOK_AHEAD_TIME = 1.0 / 60.0; // The time to look ahead when calculating the predicted position
-float const VISCOSITY = 0.1; // The viscosity of the fluid
-float const DAMPENING = 0.95; // How much to slow down particles when they collide with the walls
-float const dt = 1.0 / 8.0; // The time step
+#define RADIUS_OF_INFLUENCE (75.0 / 4.0) // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
+#define TARGET_DENSITY 0.2; // The target density of the fluid
+#define PRESSURE_MULTIPLIER 500.0; // The multiplier for the pressure force
+#define GRAVITY 0.2; // The strength of gravity
+#define LOOK_AHEAD_TIME (1.0 / 60.0); // The time to look ahead when calculating the predicted position
+#define VISCOSITY 0.1; // The viscosity of the fluid
+#define DAMPENING 0.95; // How much to slow down particles when they collide with the walls
+#define dt (1.0 / 8.0); // The time step
 
 int const GRIDS_TO_CHECK[2] = {int(RADIUS_OF_INFLUENCE / SCREEN_SIZE_C[0] * GRID_SIZE_C[0] + 1.0), int(RADIUS_OF_INFLUENCE / SCREEN_SIZE_C[1] * GRID_SIZE_C[1] + 1.0)}; // How many grid cells to check in each direction
 
@@ -74,6 +74,9 @@ __global__ void calculate_densities(float **positions, float *densities, float *
 
     int ending_index = starting_index + particle_counts[first_grid_index];
 
+    for(int i = starting_index; i <= ending_index; i++){
+      
+    }
   }
 
   densities[index] = density;
@@ -212,8 +215,62 @@ int main(void)
   cudaFree(viscosity_force);
   cudaFree(densities);
   cudaFree(radii);
+  cudaFree(particle_lookup);
+  cudaFree(particle_counts);
 
   std::cout << "Hello, World!" << std::endl;
 
   return 0;
+}
+
+__device__
+float density_to_pressure(float density)
+{
+  float density_error = density - TARGET_DENSITY;
+  return density_error * PRESSURE_MULTIPLIER;
+}
+
+__device__
+float smoothing_kernel(float distance)
+{
+  if (distance >= RADIUS_OF_INFLUENCE)
+  {
+    return 0.0;
+  }
+
+  float volume = 3.141592653589 * pow(RADIUS_OF_INFLUENCE, 4.0) / 6.0;
+  return (RADIUS_OF_INFLUENCE - distance) * (RADIUS_OF_INFLUENCE - distance) / volume;
+}
+
+__device__
+float smoothing_kernel_derivative(float distance)
+{
+  if (distance >= RADIUS_OF_INFLUENCE)
+  {
+    return 0.0;
+  }
+
+  float scale = 12.0 / (pow(RADIUS_OF_INFLUENCE, 4.0) * 3.141592653589);
+  return (RADIUS_OF_INFLUENCE - distance) * scale;
+}
+
+__device__
+float viscosity_kernel(float distance)
+{
+  if (distance >= RADIUS_OF_INFLUENCE)
+  {
+    return 0.0;
+  }
+
+  float volume = 3.141592653589 * pow(RADIUS_OF_INFLUENCE, 8.0) / 4.0;
+  float value = RADIUS_OF_INFLUENCE * RADIUS_OF_INFLUENCE - distance * distance;
+  return value * value * value / volume;
+}
+
+__device__
+float calculate_shared_pressure(float density_a, float density_b)
+{
+  float pressure_a = density_to_pressure(density_a);
+  float pressure_b = density_to_pressure(density_b);
+  return (pressure_a + pressure_b) / 2.0;
 }

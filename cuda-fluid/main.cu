@@ -2,6 +2,7 @@
 #include <math.h>
 #include <chrono>
 #include <vector>
+#include <algorithm>
 #include <SFML/Graphics.hpp>
 
 // nvcc main.cu -I"C:\\Users\\jacob\\Documents\\VSC\\C++ Libraries\\SFML-2.6.1\\include" -L"C:\\Users\\jacob\\Documents\\VSC\\C++ Libraries\\SFML-2.6.1\\lib" -lsfml-graphics -lsfml-window -lsfml-system && a.exe
@@ -10,8 +11,6 @@
 #define SCREEN_SIZE_Y 600
 #define GRID_SIZE_X 80
 #define GRID_SIZE_Y 40
-int const SCREEN_SIZE_C[2] = {SCREEN_SIZE_X, SCREEN_SIZE_Y}; // The size of the screen
-int const GRID_SIZE_C[2] = {GRID_SIZE_X, GRID_SIZE_Y};       // How many grid cells to divide the screen into
 
 int const TIME_BETWEEN_FRAMES = 2;
 float const PARTICLE_RADIUS = 1.25;                                // The radius of the particles
@@ -29,7 +28,18 @@ float const PADDING = 50.0;                                        // The paddin
 #define DAMPENING 0.95; // How much to slow down particles when they collide with the walls
 #define dt (1.0 / 8.0); // The time step
 
-int const GRIDS_TO_CHECK[2] = {int(RADIUS_OF_INFLUENCE / SCREEN_SIZE_C[0] * GRID_SIZE_C[0] + 1.0), int(RADIUS_OF_INFLUENCE / SCREEN_SIZE_C[1] * GRID_SIZE_C[1] + 1.0)}; // How many grid cells to check in each direction
+int const GRIDS_TO_CHECK[2] = {int(RADIUS_OF_INFLUENCE / SCREEN_SIZE_X * GRID_SIZE_X + 1.0), int(RADIUS_OF_INFLUENCE / SCREEN_SIZE_Y * GRID_SIZE_Y + 1.0)}; // How many grid cells to check in each direction
+
+struct Particle
+{
+  sf::Vector2f position;
+  sf::Vector2f velocity = {0.0, 0.0};
+  float radius = PARTICLE_RADIUS;
+  float density = 0.0;
+  sf::Vector2f pressure_force = {0.0, 0.0};
+  sf::Vector2f viscosity_force = {0.0, 0.0};
+  int grid_index = -1;
+};
 
 // Grid functions
 __device__ __host__ int *pos_to_grid(float x, float y)
@@ -93,13 +103,13 @@ __device__ float calculate_shared_pressure(float density_a, float density_b)
 }
 
 // Kernel function to calculate densities
-__global__ void calculate_densities(float **positions, float **velocities, float *densities, float *radii, int *particle_lookup, int *particle_counts, int GRIDS_TO_CHECK_X, int GRIDS_TO_CHECK_Y, int particle_amount)
+__global__ void calculate_densities(Particle* particles, int* particle_lookup, int* particle_counts, int GRIDS_TO_CHECK_X, int GRIDS_TO_CHECK_Y, int particle_amount)
 {
   int index = blockIdx.x * blockDim.x + threadIdx.x;
   if (index >= PARTICLE_AMOUNT)
     return;
 
-  int *grid = pos_to_grid(positions[index][0], positions[index][1]);
+  int *grid = pos_to_grid(particles[index].position.x, particles[index].position.y);
   float density = 0.0;
 
   for (int g = 0; g < (GRIDS_TO_CHECK_X * 2 + 1) * (GRIDS_TO_CHECK_Y * 2 + 1); g++)
@@ -128,79 +138,56 @@ __global__ void calculate_densities(float **positions, float **velocities, float
 
     for (int i = starting_index; i <= ending_index; i++)
     {
-      float distance = sqrt(pow(positions[index][0] - positions[i][0], 2.0) + pow(positions[index][1] - positions[i][1], 2.0));
+      float distance = sqrt(pow(particles[i].position.x - particles[index].position.x, 2.0) + pow(particles[i].position.y - particles[index].position.y, 2.0));
       if (distance < RADIUS_OF_INFLUENCE)
       {
         float influence = smoothing_kernel(distance);
-        density += influence * 3.141592653589 * radii[i] * radii[i];
+        density += influence * 3.141592653589 * particles[i].radius * particles[i].radius;
       }
     }
   }
 
-  densities[index] = density;
+  particles[index].density = density;
 }
 
-void sort(float **positions, float **velocities, float *radii, float *densities, float **pressure_force, float **viscosity_force, int *particle_lookup, int *particle_counts)
+void sort(std::vector<Particle>& particles, std::vector<int>& particle_lookup, std::vector<int>& particle_counts)
 {
-  // Map all particles to their grid cell
-  std::vector<std::vector<std::vector<int>>> index_map(GRID_SIZE_C[0], std::vector<std::vector<int>>(GRID_SIZE_C[1], std::vector<int>()));
+  // Update the grid indices of the particles
   for (int i = 0; i < PARTICLE_AMOUNT; i++)
   {
-    int *grid = pos_to_grid(positions[i][0], positions[i][1]);
-    index_map[grid[0]][grid[1]].push_back(i);
+    int *grid = pos_to_grid(particles[i].position.x, particles[i].position.y);
+    particles[i].grid_index = grid_to_index(grid[0], grid[1]);
   }
 
-  // Create a new list of particles
-  float **new_positions = new float *[PARTICLE_AMOUNT];
-  float **new_velocities = new float *[PARTICLE_AMOUNT];
-  float *new_radii = new float[PARTICLE_AMOUNT];
-  float *new_densities = new float[PARTICLE_AMOUNT];
-  float **new_pressure_force = new float *[PARTICLE_AMOUNT];
-  float **new_viscosity_force = new float *[PARTICLE_AMOUNT];
+  // Sort the particles based on grid index
+  std::sort(particles.begin(), particles.end(), [](const Particle& a, const Particle& b) {
+      return a.grid_index < b.grid_index;
+  });
 
-  // Iterate over all grid cells
-  for (int i = 0; i < GRID_SIZE_C[0]; i++)
+  // Update the particle lookup and counts
+  for (int i = 0; i < GRID_SIZE_X * GRID_SIZE_Y; i++)
   {
-    for (int j = 0; j < GRID_SIZE_C[1]; j++)
-    {
-      int grid_index = i + j * GRID_SIZE_C[0];
-      int index = -1;
-
-      // Iterate over all particles in the grid cell
-      for (int k = 0; k < index_map[i][j].size(); k++)
-      {
-        int particle_index = index_map[i][j][k];
-        new_positions[particle_index] = positions[particle_index];
-        new_velocities[particle_index] = velocities[particle_index];
-        new_radii[particle_index] = radii[particle_index];
-        new_densities[particle_index] = densities[particle_index];
-        new_pressure_force[particle_index] = pressure_force[particle_index];
-        new_viscosity_force[particle_index] = viscosity_force[particle_index];
-
-        if (index == -1)
-        {
-          index = particle_index;
-        }
-        particle_counts[grid_index]++;
-      }
-
-      particle_lookup[grid_index] = index;
-    }
+    particle_lookup[i] = -1;
+    particle_counts[i] = 0;
   }
 
-  positions = new_positions;
-  velocities = new_velocities;
-  radii = new_radii;
-  densities = new_densities;
-  pressure_force = new_pressure_force;
-  viscosity_force = new_viscosity_force;
+  for (int i = 0; i < PARTICLE_AMOUNT; i++)
+  {
+    if (particle_lookup[particles[i].grid_index] == -1)
+    {
+      particle_lookup[particles[i].grid_index] = i;
+    }
+    particle_counts[particles[i].grid_index]++;
+  }
 
-  delete[] new_positions;
-  delete[] new_velocities;
-  delete[] new_radii;
-  delete[] new_densities;
-  delete[] new_pressure_force;
-  delete[] new_viscosity_force;
+  int currentGridIndex = -1;
+  for(int i = 0; i < PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y; ++i) {
+    if (particles[i].grid_index != currentGridIndex) {
+      particle_lookup[particles[i].grid_index] = i;
+      currentGridIndex = particles[i].grid_index;
+    }
+    particle_counts[particles[i].grid_index]++;
+  }
 }
 
 int main(void)
@@ -208,48 +195,35 @@ int main(void)
   sf::RenderWindow window(sf::VideoMode(SCREEN_SIZE_X, SCREEN_SIZE_Y), "Fluid Simulation");
 
   // Initialize data
-  float **positions, **velocities, **pressure_force, **viscosity_force;
-  float *densities, *radii;
-  int *particle_lookup, *particle_counts;
+  std::vector<Particle> particles(PARTICLE_AMOUNT);
+  std::vector<int> particle_lookup(GRID_SIZE_X * GRID_SIZE_Y, -1);
+  std::vector<int> particle_counts(GRID_SIZE_X * GRID_SIZE_Y, 0);
 
-  // Allocate Unified Memory – accessible from CPU or GPU
-  cudaMallocManaged(&positions, PARTICLE_AMOUNT * sizeof(float *));
-  cudaMallocManaged(&velocities, PARTICLE_AMOUNT * sizeof(float *));
-  cudaMallocManaged(&pressure_force, PARTICLE_AMOUNT * sizeof(float *));
-  cudaMallocManaged(&viscosity_force, PARTICLE_AMOUNT * sizeof(float *));
-  cudaMallocManaged(&densities, PARTICLE_AMOUNT * sizeof(float));
-  cudaMallocManaged(&radii, PARTICLE_AMOUNT * sizeof(float));
-  cudaMallocManaged(&particle_lookup, GRID_SIZE_C[0] * GRID_SIZE_C[1] * sizeof(int));
-  cudaMallocManaged(&particle_counts, GRID_SIZE_C[0] * GRID_SIZE_C[1] * sizeof(int));
-
-  // Initialize data
-  for(int i = 0; i < PARTICLE_AMOUNT_X; i++){
-    for(int j = 0; j < PARTICLE_AMOUNT_Y; j++){
+  for (int i = 0; i < PARTICLE_AMOUNT_X; i++)
+  {
+    for (int j = 0; j < PARTICLE_AMOUNT_Y; j++)
+    {
       int index = i + j * PARTICLE_AMOUNT_X;
-      positions[index] = new float[2];
-      velocities[index] = new float[2];
-      pressure_force[index] = new float[2];
-      viscosity_force[index] = new float[2];
-      positions[index][0] = (i + 0.5) * (SCREEN_SIZE_C[0] - 2.0 * PADDING) / PARTICLE_AMOUNT_X + PADDING;
-      positions[index][1] = (j + 0.5) * (SCREEN_SIZE_C[1] - 2.0 * PADDING) / PARTICLE_AMOUNT_Y + PADDING;
-      velocities[index][0] = 0.0;
-      velocities[index][1] = 0.0;
-      densities[index] = 0.0;
-      radii[index] = PARTICLE_RADIUS;
-      pressure_force[index][0] = 0.0;
-      pressure_force[index][1] = 0.0;
-      viscosity_force[index][0] = 0.0;
-      viscosity_force[index][1] = 0.0;
+      particles[index].position = {(i + 0.5f) * (SCREEN_SIZE_X - 2.0f * PADDING) / PARTICLE_AMOUNT_X + PADDING, (j + 0.5f) * (SCREEN_SIZE_Y - 2.0f * PADDING) / PARTICLE_AMOUNT_Y + PADDING};
     }
   }
-  
-  for(int i = 0; i < GRID_SIZE_C[0] * GRID_SIZE_C[1]; i++){
+
+  for (int i = 0; i < GRID_SIZE_X * GRID_SIZE_Y; i++)
+  {
     particle_lookup[i] = -1;
     particle_counts[i] = 0;
   }
 
+  // Allocate Unified Memory – accessible from CPU or GPU
+  Particle* d_particles;
+  int* d_particle_lookup;
+  int* d_particle_counts;
+  cudaMalloc(&d_particles, PARTICLE_AMOUNT * sizeof(Particle));
+  cudaMalloc(&d_particle_lookup, GRID_SIZE_X * GRID_SIZE_Y * sizeof(int));
+  cudaMalloc(&d_particle_counts, GRID_SIZE_X * GRID_SIZE_Y * sizeof(int));
+
   // Sort the particles
-  sort(positions, velocities, radii, densities, pressure_force, viscosity_force, particle_lookup, particle_counts);
+  sort(particles, particle_lookup, particle_counts);
 
   while (window.isOpen())
   {
@@ -283,7 +257,7 @@ int main(void)
     {
       sf::CircleShape circle(PARTICLE_RADIUS);
       circle.setFillColor(sf::Color::Blue);
-      circle.setPosition(positions[i][0], positions[i][1]);
+      circle.setPosition(particles[i].position);
       circles.push_back(circle);
     }
 
@@ -299,14 +273,9 @@ int main(void)
   }
 
   // Free memory
-  cudaFree(positions);
-  cudaFree(velocities);
-  cudaFree(pressure_force);
-  cudaFree(viscosity_force);
-  cudaFree(densities);
-  cudaFree(radii);
-  cudaFree(particle_lookup);
-  cudaFree(particle_counts);
+  cudaFree(d_particles);
+  cudaFree(d_particle_lookup);
+  cudaFree(d_particle_counts);
 
   std::cout << "Hello, World!" << std::endl;
 

@@ -14,6 +14,17 @@ int const PARTICLE_AMOUNT_Y = 96;                                  // The number
 int const PARTICLE_AMOUNT = PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y; // The total number of particles
 float const PADDING = 50.0;                                        // The padding around the screen
 
+float const RADIUS_OF_INFLUENCE = 75.0 / 4.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
+float const TARGET_DENSITY = 0.2; // The target density of the fluid
+float const PRESSURE_MULTIPLIER = 500.0; // The multiplier for the pressure force
+float const GRAVITY = 0.2; // The strength of gravity
+float const LOOK_AHEAD_TIME = 1.0 / 60.0; // The time to look ahead when calculating the predicted position
+float const VISCOSITY = 0.1; // The viscosity of the fluid
+float const DAMPENING = 0.95; // How much to slow down particles when they collide with the walls
+float const dt = 1.0 / 8.0; // The time step
+
+std::array<int, 2> const GRIDS_TO_CHECK = {int(RADIUS_OF_INFLUENCE / SCREEN_SIZE[0] * GRID_SIZE[0] + 1.0), int(RADIUS_OF_INFLUENCE / SCREEN_SIZE[1] * GRID_SIZE[1] + 1.0)}; // How many grid cells to check in each direction
+
 // Grid functions
 __host__
 std::array<int, 2> pos_to_grid(float x, float y)
@@ -30,15 +41,36 @@ int grid_to_index(int x, int y)
 }
 
 // Kernel function to calculate densities
-__global__ void calculate_densities(float **positions, float *densities, float *radii, int PARTICLE_AMOUNT)
+__global__ void calculate_densities(float **positions, float *densities, float *radii, int *particle_lookup, int *particle_counts, int particle_amount)
 {
   int index = blockIdx.x * blockDim.x + threadIdx.x;
   if (index >= PARTICLE_AMOUNT)
     return;
 
+  std::array<int, 2> grid = pos_to_grid(positions[index][0], positions[index][1]);
   float density = 0.0;
 
-  // TODO: Finish code
+  for(int g = 0; g < (GRIDS_TO_CHECK[0] * 2 + 1) * (GRIDS_TO_CHECK[1] * 2 + 1); g++){
+    int gx = g / (GRIDS_TO_CHECK[1] * 2 + 1) - GRIDS_TO_CHECK[0];
+    int gy = g % (GRIDS_TO_CHECK[1] * 2 + 1) - GRIDS_TO_CHECK[1];
+
+    if(grid[0] + gx < 0 || grid[0] + gx >= GRID_SIZE[0] || grid[1] + gy < 0 || grid[1] + gy >= GRID_SIZE[1]){
+      continue;
+    }
+
+    int first_grid_index = grid_to_index(grid[0] + gx, grid[1] + gy);
+    if(first_grid_index < 0 || first_grid_index >= GRID_SIZE[0] * GRID_SIZE[1]){
+      continue;
+    }
+
+    int starting_index = particle_lookup[first_grid_index];
+    if(starting_index == -1){
+      continue;
+    }
+
+    int ending_index = starting_index + particle_counts[first_grid_index];
+
+  }
 
   densities[index] = density;
 }
@@ -152,7 +184,7 @@ int main(void)
   int numBlocks = (PARTICLE_AMOUNT + blockSize - 1) / blockSize;
 
   // Calculate densities
-  calculate_densities<<<numBlocks, blockSize>>>(positions, densities, radii, PARTICLE_AMOUNT);
+  calculate_densities<<<numBlocks, blockSize>>>(positions, densities, radii, particle_lookup, particle_counts, PARTICLE_AMOUNT);
 
   // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();

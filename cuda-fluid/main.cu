@@ -2,13 +2,16 @@
 #include <math.h>
 #include <chrono>
 #include <vector>
+#include <SFML/Graphics.hpp>
+
+// nvcc main.cu -I"C:\\Users\\jacob\\Documents\\VSC\\C++ Libraries\\SFML-2.6.1\\include" -L"C:\\Users\\jacob\\Documents\\VSC\\C++ Libraries\\SFML-2.6.1\\lib" -lsfml-graphics -lsfml-window -lsfml-system && a.exe
 
 #define SCREEN_SIZE_X 1200
 #define SCREEN_SIZE_Y 600
 #define GRID_SIZE_X 80
 #define GRID_SIZE_Y 40
 int const SCREEN_SIZE_C[2] = {SCREEN_SIZE_X, SCREEN_SIZE_Y}; // The size of the screen
-int const GRID_SIZE_C[2] = {GRID_SIZE_X, GRID_SIZE_Y};     // How many grid cells to divide the screen into
+int const GRID_SIZE_C[2] = {GRID_SIZE_X, GRID_SIZE_Y};       // How many grid cells to divide the screen into
 
 int const TIME_BETWEEN_FRAMES = 2;
 float const PARTICLE_RADIUS = 1.25;                                // The radius of the particles
@@ -18,41 +21,37 @@ int const PARTICLE_AMOUNT = PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y; // The total 
 float const PADDING = 50.0;                                        // The padding around the screen
 
 #define RADIUS_OF_INFLUENCE (75.0 / 4.0) // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
-#define TARGET_DENSITY 0.2; // The target density of the fluid
-#define PRESSURE_MULTIPLIER 500.0; // The multiplier for the pressure force
-#define GRAVITY 0.2; // The strength of gravity
+#define TARGET_DENSITY 0.2;              // The target density of the fluid
+#define PRESSURE_MULTIPLIER 500.0;       // The multiplier for the pressure force
+#define GRAVITY 0.2;                     // The strength of gravity
 // TODO: ADD BACK // #define LOOK_AHEAD_TIME (1.0 / 60.0); // The time to look ahead when calculating the predicted position
-#define VISCOSITY 0.1; // The viscosity of the fluid
+#define VISCOSITY 0.1;  // The viscosity of the fluid
 #define DAMPENING 0.95; // How much to slow down particles when they collide with the walls
 #define dt (1.0 / 8.0); // The time step
 
 int const GRIDS_TO_CHECK[2] = {int(RADIUS_OF_INFLUENCE / SCREEN_SIZE_C[0] * GRID_SIZE_C[0] + 1.0), int(RADIUS_OF_INFLUENCE / SCREEN_SIZE_C[1] * GRID_SIZE_C[1] + 1.0)}; // How many grid cells to check in each direction
 
 // Grid functions
-__device__ __host__
-int* pos_to_grid(float x, float y)
+__device__ __host__ int *pos_to_grid(float x, float y)
 {
-  int grid[2] =  {
+  int grid[2] = {
       (int)fmax(fmin(floor(x / SCREEN_SIZE_X * GRID_SIZE_X), GRID_SIZE_X - 1), 0),
       (int)fmax(fmin(floor(y / SCREEN_SIZE_Y * GRID_SIZE_Y), GRID_SIZE_Y - 1), 0)};
   return grid;
 }
 
-__device__ __host__
-int grid_to_index(int x, int y)
+__device__ __host__ int grid_to_index(int x, int y)
 {
   return y * GRID_SIZE_X + x;
 }
 
-__device__
-float density_to_pressure(float density)
+__device__ float density_to_pressure(float density)
 {
   float density_error = density - TARGET_DENSITY;
   return density_error * PRESSURE_MULTIPLIER;
 }
 
-__device__
-float smoothing_kernel(float distance)
+__device__ float smoothing_kernel(float distance)
 {
   if (distance >= RADIUS_OF_INFLUENCE)
   {
@@ -63,8 +62,7 @@ float smoothing_kernel(float distance)
   return (RADIUS_OF_INFLUENCE - distance) * (RADIUS_OF_INFLUENCE - distance) / volume;
 }
 
-__device__
-float smoothing_kernel_derivative(float distance)
+__device__ float smoothing_kernel_derivative(float distance)
 {
   if (distance >= RADIUS_OF_INFLUENCE)
   {
@@ -75,8 +73,7 @@ float smoothing_kernel_derivative(float distance)
   return (RADIUS_OF_INFLUENCE - distance) * scale;
 }
 
-__device__
-float viscosity_kernel(float distance)
+__device__ float viscosity_kernel(float distance)
 {
   if (distance >= RADIUS_OF_INFLUENCE)
   {
@@ -88,8 +85,7 @@ float viscosity_kernel(float distance)
   return value * value * value / volume;
 }
 
-__device__
-float calculate_shared_pressure(float density_a, float density_b)
+__device__ float calculate_shared_pressure(float density_a, float density_b)
 {
   float pressure_a = density_to_pressure(density_a);
   float pressure_b = density_to_pressure(density_b);
@@ -103,32 +99,38 @@ __global__ void calculate_densities(float **positions, float **velocities, float
   if (index >= PARTICLE_AMOUNT)
     return;
 
-  int* grid = pos_to_grid(positions[index][0], positions[index][1]);
+  int *grid = pos_to_grid(positions[index][0], positions[index][1]);
   float density = 0.0;
 
-  for(int g = 0; g < (GRIDS_TO_CHECK_X * 2 + 1) * (GRIDS_TO_CHECK_Y * 2 + 1); g++){
+  for (int g = 0; g < (GRIDS_TO_CHECK_X * 2 + 1) * (GRIDS_TO_CHECK_Y * 2 + 1); g++)
+  {
     int gx = g / (GRIDS_TO_CHECK_Y * 2 + 1) - GRIDS_TO_CHECK_X;
     int gy = g % (GRIDS_TO_CHECK_Y * 2 + 1) - GRIDS_TO_CHECK_Y;
 
-    if(grid[0] + gx < 0 || grid[0] + gx >= GRID_SIZE_X || grid[1] + gy < 0 || grid[1] + gy >= GRID_SIZE_Y){
+    if (grid[0] + gx < 0 || grid[0] + gx >= GRID_SIZE_X || grid[1] + gy < 0 || grid[1] + gy >= GRID_SIZE_Y)
+    {
       continue;
     }
 
     int first_grid_index = grid_to_index(grid[0] + gx, grid[1] + gy);
-    if(first_grid_index < 0 || first_grid_index >= GRID_SIZE_X * GRID_SIZE_Y){
+    if (first_grid_index < 0 || first_grid_index >= GRID_SIZE_X * GRID_SIZE_Y)
+    {
       continue;
     }
 
     int starting_index = particle_lookup[first_grid_index];
-    if(starting_index == -1){
+    if (starting_index == -1)
+    {
       continue;
     }
 
     int ending_index = starting_index + particle_counts[first_grid_index];
 
-    for(int i = starting_index; i <= ending_index; i++){
+    for (int i = starting_index; i <= ending_index; i++)
+    {
       float distance = sqrt(pow(positions[index][0] - positions[i][0], 2.0) + pow(positions[index][1] - positions[i][1], 2.0));
-      if(distance < RADIUS_OF_INFLUENCE){
+      if (distance < RADIUS_OF_INFLUENCE)
+      {
         float influence = smoothing_kernel(distance);
         density += influence * 3.141592653589 * radii[i] * radii[i];
       }
@@ -144,7 +146,7 @@ void sort(float **positions, float **velocities, float *radii, float *densities,
   std::vector<std::vector<std::vector<int>>> index_map(GRID_SIZE_C[0], std::vector<std::vector<int>>(GRID_SIZE_C[1], std::vector<int>()));
   for (int i = 0; i < PARTICLE_AMOUNT; i++)
   {
-    int* grid = pos_to_grid(positions[i][0], positions[i][1]);
+    int *grid = pos_to_grid(positions[i][0], positions[i][1]);
     index_map[grid[0]][grid[1]].push_back(i);
   }
 
@@ -203,6 +205,8 @@ void sort(float **positions, float **velocities, float *radii, float *densities,
 
 int main(void)
 {
+  sf::RenderWindow window(sf::VideoMode(SCREEN_SIZE_X, SCREEN_SIZE_Y), "Fluid Simulation");
+
   // Initialize data
   float **positions, **velocities, **pressure_force, **viscosity_force;
   float *densities, *radii;
@@ -242,27 +246,56 @@ int main(void)
       particle_counts[i] = 0;
     }
   }
-  
+
   // Sort the particles
   sort(positions, velocities, radii, densities, pressure_force, viscosity_force, particle_lookup, particle_counts);
 
-  // Get start time
-  auto start = std::chrono::high_resolution_clock::now();
+  while (window.isOpen())
+  {
+    sf::Event event;
+    while (window.pollEvent(event))
+    {
+      if (event.type == sf::Event::Closed)
+        window.close();
+    }
 
-  // Get the number of blocks and threads
-  int blockSize = 256;
-  int numBlocks = (PARTICLE_AMOUNT + blockSize - 1) / blockSize;
+    // Get start time
+    auto start = std::chrono::high_resolution_clock::now();
 
-  // Calculate densities
-  calculate_densities<<<numBlocks, blockSize>>>(positions, velocities, densities, radii, particle_lookup, particle_counts, GRIDS_TO_CHECK[0], GRIDS_TO_CHECK[1], PARTICLE_AMOUNT);
+    // Get the number of blocks and threads
+    int blockSize = 256;
+    int numBlocks = (PARTICLE_AMOUNT + blockSize - 1) / blockSize;
 
-  // Wait for GPU to finish before accessing on host
-  cudaDeviceSynchronize();
+    // Calculate densities
+    // calculate_densities<<<numBlocks, blockSize>>>(positions, velocities, densities, radii, particle_lookup, particle_counts, GRIDS_TO_CHECK[0], GRIDS_TO_CHECK[1], PARTICLE_AMOUNT);
 
-  // Print end time in ms
-  auto end = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::milli> elapsed = end - start;
-  std::cout << "Elapsed time in milliseconds : " << elapsed.count() << " ms" << std::endl;
+    // Wait for GPU to finish before accessing on host
+    // cudaDeviceSynchronize();
+
+    // Print end time in ms
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> elapsed = end - start;
+    std::cout << "Elapsed time in milliseconds : " << elapsed.count() << " ms" << std::endl;
+
+    std::vector<sf::CircleShape> circles;
+    for (int i = 0; i < PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y; ++i)
+    {
+      sf::CircleShape circle(10.f); // Radius
+      circle.setFillColor(sf::Color::Blue);
+      circle.setPosition(positions[i][0], positions[i][1]);
+      circles.push_back(circle);
+    }
+
+    window.clear();
+    for (const auto &circle : circles)
+    {
+      window.draw(circle);
+    }
+    window.display();
+
+    // Wait for TIME_BETWEEN_FRAMES
+    sf::sleep(sf::milliseconds(TIME_BETWEEN_FRAMES));
+  }
 
   // Free memory
   cudaFree(positions);

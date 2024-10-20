@@ -126,7 +126,7 @@ __global__ void calculate_densities(Particle *particles, int *particle_lookup, i
   if (index >= PARTICLE_AMOUNT)
     return;
 
-  int *grid = pos_to_grid(particles[index].position.x, particles[index].position.y);
+  // int *grid = pos_to_grid(particles[index].position.x, particles[index].position.y);
   float density_a = 0.0;
 
   for (int g = 0; g < (GRIDS_TO_CHECK_X * 2 + 1) * (GRIDS_TO_CHECK_Y * 2 + 1); g++)
@@ -134,41 +134,42 @@ __global__ void calculate_densities(Particle *particles, int *particle_lookup, i
     int gx = g / (GRIDS_TO_CHECK_Y * 2 + 1) - GRIDS_TO_CHECK_X;
     int gy = g % (GRIDS_TO_CHECK_Y * 2 + 1) - GRIDS_TO_CHECK_Y;
 
-    if (grid[0] + gx < 0 || grid[0] + gx >= GRID_SIZE_X || grid[1] + gy < 0 || grid[1] + gy >= GRID_SIZE_Y)
-    {
-      continue;
-    }
-
-    int first_grid_index = grid_to_index(grid[0] + gx, grid[1] + gy);
-    if (first_grid_index < 0 || first_grid_index >= GRID_SIZE_X * GRID_SIZE_Y)
-    {
-      continue;
-    }
-
-    int starting_index = particle_lookup[first_grid_index];
-    if (starting_index == -1)
-    {
-      continue;
-    }
-
-    int ending_index = starting_index + particle_counts[first_grid_index] - 1;
-    if (ending_index >= PARTICLE_AMOUNT)
-    {
-      ending_index = PARTICLE_AMOUNT - 1;
-    }
-
-    float grid_density = get_densities_from_grid(index, particles, starting_index, ending_index);
-    density_a += grid_density;
-
-    // for (int i = starting_index; i <= ending_index; i++)
+    // if (grid[0] + gx < 0 || grid[0] + gx >= GRID_SIZE_X || grid[1] + gy < 0 || grid[1] + gy >= GRID_SIZE_Y)
     // {
-    //     float distance = sqrt(pow(particles[i].position.x - particles[index].position.x, 2.0) + pow(particles[i].position.y - particles[index].position.y, 2.0));
-    //     if (distance < RADIUS_OF_INFLUENCE)
-    //     {
-    //       float influence = smoothing_kernel(distance);
-    //       density += influence * 3.141592653589 * particles[i].radius * particles[i].radius;
-    //     }
+    //   continue;
     // }
+
+    density_a += 1.0;
+    //   int first_grid_index = grid_to_index(grid[0] + gx, grid[1] + gy);
+    //   if (first_grid_index < 0 || first_grid_index >= GRID_SIZE_X * GRID_SIZE_Y)
+    //   {
+    //     continue;
+    //   }
+
+    //   int starting_index = particle_lookup[first_grid_index];
+    //   if (starting_index == -1)
+    //   {
+    //     continue;
+    //   }
+
+    //   int ending_index = starting_index + particle_counts[first_grid_index] - 1;
+    //   if (ending_index >= PARTICLE_AMOUNT)
+    //   {
+    //     ending_index = PARTICLE_AMOUNT - 1;
+    //   }
+
+    //   float grid_density = get_densities_from_grid(index, particles, starting_index, ending_index);
+    //   density_a += grid_density;
+
+    //   // for (int i = starting_index; i <= ending_index; i++)
+    //   // {
+    //   //     float distance = sqrt(pow(particles[i].position.x - particles[index].position.x, 2.0) + pow(particles[i].position.y - particles[index].position.y, 2.0));
+    //   //     if (distance < RADIUS_OF_INFLUENCE)
+    //   //     {
+    //   //       float influence = smoothing_kernel(distance);
+    //   //       density += influence * 3.141592653589 * particles[i].radius * particles[i].radius;
+    //   //     }
+    //   // }
   }
 
   // particles[index].density = density;

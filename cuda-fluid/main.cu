@@ -105,7 +105,7 @@ __device__ float calculate_shared_pressure(float density_a, float density_b)
 // Calculate densities from a grid
 __device__ float get_densities_from_grid(int index, Particle *particles, int startingIndex, int endingIndex)
 {
-  int total_density = 0.0;
+  float total_density = 0.0;
   for (int i = startingIndex; i <= endingIndex; i++)
   {
     float distance = sqrt(pow(particles[i].position.x - particles[index].position.x, 2.0) + pow(particles[i].position.y - particles[index].position.y, 2.0));
@@ -127,7 +127,7 @@ __global__ void calculate_densities(Particle *particles, int *particle_lookup, i
     return;
 
   int *grid = pos_to_grid(particles[index].position.x, particles[index].position.y);
-  float density = 0.0;
+  float density_a = 0.0;
 
   for (int g = 0; g < (GRIDS_TO_CHECK_X * 2 + 1) * (GRIDS_TO_CHECK_Y * 2 + 1); g++)
   {
@@ -151,18 +151,23 @@ __global__ void calculate_densities(Particle *particles, int *particle_lookup, i
       continue;
     }
 
-    int ending_index = starting_index + particle_counts[first_grid_index];
+    int ending_index = starting_index + particle_counts[first_grid_index] - 1;
+    if (ending_index >= PARTICLE_AMOUNT)
+    {
+      ending_index = PARTICLE_AMOUNT - 1;
+    }
 
-    int grid_density = get_densities_from_grid(index, particles, starting_index, ending_index);
+    float grid_density = get_densities_from_grid(index, particles, starting_index, ending_index);
+    density_a += grid_density;
 
     // for (int i = starting_index; i <= ending_index; i++)
     // {
-  //     float distance = sqrt(pow(particles[i].position.x - particles[index].position.x, 2.0) + pow(particles[i].position.y - particles[index].position.y, 2.0));
-  //     if (distance < RADIUS_OF_INFLUENCE)
-  //     {
-  //       float influence = smoothing_kernel(distance);
-  //       density += influence * 3.141592653589 * particles[i].radius * particles[i].radius;
-  //     }
+    //     float distance = sqrt(pow(particles[i].position.x - particles[index].position.x, 2.0) + pow(particles[i].position.y - particles[index].position.y, 2.0));
+    //     if (distance < RADIUS_OF_INFLUENCE)
+    //     {
+    //       float influence = smoothing_kernel(distance);
+    //       density += influence * 3.141592653589 * particles[i].radius * particles[i].radius;
+    //     }
     // }
   }
 
@@ -335,6 +340,11 @@ int main(void)
 
     // Wait for GPU to finish before accessing on host
     cudaDeviceSynchronize();
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess)
+    {
+      std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
+    }
 
     // Copy data back from GPU
     cudaMemcpy(particles.data(), d_particles, PARTICLE_AMOUNT * sizeof(Particle), cudaMemcpyDeviceToHost);

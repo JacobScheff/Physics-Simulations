@@ -13,9 +13,9 @@
 #define GRID_SIZE_Y 40
 
 int const TIME_BETWEEN_FRAMES = 2;                                 // The time between frames in milliseconds
-float const PARTICLE_RADIUS = 1.25 / 2.0;                          // The radius of the particles
-int const PARTICLE_AMOUNT_X = 192 * 2;                             // The number of particles in the x direction
-int const PARTICLE_AMOUNT_Y = 96 * 2;                              // The number of particles in the y direction
+float const PARTICLE_RADIUS = 1.25;                                // The radius of the particles
+int const PARTICLE_AMOUNT_X = 192;                                 // The number of particles in the x direction
+int const PARTICLE_AMOUNT_Y = 96;                                  // The number of particles in the y direction
 int const PARTICLE_AMOUNT = PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y; // The total number of particles
 float const PADDING = 50.0;                                        // The padding around the screen
 
@@ -102,6 +102,23 @@ __device__ float calculate_shared_pressure(float density_a, float density_b)
   return (pressure_a + pressure_b) / 2.0;
 }
 
+// Calculate densities from a grid
+__device__ float get_densities_from_grid(int index, Particle *particles, int startingIndex, int endingIndex)
+{
+  int total_density = 0.0;
+  for (int i = startingIndex; i <= endingIndex; i++)
+  {
+    float distance = sqrt(pow(particles[i].position.x - particles[index].position.x, 2.0) + pow(particles[i].position.y - particles[index].position.y, 2.0));
+    if (distance < RADIUS_OF_INFLUENCE)
+    {
+      float influence = smoothing_kernel(distance);
+      total_density += influence * 3.141592653589 * particles[i].radius * particles[i].radius;
+    }
+  }
+
+  return total_density;
+}
+
 // Kernel function to calculate densities
 __global__ void calculate_densities(Particle *particles, int *particle_lookup, int *particle_counts, int GRIDS_TO_CHECK_X, int GRIDS_TO_CHECK_Y, int particle_amount)
 {
@@ -136,82 +153,84 @@ __global__ void calculate_densities(Particle *particles, int *particle_lookup, i
 
     int ending_index = starting_index + particle_counts[first_grid_index];
 
-    for (int i = starting_index; i <= ending_index; i++)
-    {
-      float distance = sqrt(pow(particles[i].position.x - particles[index].position.x, 2.0) + pow(particles[i].position.y - particles[index].position.y, 2.0));
-      if (distance < RADIUS_OF_INFLUENCE)
-      {
-        float influence = smoothing_kernel(distance);
-        density += influence * 3.141592653589 * particles[i].radius * particles[i].radius;
-      }
-    }
+    int grid_density = get_densities_from_grid(index, particles, starting_index, ending_index);
+
+    // for (int i = starting_index; i <= ending_index; i++)
+    // {
+  //     float distance = sqrt(pow(particles[i].position.x - particles[index].position.x, 2.0) + pow(particles[i].position.y - particles[index].position.y, 2.0));
+  //     if (distance < RADIUS_OF_INFLUENCE)
+  //     {
+  //       float influence = smoothing_kernel(distance);
+  //       density += influence * 3.141592653589 * particles[i].radius * particles[i].radius;
+  //     }
+    // }
   }
 
-  particles[index].density = density;
+  // particles[index].density = density;
 }
 
 // Kernel function to calculate forces
 __global__ void calculate_forces(Particle *particles, int *particle_lookup, int *particle_counts, int GRIDS_TO_CHECK_X, int GRIDS_TO_CHECK_Y, int particle_amount)
 {
-  int index = blockIdx.x * blockDim.x + threadIdx.x;
-  if (index >= PARTICLE_AMOUNT)
-    return;
+  // int index = blockIdx.x * blockDim.x + threadIdx.x;
+  // if (index >= PARTICLE_AMOUNT)
+  //   return;
 
-  int *grid = pos_to_grid(particles[index].position.x, particles[index].position.y);
-  // sf::Vector2f pressure_force = {0.0, 0.0};
-  // sf::Vector2f viscosity_force = {0.0, 0.0};
+  // int *grid = pos_to_grid(particles[index].position.x, particles[index].position.y);
+  // // sf::Vector2f pressure_force = {0.0, 0.0};
+  // // sf::Vector2f viscosity_force = {0.0, 0.0};
 
-  for (int g = 0; g < (GRIDS_TO_CHECK_X * 2 + 1) * (GRIDS_TO_CHECK_Y * 2 + 1); g++)
-  {
-    int gx = g / (GRIDS_TO_CHECK_Y * 2 + 1) - GRIDS_TO_CHECK_X;
-    int gy = g % (GRIDS_TO_CHECK_Y * 2 + 1) - GRIDS_TO_CHECK_Y;
+  // for (int g = 0; g < (GRIDS_TO_CHECK_X * 2 + 1) * (GRIDS_TO_CHECK_Y * 2 + 1); g++)
+  // {
+  //   int gx = g / (GRIDS_TO_CHECK_Y * 2 + 1) - GRIDS_TO_CHECK_X;
+  //   int gy = g % (GRIDS_TO_CHECK_Y * 2 + 1) - GRIDS_TO_CHECK_Y;
 
-    if (grid[0] + gx < 0 || grid[0] + gx >= GRID_SIZE_X || grid[1] + gy < 0 || grid[1] + gy >= GRID_SIZE_Y)
-    {
-      continue;
-    }
+  //   if (grid[0] + gx < 0 || grid[0] + gx >= GRID_SIZE_X || grid[1] + gy < 0 || grid[1] + gy >= GRID_SIZE_Y)
+  //   {
+  //     continue;
+  //   }
 
-    int first_grid_index = grid_to_index(grid[0] + gx, grid[1] + gy);
-    if (first_grid_index < 0 || first_grid_index >= GRID_SIZE_X * GRID_SIZE_Y)
-    {
-      continue;
-    }
+  //   int first_grid_index = grid_to_index(grid[0] + gx, grid[1] + gy);
+  //   if (first_grid_index < 0 || first_grid_index >= GRID_SIZE_X * GRID_SIZE_Y)
+  //   {
+  //     continue;
+  //   }
 
-    int starting_index = particle_lookup[first_grid_index];
-    if (starting_index == -1)
-    {
-      continue;
-    }
+  //   int starting_index = particle_lookup[first_grid_index];
+  //   if (starting_index == -1)
+  //   {
+  //     continue;
+  //   }
 
-    int ending_index = starting_index + particle_counts[first_grid_index];
+  //   int ending_index = starting_index + particle_counts[first_grid_index];
 
-    for (int i = starting_index; i <= ending_index; i++)
-    {
-      // sf::Vector2f offset = particles[i].position - particles[index].position;
-      // float distance = sqrt(offset.x * offset.x + offset.y * offset.y);
-      // if (distance == 0 || distance >= RADIUS_OF_INFLUENCE)
-      // {
-      //   continue;
-      // }
-      // sf::Vector2f dir = offset / distance;
+  //   for (int i = starting_index; i <= ending_index; i++)
+  //   {
+  //     // sf::Vector2f offset = particles[i].position - particles[index].position;
+  //     // float distance = sqrt(offset.x * offset.x + offset.y * offset.y);
+  //     // if (distance == 0 || distance >= RADIUS_OF_INFLUENCE)
+  //     // {
+  //     //   continue;
+  //     // }
+  //     // sf::Vector2f dir = offset / distance;
 
-      // float slope = smoothing_kernel_derivative(distance);
-      // float shared_pressure = calculate_shared_pressure(particles[index].density, particles[i].density);
+  //     // float slope = smoothing_kernel_derivative(distance);
+  //     // float shared_pressure = calculate_shared_pressure(particles[index].density, particles[i].density);
 
-      // float pressure_multiplier = shared_pressure * slope * 3.141592653589 * particles[i].radius * particles[i].radius / max(particles[index].density, 0.000001);
-      // sf::Vector2f local_pressure_force = dir * pressure_multiplier;
+  //     // float pressure_multiplier = shared_pressure * slope * 3.141592653589 * particles[i].radius * particles[i].radius / max(particles[index].density, 0.000001);
+  //     // sf::Vector2f local_pressure_force = dir * pressure_multiplier;
 
-      // sf::Vector2f local_viscosity_force = (particles[i].velocity - particles[index].velocity) * viscosity_kernel(distance);
-      // local_viscosity_force.x *= VISCOSITY;
-      // local_viscosity_force.y *= VISCOSITY;
+  //     // sf::Vector2f local_viscosity_force = (particles[i].velocity - particles[index].velocity) * viscosity_kernel(distance);
+  //     // local_viscosity_force.x *= VISCOSITY;
+  //     // local_viscosity_force.y *= VISCOSITY;
 
-      // pressure_force += local_pressure_force;
-      // viscosity_force += local_viscosity_force;
-    }
-  }
+  //     // pressure_force += local_pressure_force;
+  //     // viscosity_force += local_viscosity_force;
+  //   }
+  // }
 
-  particles[index].pressure_force = pressure_force;
-  particles[index].viscosity_force = viscosity_force;
+  // // particles[index].pressure_force = pressure_force;
+  // // particles[index].viscosity_force = viscosity_force;
 }
 
 void sort(std::vector<Particle> &particles, std::vector<int> &particle_lookup, std::vector<int> &particle_counts)

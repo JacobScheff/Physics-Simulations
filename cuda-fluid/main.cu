@@ -151,6 +151,9 @@ __global__ void calculate_densities(Particle *particles, int *particle_lookup, i
     float y = particles[index].position.y;
     for (int i = starting_index; i <= ending_index; i++)
     {
+      if (i == index)
+        continue;
+        
       float distance = sqrtf(powf(particles[i].position.x - x, 2.0) + powf(particles[i].position.y - y, 2.0));
       if (distance < RADIUS_OF_INFLUENCE)
       {
@@ -170,11 +173,11 @@ __global__ void calculate_forces(Particle *particles, int *particle_lookup, int 
   if (index >= PARTICLE_AMOUNT)
     return;
 
-    int grid[2];
-    pos_to_grid(particles[index].position.x, particles[index].position.y, grid);
+  int grid[2];
+  pos_to_grid(particles[index].position.x, particles[index].position.y, grid);
 
-    float pressure_force[2] = {0.0, 0.0};
-    float viscosity_force[2] = {0.0, 0.0};
+  float pressure_force[2] = {0.0, 0.0};
+  float viscosity_force[2] = {0.0, 0.0};
 
   for (int g = 0; g < (GRIDS_TO_CHECK_X * 2 + 1) * (GRIDS_TO_CHECK_Y * 2 + 1); g++)
   {
@@ -204,7 +207,9 @@ __global__ void calculate_forces(Particle *particles, int *particle_lookup, int 
     float y = particles[index].position.y;
     for (int i = starting_index; i <= ending_index; i++)
     {
-          float offset[2] = {particles[i].position.x - particles[index].position.x, particles[i].position.y - particles[index].position.y};
+      if(i == index) continue;
+
+      float offset[2] = {particles[i].position.x - particles[index].position.x, particles[i].position.y - particles[index].position.y};
       float distance = sqrtf(offset[0] * offset[0] + offset[1] * offset[1]);
       if (distance == 0 || distance >= RADIUS_OF_INFLUENCE)
       {
@@ -218,15 +223,15 @@ __global__ void calculate_forces(Particle *particles, int *particle_lookup, int 
       float pressure_multiplier = shared_pressure * slope * 3.141592653589 * particles[i].radius * particles[i].radius / max(particles[index].density, 0.000001);
       float local_pressure_force[2] = {dir[0] * pressure_multiplier, dir[1] * pressure_multiplier};
 
-        float viscosity = viscosity_kernel(distance);
-        float local_viscosity_force[2] = {(particles[i].velocity.x - particles[index].velocity.x) * viscosity, (particles[i].velocity.y - particles[index].velocity.y) * viscosity};
-        local_viscosity_force[0] *= VISCOSITY;
-        local_viscosity_force[1] *= VISCOSITY;
+      float viscosity = viscosity_kernel(distance);
+      float local_viscosity_force[2] = {(particles[i].velocity.x - particles[index].velocity.x) * viscosity, (particles[i].velocity.y - particles[index].velocity.y) * viscosity};
+      local_viscosity_force[0] *= VISCOSITY;
+      local_viscosity_force[1] *= VISCOSITY;
 
-        pressure_force[0] += local_pressure_force[0];
-        pressure_force[1] += local_pressure_force[1];
-        viscosity_force[0] += local_viscosity_force[0];
-        viscosity_force[1] += local_viscosity_force[1];
+      pressure_force[0] += local_pressure_force[0];
+      pressure_force[1] += local_pressure_force[1];
+      viscosity_force[0] += local_viscosity_force[0];
+      viscosity_force[1] += local_viscosity_force[1];
     }
   }
 
@@ -234,6 +239,45 @@ __global__ void calculate_forces(Particle *particles, int *particle_lookup, int 
   particles[index].pressure_force.y = pressure_force[1];
   particles[index].viscosity_force.x = viscosity_force[0];
   particles[index].viscosity_force.y = viscosity_force[1];
+}
+
+__global__ void move_particles(Particle *particles, int particle_amount)
+{
+  int index = blockIdx.x * blockDim.x + threadIdx.x;
+  if (index >= PARTICLE_AMOUNT)
+    return;
+
+  float acceleration[2] = {particles[index].pressure_force.x / max(particles[index].density, 0.000001), particles[index].pressure_force.y / max(particles[index].density, 0.000001)};
+  acceleration[0] += particles[index].viscosity_force.x;
+  acceleration[1] += particles[index].viscosity_force.y;
+  acceleration[1] += GRAVITY;
+
+  particles[index].velocity.x += acceleration[0];
+  particles[index].velocity.y += acceleration[1];
+
+  particles[index].position.x += particles[index].velocity.x * dt;
+  particles[index].position.y += particles[index].velocity.y * dt;
+
+  if (particles[index].position.x < particles[index].radius)
+  {
+    particles[index].position.x = particles[index].radius;
+    particles[index].velocity.x *= -DAMPENING;
+  }
+  if (particles[index].position.x > SCREEN_SIZE_X - particles[index].radius)
+  {
+    particles[index].position.x = SCREEN_SIZE_X - particles[index].radius;
+    particles[index].velocity.x *= -DAMPENING;
+  }
+  if (particles[index].position.y < particles[index].radius)
+  {
+    particles[index].position.y = particles[index].radius;
+    particles[index].velocity.y *= -DAMPENING;
+  }
+  if (particles[index].position.y > SCREEN_SIZE_Y - particles[index].radius)
+  {
+    particles[index].position.y = SCREEN_SIZE_Y - particles[index].radius;
+    particles[index].velocity.y *= -DAMPENING;
+  }
 }
 
 void sort(std::vector<Particle> &particles, std::vector<int> &particle_lookup, std::vector<int> &particle_counts)
@@ -346,7 +390,18 @@ int main(void)
 
     // Calculate forces
     calculate_forces<<<numBlocks, blockSize>>>(d_particles, d_particle_lookup, d_particle_counts, GRIDS_TO_CHECK[0], GRIDS_TO_CHECK[1], PARTICLE_AMOUNT);
-    
+
+    // Wait for GPU to finish before accessing on host
+    cudaDeviceSynchronize();
+    err = cudaGetLastError();
+    if (err != cudaSuccess)
+    {
+      std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
+    }
+
+    // Move the particles
+    move_particles<<<numBlocks, blockSize>>>(d_particles, PARTICLE_AMOUNT);
+
     // Wait for GPU to finish before accessing on host
     cudaDeviceSynchronize();
     err = cudaGetLastError();
@@ -357,6 +412,9 @@ int main(void)
 
     // Copy data back from GPU
     cudaMemcpy(particles.data(), d_particles, PARTICLE_AMOUNT * sizeof(Particle), cudaMemcpyDeviceToHost);
+
+    // Sort the particles TODO: SPEED UP SORT
+    sort(particles, particle_lookup, particle_counts);
 
     // Print end time in ms
     auto end = std::chrono::high_resolution_clock::now();

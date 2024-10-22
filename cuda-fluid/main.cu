@@ -151,7 +151,7 @@ __global__ void calculate_densities(Particle *particles, int *particle_lookup, i
     float y = particles[index].position.y;
     for (int i = starting_index; i <= ending_index; i++)
     {
-      float distance = sqrtf(powf(particles[i].position.x - x, 2.0) + powf(particles[i].position.y - y, 2.0));
+      float distance = sqrtf((particles[i].position.x - x, 2.0) * (particles[i].position.x - x, 2.0) + (particles[i].position.y - y, 2.0) * (particles[i].position.y - y, 2.0));
       if (distance < RADIUS_OF_INFLUENCE)
       {
         float influence = smoothing_kernel(distance);
@@ -166,42 +166,44 @@ __global__ void calculate_densities(Particle *particles, int *particle_lookup, i
 // Kernel function to calculate forces
 __global__ void calculate_forces(Particle *particles, int *particle_lookup, int *particle_counts, int GRIDS_TO_CHECK_X, int GRIDS_TO_CHECK_Y, int particle_amount)
 {
-  // int index = blockIdx.x * blockDim.x + threadIdx.x;
-  // if (index >= PARTICLE_AMOUNT)
-  //   return;
+  int index = blockIdx.x * blockDim.x + threadIdx.x;
+  if (index >= PARTICLE_AMOUNT)
+    return;
 
-  // int *grid = pos_to_grid(particles[index].position.x, particles[index].position.y);
-  // // sf::Vector2f pressure_force = {0.0, 0.0};
-  // // sf::Vector2f viscosity_force = {0.0, 0.0};
+    int grid[2];
+    pos_to_grid(particles[index].position.x, particles[index].position.y, grid);
 
-  // for (int g = 0; g < (GRIDS_TO_CHECK_X * 2 + 1) * (GRIDS_TO_CHECK_Y * 2 + 1); g++)
-  // {
-  //   int gx = g / (GRIDS_TO_CHECK_Y * 2 + 1) - GRIDS_TO_CHECK_X;
-  //   int gy = g % (GRIDS_TO_CHECK_Y * 2 + 1) - GRIDS_TO_CHECK_Y;
+    float pressure_force[2] = {0.0, 0.0};
+    float viscosity_force[2] = {0.0, 0.0};
 
-  //   if (grid[0] + gx < 0 || grid[0] + gx >= GRID_SIZE_X || grid[1] + gy < 0 || grid[1] + gy >= GRID_SIZE_Y)
-  //   {
-  //     continue;
-  //   }
+  for (int g = 0; g < (GRIDS_TO_CHECK_X * 2 + 1) * (GRIDS_TO_CHECK_Y * 2 + 1); g++)
+  {
+    int gx = g / (GRIDS_TO_CHECK_Y * 2 + 1) - GRIDS_TO_CHECK_X;
+    int gy = g % (GRIDS_TO_CHECK_Y * 2 + 1) - GRIDS_TO_CHECK_Y;
 
-  //   int first_grid_index = grid_to_index(grid[0] + gx, grid[1] + gy);
-  //   if (first_grid_index < 0 || first_grid_index >= GRID_SIZE_X * GRID_SIZE_Y)
-  //   {
-  //     continue;
-  //   }
+    if (grid[0] + gx < 0 || grid[0] + gx >= GRID_SIZE_X || grid[1] + gy < 0 || grid[1] + gy >= GRID_SIZE_Y)
+    {
+      continue;
+    }
 
-  //   int starting_index = particle_lookup[first_grid_index];
-  //   if (starting_index == -1)
-  //   {
-  //     continue;
-  //   }
+    int first_grid_index = grid_to_index(grid[0] + gx, grid[1] + gy);
+    if (first_grid_index < 0 || first_grid_index >= GRID_SIZE_X * GRID_SIZE_Y)
+    {
+      continue;
+    }
 
-  //   int ending_index = starting_index + particle_counts[first_grid_index];
+    int starting_index = particle_lookup[first_grid_index];
+    if (starting_index == -1)
+    {
+      continue;
+    }
 
-  //   for (int i = starting_index; i <= ending_index; i++)
-  //   {
-  //     // sf::Vector2f offset = particles[i].position - particles[index].position;
-  //     // float distance = sqrt(offset.x * offset.x + offset.y * offset.y);
+    int ending_index = starting_index + particle_counts[first_grid_index];
+
+    for (int i = starting_index; i <= ending_index; i++)
+    {
+          // float offset[2] = {particles[i].position.x - particles[index].position.x, particles[i].position.y - particles[index].position.y};
+      // float distance = sqrt(offset.x * offset.x + offset.y * offset.y);
   //     // if (distance == 0 || distance >= RADIUS_OF_INFLUENCE)
   //     // {
   //     //   continue;
@@ -220,11 +222,13 @@ __global__ void calculate_forces(Particle *particles, int *particle_lookup, int 
 
   //     // pressure_force += local_pressure_force;
   //     // viscosity_force += local_viscosity_force;
-  //   }
-  // }
+    }
+  }
 
-  // // particles[index].pressure_force = pressure_force;
-  // // particles[index].viscosity_force = viscosity_force;
+  particles[index].pressure_force.x = pressure_force[0];
+  particles[index].pressure_force.y = pressure_force[1];
+  particles[index].viscosity_force.x = viscosity_force[0];
+  particles[index].viscosity_force.y = viscosity_force[1];
 }
 
 void sort(std::vector<Particle> &particles, std::vector<int> &particle_lookup, std::vector<int> &particle_counts)
@@ -334,6 +338,17 @@ int main(void)
     {
       std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
     }
+
+    // // Calculate forces
+    // calculate_forces<<<numBlocks, blockSize>>>(d_particles, d_particle_lookup, d_particle_counts, GRIDS_TO_CHECK[0], GRIDS_TO_CHECK[1], PARTICLE_AMOUNT);
+    
+    // // Wait for GPU to finish before accessing on host
+    // cudaDeviceSynchronize();
+    // err = cudaGetLastError();
+    // if (err != cudaSuccess)
+    // {
+    //   std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
+    // }
 
     // Copy data back from GPU
     cudaMemcpy(particles.data(), d_particles, PARTICLE_AMOUNT * sizeof(Particle), cudaMemcpyDeviceToHost);

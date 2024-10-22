@@ -32,12 +32,12 @@ int const GRIDS_TO_CHECK[2] = {int(RADIUS_OF_INFLUENCE / SCREEN_SIZE_X * GRID_SI
 
 struct Particle
 {
-  sf::Vector2f position;
-  sf::Vector2f velocity = {0.0, 0.0};
+  float2 position;
+  float2 velocity = {0.0, 0.0};
   float radius = PARTICLE_RADIUS;
   float density = 0.0;
-  sf::Vector2f pressure_force = {0.0, 0.0};
-  sf::Vector2f viscosity_force = {0.0, 0.0};
+  float2 pressure_force = {0.0, 0.0};
+  float2 viscosity_force = {0.0, 0.0};
   int grid_index = -1;
 };
 
@@ -427,7 +427,7 @@ int main(void)
     {
       sf::CircleShape circle(PARTICLE_RADIUS);
       circle.setFillColor(sf::Color::Blue);
-      circle.setPosition(particles[i].position);
+      circle.setPosition(particles[i].position.x, particles[i].position.y);
       circles.push_back(circle);
     }
 

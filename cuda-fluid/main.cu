@@ -74,7 +74,7 @@ __device__ float smoothing_kernel(float distance)
     return 0.0;
   }
 
-  float volume = 3.141592653589 * pow(RADIUS_OF_INFLUENCE, 4.0) / 6.0;
+  float volume = 3.141592653589 * powf(RADIUS_OF_INFLUENCE, 4.0) / 6.0;
   return (RADIUS_OF_INFLUENCE - distance) * (RADIUS_OF_INFLUENCE - distance) / volume;
 }
 
@@ -85,7 +85,7 @@ __device__ float smoothing_kernel_derivative(float distance)
     return 0.0;
   }
 
-  float scale = 12.0 / (pow(RADIUS_OF_INFLUENCE, 4.0) * 3.141592653589);
+  float scale = 12.0 / (powf(RADIUS_OF_INFLUENCE, 4.0) * 3.141592653589);
   return (RADIUS_OF_INFLUENCE - distance) * scale;
 }
 
@@ -96,7 +96,7 @@ __device__ float viscosity_kernel(float distance)
     return 0.0;
   }
 
-  float volume = 3.141592653589 * pow(RADIUS_OF_INFLUENCE, 8.0) / 4.0;
+  float volume = 3.141592653589 * powf(RADIUS_OF_INFLUENCE, 8.0) / 4.0;
   float value = RADIUS_OF_INFLUENCE * RADIUS_OF_INFLUENCE - distance * distance;
   return value * value * value / volume;
 }
@@ -200,28 +200,33 @@ __global__ void calculate_forces(Particle *particles, int *particle_lookup, int 
 
     int ending_index = starting_index + particle_counts[first_grid_index];
 
+    float x = particles[index].position.x;
+    float y = particles[index].position.y;
     for (int i = starting_index; i <= ending_index; i++)
     {
-          // float offset[2] = {particles[i].position.x - particles[index].position.x, particles[i].position.y - particles[index].position.y};
-      // float distance = sqrt(offset.x * offset.x + offset.y * offset.y);
-  //     // if (distance == 0 || distance >= RADIUS_OF_INFLUENCE)
-  //     // {
-  //     //   continue;
-  //     // }
-  //     // sf::Vector2f dir = offset / distance;
+          float offset[2] = {particles[i].position.x - particles[index].position.x, particles[i].position.y - particles[index].position.y};
+      float distance = sqrtf(offset[0] * offset[0] + offset[1] * offset[1]);
+      if (distance == 0 || distance >= RADIUS_OF_INFLUENCE)
+      {
+        continue;
+      }
+      float dir[2] = {offset[0] / distance, offset[1] / distance};
 
-  //     // float slope = smoothing_kernel_derivative(distance);
-  //     // float shared_pressure = calculate_shared_pressure(particles[index].density, particles[i].density);
+      float slope = smoothing_kernel_derivative(distance);
+      float shared_pressure = calculate_shared_pressure(particles[index].density, particles[i].density);
 
-  //     // float pressure_multiplier = shared_pressure * slope * 3.141592653589 * particles[i].radius * particles[i].radius / max(particles[index].density, 0.000001);
-  //     // sf::Vector2f local_pressure_force = dir * pressure_multiplier;
+      float pressure_multiplier = shared_pressure * slope * 3.141592653589 * particles[i].radius * particles[i].radius / max(particles[index].density, 0.000001);
+      float local_pressure_force[2] = {dir[0] * pressure_multiplier, dir[1] * pressure_multiplier};
 
-  //     // sf::Vector2f local_viscosity_force = (particles[i].velocity - particles[index].velocity) * viscosity_kernel(distance);
-  //     // local_viscosity_force.x *= VISCOSITY;
-  //     // local_viscosity_force.y *= VISCOSITY;
+        float viscosity = viscosity_kernel(distance);
+        float local_viscosity_force[2] = {(particles[i].velocity.x - particles[index].velocity.x) * viscosity, (particles[i].velocity.y - particles[index].velocity.y) * viscosity};
+        local_viscosity_force[0] *= VISCOSITY;
+        local_viscosity_force[1] *= VISCOSITY;
 
-  //     // pressure_force += local_pressure_force;
-  //     // viscosity_force += local_viscosity_force;
+        pressure_force[0] += local_pressure_force[0];
+        pressure_force[1] += local_pressure_force[1];
+        viscosity_force[0] += local_viscosity_force[0];
+        viscosity_force[1] += local_viscosity_force[1];
     }
   }
 

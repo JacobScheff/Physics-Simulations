@@ -151,7 +151,7 @@ __global__ void calculate_densities(Particle *particles, int *particle_lookup, i
     float y = particles[index].position.y;
     for (int i = starting_index; i <= ending_index; i++)
     {
-      float distance = sqrtf((particles[i].position.x - x, 2.0) * (particles[i].position.x - x, 2.0) + (particles[i].position.y - y, 2.0) * (particles[i].position.y - y, 2.0));
+      float distance = sqrtf(powf(particles[i].position.x - x, 2.0) + powf(particles[i].position.y - y, 2.0));
       if (distance < RADIUS_OF_INFLUENCE)
       {
         float influence = smoothing_kernel(distance);
@@ -339,16 +339,16 @@ int main(void)
       std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
     }
 
-    // // Calculate forces
-    // calculate_forces<<<numBlocks, blockSize>>>(d_particles, d_particle_lookup, d_particle_counts, GRIDS_TO_CHECK[0], GRIDS_TO_CHECK[1], PARTICLE_AMOUNT);
+    // Calculate forces
+    calculate_forces<<<numBlocks, blockSize>>>(d_particles, d_particle_lookup, d_particle_counts, GRIDS_TO_CHECK[0], GRIDS_TO_CHECK[1], PARTICLE_AMOUNT);
     
-    // // Wait for GPU to finish before accessing on host
-    // cudaDeviceSynchronize();
-    // err = cudaGetLastError();
-    // if (err != cudaSuccess)
-    // {
-    //   std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
-    // }
+    // Wait for GPU to finish before accessing on host
+    cudaDeviceSynchronize();
+    err = cudaGetLastError();
+    if (err != cudaSuccess)
+    {
+      std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
+    }
 
     // Copy data back from GPU
     cudaMemcpy(particles.data(), d_particles, PARTICLE_AMOUNT * sizeof(Particle), cudaMemcpyDeviceToHost);

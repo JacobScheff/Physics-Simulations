@@ -147,13 +147,15 @@ __global__ void calculate_densities(Particle *particles, int *particle_lookup, i
       ending_index = PARTICLE_AMOUNT - 1;
     }
 
+    float x = particles[index].position.x;
+    float y = particles[index].position.y;
     for (int i = starting_index; i <= ending_index; i++)
     {
-      float distance = sqrt(pow(particles[i].position.x - particles[index].position.x, 2.0) + pow(particles[i].position.y - particles[index].position.y, 2.0));
+      float distance = sqrtf(powf(particles[i].position.x - x, 2.0) + powf(particles[i].position.y - y, 2.0));
       if (distance < RADIUS_OF_INFLUENCE)
       {
         float influence = smoothing_kernel(distance);
-        density += influence * 3.141592653589 * particles[i].radius * particles[i].radius;
+        density += influence * 3.1415926f * particles[i].radius * particles[i].radius;
       }
     }
   }

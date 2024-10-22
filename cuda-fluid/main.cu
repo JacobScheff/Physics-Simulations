@@ -356,6 +356,11 @@ int main(void)
   // Sort the particles
   sort(particles, particle_lookup, particle_counts);
 
+  sf::VertexArray particle_display(sf::Points, PARTICLE_AMOUNT);
+  for (int i = 0; i < PARTICLE_AMOUNT; i++)
+  {
+    particle_display[i].color = sf::Color::Blue;
+  }
   while (window.isOpen())
   {
     sf::Event event;
@@ -422,20 +427,13 @@ int main(void)
     std::cout << "Elapsed time in milliseconds : " << elapsed.count() << " ms" << std::endl;
 
     // NOTE: DRAWING IS VERY SLOW
-    std::vector<sf::CircleShape> circles;
     for (int i = 0; i < PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y; ++i)
     {
-      sf::CircleShape circle(PARTICLE_RADIUS);
-      circle.setFillColor(sf::Color::Blue);
-      circle.setPosition(particles[i].position.x, particles[i].position.y);
-      circles.push_back(circle);
+      particle_display[i].position = sf::Vector2f(particles[i].position.x, particles[i].position.y);
     }
 
     window.clear();
-    for (const auto &circle : circles)
-    {
-      window.draw(circle);
-    }
+    window.draw(particle_display);
     window.display();
 
     // Wait for TIME_BETWEEN_FRAMES

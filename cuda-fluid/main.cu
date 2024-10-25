@@ -7,10 +7,10 @@
 
 // nvcc main.cu -I"C:\\Users\\jacob\\Documents\\VSC\\C++ Libraries\\SFML-2.6.1\\include" -L"C:\\Users\\jacob\\Documents\\VSC\\C++ Libraries\\SFML-2.6.1\\lib" -lsfml-graphics -lsfml-window -lsfml-system && a.exe
 
-#define SCREEN_SIZE_X 1200
-#define SCREEN_SIZE_Y 600
-#define GRID_SIZE_X 80
-#define GRID_SIZE_Y 40
+#define SCREEN_SIZE_X (1200)
+#define SCREEN_SIZE_Y (600)
+#define GRID_SIZE_X (80)
+#define GRID_SIZE_Y (40)
 
 int const TIME_BETWEEN_FRAMES = 2;                                 // The time between frames in milliseconds
 float const PARTICLE_RADIUS = 1.25;                                // The radius of the particles
@@ -22,10 +22,10 @@ float const PADDING = 50.0;                                        // The paddin
 #define RADIUS_OF_INFLUENCE (75.0 / 4.0) // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 #define TARGET_DENSITY 0.2;              // The target density of the fluid
 #define PRESSURE_MULTIPLIER 500.0;       // The multiplier for the pressure force
-#define GRAVITY 0.2;                     // The strength of gravity
+#define GRAVITY (0.2);                     // The strength of gravity
 // TODO: ADD BACK // #define LOOK_AHEAD_TIME (1.0 / 60.0); // The time to look ahead when calculating the predicted position
-#define VISCOSITY 0.1;  // The viscosity of the fluid
-#define DAMPENING 0.95; // How much to slow down particles when they collide with the walls
+#define VISCOSITY (0.1);  // The viscosity of the fluid
+#define DAMPENING (0.95); // How much to slow down particles when they collide with the walls
 #define dt (1.0 / 20.0); // The time step
 
 int const GRIDS_TO_CHECK[2] = {int(RADIUS_OF_INFLUENCE / SCREEN_SIZE_X * GRID_SIZE_X + 1.0), int(RADIUS_OF_INFLUENCE / SCREEN_SIZE_Y * GRID_SIZE_Y + 1.0)}; // How many grid cells to check in each direction
@@ -151,8 +151,10 @@ __global__ void calculate_densities(Particle *particles, int *particle_lookup, i
     float y = particles[index].position.y;
     for (int i = starting_index; i <= ending_index; i++)
     {
-      if (i == index)
+      if (i == index || i >= PARTICLE_AMOUNT || i < 0)
+      {
         continue;
+      }
         
       float distance = sqrtf(powf(particles[i].position.x - x, 2.0) + powf(particles[i].position.y - y, 2.0));
       if (distance < RADIUS_OF_INFLUENCE)
@@ -207,7 +209,9 @@ __global__ void calculate_forces(Particle *particles, int *particle_lookup, int 
     float y = particles[index].position.y;
     for (int i = starting_index; i <= ending_index; i++)
     {
-      if(i == index) continue;
+      if(i == index || i >= PARTICLE_AMOUNT || i < 0){
+        continue;
+      }
 
       float offset[2] = {particles[index].position.x - particles[i].position.x, particles[index].position.y - particles[i].position.y};
       float distance = sqrtf(offset[0] * offset[0] + offset[1] * offset[1]);
@@ -222,7 +226,6 @@ __global__ void calculate_forces(Particle *particles, int *particle_lookup, int 
 
       float pressure_multiplier = shared_pressure * slope * 3.141592653589 * particles[i].radius * particles[i].radius / max(particles[index].density, 0.000001);
       float local_pressure_force[2] = {dir[0] * pressure_multiplier, dir[1] * pressure_multiplier};
-      // float local_pressure_force[2] = {0.0005, 0.0005};
 
       // float viscosity = viscosity_kernel(distance);
       // float local_viscosity_force[2] = {(particles[i].velocity.x - particles[index].velocity.x) * viscosity, (particles[i].velocity.y - particles[index].velocity.y) * viscosity};
@@ -251,7 +254,7 @@ __global__ void move_particles(Particle *particles, int particle_amount)
   float acceleration[2] = {particles[index].pressure_force.x / max(particles[index].density, 0.000001), particles[index].pressure_force.y / max(particles[index].density, 0.000001)};
   acceleration[0] += particles[index].viscosity_force.x;
   acceleration[1] += particles[index].viscosity_force.y;
-  // acceleration[1] += GRAVITY;
+  acceleration[1] += GRAVITY;
 
   particles[index].velocity.x += acceleration[0];
   particles[index].velocity.y += acceleration[1];
@@ -426,12 +429,17 @@ int main(void)
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = end - start;
     std::cout << "Elapsed time in milliseconds : " << elapsed.count() << " ms" << std::endl;
-    if (elapsed.count() < 2)
+    
+    // Count the number of nan positions
+    int nan_count = 0;
+    for (int i = 0; i < PARTICLE_AMOUNT; i++)
     {
-      for(int i = 0; i < 10; i++){
-        printf("%f %f\n", particles[i].position.x, particles[i].position.y);
+      if (isnan(particles[i].position.x) || isnan(particles[i].position.y))
+      {
+        nan_count++;
       }
     }
+    std::cout << "Nan count: " << nan_count << std::endl;
 
     // NOTE: DRAWING IS VERY SLOW
     float min_density = 0.0;

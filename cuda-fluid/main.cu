@@ -26,7 +26,7 @@ float const PADDING = 50.0;                                        // The paddin
 // TODO: ADD BACK // #define LOOK_AHEAD_TIME (1.0 / 60.0); // The time to look ahead when calculating the predicted position
 #define VISCOSITY 0.1;  // The viscosity of the fluid
 #define DAMPENING 0.95; // How much to slow down particles when they collide with the walls
-#define dt (1.0 / 8.0); // The time step
+#define dt (1.0 / 20.0); // The time step
 
 int const GRIDS_TO_CHECK[2] = {int(RADIUS_OF_INFLUENCE / SCREEN_SIZE_X * GRID_SIZE_X + 1.0), int(RADIUS_OF_INFLUENCE / SCREEN_SIZE_Y * GRID_SIZE_Y + 1.0)}; // How many grid cells to check in each direction
 
@@ -209,7 +209,7 @@ __global__ void calculate_forces(Particle *particles, int *particle_lookup, int 
     {
       if(i == index) continue;
 
-      float offset[2] = {particles[i].position.x - particles[index].position.x, particles[i].position.y - particles[index].position.y};
+      float offset[2] = {particles[index].position.x - particles[i].position.x, particles[index].position.y - particles[i].position.y};
       float distance = sqrtf(offset[0] * offset[0] + offset[1] * offset[1]);
       if (distance == 0 || distance >= RADIUS_OF_INFLUENCE)
       {
@@ -222,23 +222,24 @@ __global__ void calculate_forces(Particle *particles, int *particle_lookup, int 
 
       float pressure_multiplier = shared_pressure * slope * 3.141592653589 * particles[i].radius * particles[i].radius / max(particles[index].density, 0.000001);
       float local_pressure_force[2] = {dir[0] * pressure_multiplier, dir[1] * pressure_multiplier};
+      // float local_pressure_force[2] = {0.0005, 0.0005};
 
-      float viscosity = viscosity_kernel(distance);
-      float local_viscosity_force[2] = {(particles[i].velocity.x - particles[index].velocity.x) * viscosity, (particles[i].velocity.y - particles[index].velocity.y) * viscosity};
-      local_viscosity_force[0] *= VISCOSITY;
-      local_viscosity_force[1] *= VISCOSITY;
+      // float viscosity = viscosity_kernel(distance);
+      // float local_viscosity_force[2] = {(particles[i].velocity.x - particles[index].velocity.x) * viscosity, (particles[i].velocity.y - particles[index].velocity.y) * viscosity};
+      // local_viscosity_force[0] *= VISCOSITY;
+      // local_viscosity_force[1] *= VISCOSITY;
 
       pressure_force[0] += local_pressure_force[0];
       pressure_force[1] += local_pressure_force[1];
-      viscosity_force[0] += local_viscosity_force[0];
-      viscosity_force[1] += local_viscosity_force[1];
+      // viscosity_force[0] += local_viscosity_force[0];
+      // viscosity_force[1] += local_viscosity_force[1];
     }
   }
 
   particles[index].pressure_force.x = pressure_force[0];
   particles[index].pressure_force.y = pressure_force[1];
-  particles[index].viscosity_force.x = viscosity_force[0];
-  particles[index].viscosity_force.y = viscosity_force[1];
+  // particles[index].viscosity_force.x = viscosity_force[0];
+  // particles[index].viscosity_force.y = viscosity_force[1];
 }
 
 __global__ void move_particles(Particle *particles, int particle_amount)
@@ -250,7 +251,7 @@ __global__ void move_particles(Particle *particles, int particle_amount)
   float acceleration[2] = {particles[index].pressure_force.x / max(particles[index].density, 0.000001), particles[index].pressure_force.y / max(particles[index].density, 0.000001)};
   acceleration[0] += particles[index].viscosity_force.x;
   acceleration[1] += particles[index].viscosity_force.y;
-  acceleration[1] += GRAVITY;
+  // acceleration[1] += GRAVITY;
 
   particles[index].velocity.x += acceleration[0];
   particles[index].velocity.y += acceleration[1];
@@ -425,11 +426,22 @@ int main(void)
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = end - start;
     std::cout << "Elapsed time in milliseconds : " << elapsed.count() << " ms" << std::endl;
+    if (elapsed.count() < 2)
+    {
+      for(int i = 0; i < 10; i++){
+        printf("%f %f\n", particles[i].position.x, particles[i].position.y);
+      }
+    }
 
     // NOTE: DRAWING IS VERY SLOW
+    float min_density = 0.0;
+    float max_density = 0.4;
     for (int i = 0; i < PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y; ++i)
     {
       particle_display[i].position = sf::Vector2f(particles[i].position.x, particles[i].position.y);
+      // Red-0 density, Blue-max_density density
+      float density_t = (particles[i].density - min_density) / (max_density - min_density);
+      particle_display[i].color = sf::Color(255 * density_t, 0, 255 * (1.0 - density_t));
     }
 
     window.clear();

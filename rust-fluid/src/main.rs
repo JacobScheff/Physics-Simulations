@@ -850,7 +850,7 @@ impl<'a> State<'a> {
         {
             let mut render_pass = command_encoder.begin_render_pass(&render_pass_descriptor);
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_bind_group(0, &self.render_bind_group, &[]); // Access using self
+            render_pass.set_bind_group(0, &self.render_bind_group, &[]);
             render_pass.draw(0..3, 0..1); // Draw the first triangle
             render_pass.draw(3..6, 0..1); // Draw the second triangle
         }

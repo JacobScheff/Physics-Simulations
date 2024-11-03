@@ -44,10 +44,12 @@ struct State<'a> {
     compute_density_pipeline: wgpu::ComputePipeline,
     compute_forces_pipeline: wgpu::ComputePipeline,
     compute_move_pipeline: wgpu::ComputePipeline,
+    compute_sort_pipeline: wgpu::ComputePipeline,
     render_bind_group: wgpu::BindGroup,
     compute_densities_bind_group: wgpu::BindGroup,
     compute_forces_bind_group: wgpu::BindGroup,
     compute_move_bind_group: wgpu::BindGroup,
+    compute_sort_bind_group: wgpu::BindGroup,
     frame_count: u32,
     particle_positions: Vec<[f32; 2]>,
     particle_positions_buffer: wgpu::Buffer,
@@ -181,6 +183,14 @@ impl<'a> State<'a> {
         );
         let compute_forces_pipeline = compute_forces_pipeline_builder.build_pipeline(&device);
 
+        // Pass bind group layout to compute sort pipeline builder
+        let mut compute_sort_pipeline_builder = ComputePipelineBuilder::new();
+        compute_sort_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_sort");
+        compute_sort_pipeline_builder.set_bind_group_layout(
+            bind_group_layout_generator::get_bind_group_layout(&device),
+        );
+        let compute_sort_pipeline = compute_sort_pipeline_builder.build_pipeline(&device);
+
         // Create temporary bind groups
         let temp_render_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Temporary Render Bind Group"),
@@ -218,6 +228,16 @@ impl<'a> State<'a> {
             }),
             entries: &[],
         });
+
+        let temp_compute_sort_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Temporary Compute Sort Bind Group"),
+            layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[],
+                label: Some("Temporary Compute Sort Bind Group Layout"),
+            }),
+            entries: &[],
+        });
+
         // Create particle data
         let mut particle_positions = vec![];
         let mut particle_velocities = vec![];
@@ -379,10 +399,12 @@ impl<'a> State<'a> {
             compute_density_pipeline,
             compute_forces_pipeline,
             compute_move_pipeline,
+            compute_sort_pipeline,
             render_bind_group: temp_render_bind_group,
             compute_densities_bind_group: temp_compute_density_bind_group,
             compute_forces_bind_group: temp_compute_forces_bind_group,
             compute_move_bind_group: temp_compute_move_bind_group,
+            compute_sort_bind_group: temp_compute_sort_bind_group,
             frame_count: 0,
             particle_positions,
             particle_positions_buffer,
@@ -648,6 +670,10 @@ impl<'a> State<'a> {
     }
 
     async fn sort_particles(&mut self) {
+        if false {
+            return;
+        }
+
         // Update the particle positions and velocities from the buffers
         self.update_position_from_buffer().await;
         self.update_velocities_from_buffer().await;
@@ -915,6 +941,10 @@ async fn run() {
         bind_group_layout_generator::get_bind_group_layout(&state.device);
     state.compute_move_bind_group = create_bind_group(&mut state, &compute_move_bind_group_layout);
 
+    let compute_sort_bind_group_layout =
+        bind_group_layout_generator::get_bind_group_layout(&state.device);
+    state.compute_sort_bind_group = create_bind_group(&mut state, &compute_sort_bind_group_layout);
+
     // Pass bind group layout to pipeline builder
     let mut render_pipeline_builder = PipelineBuilder::new();
     render_pipeline_builder.set_shader_module("shaders/shader.wgsl", "vs_main", "fs_main");
@@ -939,6 +969,12 @@ async fn run() {
     compute_move_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_move");
     compute_move_pipeline_builder.set_bind_group_layout(compute_move_bind_group_layout);
     state.compute_move_pipeline = compute_move_pipeline_builder.build_pipeline(&state.device);
+
+    // Pass bind group layout to compute sort pipeline builder
+    let mut compute_sort_pipeline_builder = ComputePipelineBuilder::new();
+    compute_sort_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_sort");
+    compute_sort_pipeline_builder.set_bind_group_layout(compute_sort_bind_group_layout);
+    state.compute_sort_pipeline = compute_sort_pipeline_builder.build_pipeline(&state.device);
 
     // Sort the particles
     pollster::block_on(state.sort_particles());

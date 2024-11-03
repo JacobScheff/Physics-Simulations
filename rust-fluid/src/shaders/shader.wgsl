@@ -51,6 +51,12 @@ fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
     return out;
 }
 
+@compute @workgroup_size(WORKGROUP_SIZE, 1)
+fn main_sort(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    
+}
+
+
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
 fn main_density(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;

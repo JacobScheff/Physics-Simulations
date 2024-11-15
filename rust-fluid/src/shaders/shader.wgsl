@@ -183,15 +183,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                     // density_t = min(max(density_t, 0.0), 1.0);
                     // let color: vec3<f32> = vec3<f32>(speed_t, density_t, 1.0 - speed_t);
 
-                    // let color: vec3<f32> = vec3<f32>(0.2, density_t, 0.2);
-                    // let density_error = density - TARGET_DENSITY;
-                    // var color: vec3<f32> = vec3<f32>(0.0, 0.0, 0.0);
-                    // if density_error > 0.0 {
-                    //     color = vec3<f32>(density_error, 0.0, 0.0);
-                    // } else {
-                    //     color = vec3<f32>(0.0, 0.0, -density_error);
-                    // }
-
                     let color = vec3<f32>(0.0, 0.0, 1.0);
                     
                     final_color = vec4<f32>(color, 1.0);

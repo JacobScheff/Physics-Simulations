@@ -7,6 +7,14 @@ struct Grid {
     y: i32,
 }
 
+struct Particle {
+    position: vec2<f32>,
+    radius: f32,
+    velocity: vec2<f32>,
+    density: f32,
+    forces: vec4<f32>,
+}
+
 const WORKGROUP_SIZE: u32 = 16;
 
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
@@ -25,7 +33,7 @@ const DAMPENING: f32 = 0.95; // How much to slow down particles when they collid
 const dt: f32 = 1.0 / 8.0; // The time step
 
 const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_SIZE.x + 1.0), i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.y * GRID_SIZE.y + 1.0));
-@group(0) @binding(0) var<storage, read_write> particle_positions: array<vec2<f32>, u32(TOTAL_PARTICLES)>;
+@group(0) @binding(0) var<storage, read_write> particle_positions: array<Particle, u32(TOTAL_PARTICLES)>;
 // @group(0) @binding(1) var<storage, read_write> particle_radii: array<f32, u32(TOTAL_PARTICLES)>;
 // @group(0) @binding(2) var<storage, read_write> particle_velocities: array<vec2<f32>, u32(TOTAL_PARTICLES)>;
 @group(0) @binding(1) var<storage, read> particle_lookup: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
@@ -161,7 +169,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             var ending_index = starting_index + particle_counts[first_grid_index];
 
             for (var i = starting_index; i <= ending_index; i=i+1){
-                let d = (x - particle_positions[i].x) * (x - particle_positions[i].x) + (y - particle_positions[i].y) * (y - particle_positions[i].y);
+                let d = (x - particle_positions[i].position.x) * (x - particle_positions[i].position.x) + (y - particle_positions[i].position.y) * (y - particle_positions[i].position.y);
                 if d < TEMP_PARTICLE_RADII * TEMP_PARTICLE_RADII {
                     // // let speed = length(particle_velocities[i]);
                     // let speed: f32 = 10.0;

@@ -1,5 +1,6 @@
 use core::f32;
-
+use bytemuck::{Pod, Zeroable};
+use bytemuck::NoUninit;
 use renderer_backend::{
     bind_group_layout_generator, compute_pipeline_builder::ComputePipelineBuilder,
     pipeline_builder::PipelineBuilder,
@@ -33,6 +34,27 @@ const DISPATCH_SIZE: (u32, u32) = (
     (PARTICLE_AMOUNT_Y + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,
 );
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Pod, Zeroable)]
+struct Particle {
+    position: [f32; 2],
+    velocity: [f32; 2],
+    radius: f32,
+    density: f32,
+    forces: [f32; 4],
+}
+
+impl Particle {
+    fn new(position: [f32; 2], velocity: [f32; 2], radius: f32) -> Self {
+        Self {
+            position,
+            velocity,
+            radius,
+            density: 0.0,
+            forces: [0.0, 0.0, 0.0, 0.0],
+        }
+    }
+}
 struct State<'a> {
     surface: wgpu::Surface<'a>,
     device: wgpu::Device,
@@ -49,7 +71,7 @@ struct State<'a> {
     compute_forces_bind_group: wgpu::BindGroup,
     compute_move_bind_group: wgpu::BindGroup,
     frame_count: u32,
-    particle_positions: Vec<[f32; 2]>,
+    particle_positions: Vec<Particle>,
     particle_positions_buffer: wgpu::Buffer,
     positions_reader_buffer: wgpu::Buffer,
     // particle_radii: Vec<f32>,
@@ -237,7 +259,7 @@ impl<'a> State<'a> {
                     / PARTICLE_AMOUNT_Y as f32
                     + PADDING;
 
-                particle_positions.push([x, y]);
+                // particle_positions.push([x, y]);
                 particle_velocities.push([0.0, 0.0]);
                 // particle_velocities.push([
                 //     rand::thread_rng().gen_range(-1.0..1.0),
@@ -246,6 +268,8 @@ impl<'a> State<'a> {
                 particle_radii.push(PARTICLE_RADIUS);
                 particle_densities.push(0.0);
                 particle_forces.push([0.0, 0.0, 0.0, 0.0]);
+
+                particle_positions.push(Particle::new([x, y], [0.0, 0.0], PARTICLE_RADIUS));
             }
         }
         let particle_lookup: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
@@ -450,7 +474,11 @@ impl<'a> State<'a> {
             let positions: &[f32] = bytemuck::cast_slice(&data);
             // Update the particle positions
             for i in 0..self.particle_positions.len() {
-                self.particle_positions[i] = [positions[i * 2], positions[i * 2 + 1]];
+                self.particle_positions[i] = Particle::new(
+                    [positions[i * 2], positions[i * 2 + 1]],
+                    self.particle_positions[i].velocity,
+                    self.particle_positions[i].radius,
+                );
             }
 
             drop(data);
@@ -653,23 +681,19 @@ impl<'a> State<'a> {
             return;
         }
 
-        // // Update the particle positions and velocities from the buffers
-        self.update_position_from_buffer().await;
-        // self.update_velocities_from_buffer().await;
-        // self.update_radii_from_buffer().await;
-        // self.update_density_from_buffer().await;
-        // self.update_forces_from_buffer().await;
+        // Update the particle positions and velocities from the buffers
+        // self.update_position_from_buffer().await;
 
         // Map all particles to their grid cell
         let mut index_map: Vec<Vec<Vec<i32>>> =
             vec![vec![vec![]; GRID_SIZE.1 as usize]; GRID_SIZE.0 as usize];
         for i in 0..self.particle_positions.len() {
-            let grid = self.pos_to_grid(self.particle_positions[i]);
+            let grid = self.pos_to_grid(self.particle_positions[i].position);
             index_map[grid.0 as usize][grid.1 as usize].push(i as i32);
         }
 
         // Create a new list of particles
-        let mut new_positions: Vec<[f32; 2]> = vec![];
+        let mut new_positions: Vec<Particle> = vec![];
         // let mut new_velocities: Vec<[f32; 2]> = vec![];
         // let mut new_radii: Vec<f32> = vec![];
         // let mut new_densities: Vec<f32> = vec![];

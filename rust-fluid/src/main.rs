@@ -116,7 +116,7 @@ impl<'a> State<'a> {
         let adapter = instance
             .enumerate_adapters(wgpu::Backends::all())
             .into_iter()
-            .nth(1)
+            .nth(0)
             .unwrap();
         println!("{:?}", adapter.get_info());
 

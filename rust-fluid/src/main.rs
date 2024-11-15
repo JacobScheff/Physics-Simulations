@@ -388,7 +388,7 @@ impl<'a> State<'a> {
         }
 
         // Update the particles from the buffer
-        self.update_particles_from_buffer().await;
+        // self.update_particles_from_buffer().await;
 
         // Map all particles to their grid cell
         let mut index_map: Vec<Vec<Vec<i32>>> =

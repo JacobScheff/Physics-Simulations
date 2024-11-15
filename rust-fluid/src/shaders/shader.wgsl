@@ -33,12 +33,8 @@ const DAMPENING: f32 = 0.95; // How much to slow down particles when they collid
 const dt: f32 = 1.0 / 8.0; // The time step
 
 const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_SIZE.x + 1.0), i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.y * GRID_SIZE.y + 1.0));
-@group(0) @binding(0) var<storage, read_write> particle_positions: array<Particle, u32(TOTAL_PARTICLES)>;
-// @group(0) @binding(1) var<storage, read_write> particle_radii: array<f32, u32(TOTAL_PARTICLES)>;
-// @group(0) @binding(2) var<storage, read_write> particle_velocities: array<vec2<f32>, u32(TOTAL_PARTICLES)>;
+@group(0) @binding(0) var<storage, read_write> particles: array<Particle, u32(TOTAL_PARTICLES)>;
 @group(0) @binding(1) var<storage, read> particle_lookup: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
-// @group(0) @binding(4) var<storage, read_write> particle_densities: array<f32, u32(TOTAL_PARTICLES)>;
-// @group(0) @binding(5) var<storage, read_write> particle_forces: array<vec4<f32>, u32(TOTAL_PARTICLES)>;
 @group(0) @binding(2) var<storage, read> particle_counts: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
 @group(0) @binding(3) var<storage, read> mouse_info: array<f32, 4>; // 0-Up; 1-Down, x-pos, y-pos, 0-Repel; 1-Attract
 const TEMP_PARTICLE_RADII: f32 = 2.5;
@@ -169,7 +165,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             var ending_index = starting_index + particle_counts[first_grid_index];
 
             for (var i = starting_index; i <= ending_index; i=i+1){
-                let d = (x - particle_positions[i].position.x) * (x - particle_positions[i].position.x) + (y - particle_positions[i].position.y) * (y - particle_positions[i].position.y);
+                let d = (x - particles[i].position.x) * (x - particles[i].position.x) + (y - particles[i].position.y) * (y - particles[i].position.y);
                 if d < TEMP_PARTICLE_RADII * TEMP_PARTICLE_RADII {
                     // // let speed = length(particle_velocities[i]);
                     // let speed: f32 = 10.0;

@@ -37,7 +37,6 @@ const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_
 @group(0) @binding(1) var<storage, read> particle_lookup: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
 @group(0) @binding(2) var<storage, read> particle_counts: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
 @group(0) @binding(3) var<storage, read> mouse_info: array<f32, 4>; // 0-Up; 1-Down, x-pos, y-pos, 0-Repel; 1-Attract
-const TEMP_PARTICLE_RADII: f32 = 1.25 / 2.0;
 
 @vertex
 fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
@@ -59,79 +58,70 @@ fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
 fn main_density(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    // let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;
-    // if index < 0 || index >= u32(TOTAL_PARTICLES) {
-    //     return;
-    // }
+    let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;
+    if index < 0 || index >= u32(TOTAL_PARTICLES) {
+        return;
+    }
 
-    // // Update the density of the particle
-    // let density = get_density(particle_positions[index]);
-    // particle_densities[index] = density;
+    // Update the density of the particle
+    let density = get_density(particles[index].position);
+    particles[index].density = density;
 }
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
 fn main_forces(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    // let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;
-    // if index < 0 || index >= u32(TOTAL_PARTICLES) {
-    //     return;
-    // }
+    let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;
+    if index < 0 || index >= u32(TOTAL_PARTICLES) {
+        return;
+    }
     
-    // // Calculate the forces on the particle
-    // particle_forces[index] = calculate_forces(index);
+    // Calculate the forces on the particle
+    particles[index].forces = calculate_forces(index);
 }
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
 fn main_move(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    // let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;
-    // if index < 0 || index >= u32(TOTAL_PARTICLES) {
-    //     return;
+    let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;
+    if index < 0 || index >= u32(TOTAL_PARTICLES) {
+        return;
+    }
+
+    // Move the particle
+    let force = particles[index].forces;
+    let radius = particles[index].radius;
+    let density = particles[index].density;
+
+    var acceleration = vec2<f32>(force.xy / max(density, 0.0001));
+    acceleration += force.zw;
+    acceleration.y += GRAVITY;
+    // if density == 0.0 {
+    //     acceleration = vec2<f32>(0.0, GRAVITY);
     // }
 
-    // // Move the particle
-    // let force = particle_forces[index];
-    // let radius = particle_radii[index];
-    // let density = particle_densities[index];
+    particles[index].velocity += acceleration;
+    particles[index].position += particles[index].velocity * dt;
 
-    // var acceleration = vec2<f32>(force.xy / max(density, 0.0001));
-    // acceleration += force.zw;
-    // acceleration.y += GRAVITY;
-    // // if density == 0.0 {
-    // //     acceleration = vec2<f32>(0.0, GRAVITY);
-    // // }
-
-    // particle_velocities[index] += acceleration;
-    // particle_positions[index] += particle_velocities[index] * dt;
-
-    // // Collide with the walls
-    // if particle_positions[index].x - radius < 0.0 {
-    //     particle_positions[index].x = radius;
-    //     particle_velocities[index].x = -particle_velocities[index].x * DAMPENING;
-    // }
-    // if particle_positions[index].x + radius > SCREEN_SIZE.x {
-    //     particle_positions[index].x = SCREEN_SIZE.x - radius;
-    //     particle_velocities[index].x = -particle_velocities[index].x * DAMPENING;
-    // }
-    // if particle_positions[index].y - radius < 0.0 {
-    //     particle_positions[index].y = radius;
-    //     particle_velocities[index].y = -particle_velocities[index].y * DAMPENING;
-    // }
-    // if particle_positions[index].y + radius > SCREEN_SIZE.y {
-    //     particle_positions[index].y = SCREEN_SIZE.y - radius;
-    //     particle_velocities[index].y = -particle_velocities[index].y * DAMPENING;
-    // }
+    // Collide with the walls
+    if particles[index].position.x - radius < 0.0 {
+        particles[index].position.x = radius;
+        particles[index].velocity.x = -particles[index].velocity.x * DAMPENING;
+    }
+    if particles[index].position.x + radius > SCREEN_SIZE.x {
+        particles[index].position.x = SCREEN_SIZE.x - radius;
+        particles[index].velocity.x = -particles[index].velocity.x * DAMPENING;
+    }
+    if particles[index].position.y - radius < 0.0 {
+        particles[index].position.y = radius;
+        particles[index].velocity.y = -particles[index].velocity.y * DAMPENING;
+    }
+    if particles[index].position.y + radius > SCREEN_SIZE.y {
+        particles[index].position.y = SCREEN_SIZE.y - radius;
+        particles[index].velocity.y = -particles[index].velocity.y * DAMPENING;
+    }
 }
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-
-    // // 55.729168, 55.208332
-    // if(particles[1].position.x == 55.729168) {
-    //     return vec4<f32>(0.0, 1.0, 0.0, 1.0);
-    // }
-    // else {
-    //     return vec4<f32>(1.0, 0.0, 0.0, 1.0);
-    // }
-
     let x: f32 = in.pos.x;
     let y: f32 = in.pos.y;
 
@@ -158,29 +148,25 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
             for (var i = starting_index; i <= ending_index; i=i+1){
                 let d = (x - particles[i].position.x) * (x - particles[i].position.x) + (y - particles[i].position.y) * (y - particles[i].position.y);
-                if d < TEMP_PARTICLE_RADII * TEMP_PARTICLE_RADII {
-                    // // let speed = length(particle_velocities[i]);
-                    // let speed: f32 = 10.0;
-                    // // let density = particle_densities[i];
-                    // let density: f32 = 10.0;
+                if d < particles[i].radius * particles[i].radius {
+                let speed = length(particles[i].velocity);
+                let density = particles[i].density;
 
-                    // // Create a gradient color
-                    // let min_speed: f32 = 0.0;
-                    // let max_speed: f32 = 12.0;
-                    // var speed_t: f32 = (speed - min_speed) / (max_speed - min_speed);
-                    // speed_t = min(max(speed_t, 0.0), 1.0);
-                    // let min_density: f32 = 0.0;
-                    // let max_density: f32 = 0.4;
-                    // var density_t: f32 = (density - min_density) / (max_density - min_density);
-                    // density_t = min(max(density_t, 0.0), 1.0);
-                    // let color: vec3<f32> = vec3<f32>(speed_t, density_t, 1.0 - speed_t);
-
-                    let color = vec3<f32>(0.0, 0.0, 1.0);
+                // Create a gradient color
+                let min_speed: f32 = 0.0;
+                let max_speed: f32 = 12.0;
+                var speed_t: f32 = (speed - min_speed) / (max_speed - min_speed);
+                speed_t = min(max(speed_t, 0.0), 1.0);
+                let min_density: f32 = 0.0;
+                let max_density: f32 = 0.4;
+                var density_t: f32 = (density - min_density) / (max_density - min_density);
+                density_t = min(max(density_t, 0.0), 1.0);
+                let color: vec3<f32> = vec3<f32>(speed_t, density_t, 1.0 - speed_t);
                     
-                    final_color = vec4<f32>(color, 1.0);
-                    break;
-                }
+                final_color = vec4<f32>(color, 1.0);
+                break;
             }
+        }
     }
 
     return final_color;
@@ -200,46 +186,41 @@ fn smoothing_kernel(distance: f32) -> f32 {
     return (RADIUS_OF_INFLUENCE - distance) * (RADIUS_OF_INFLUENCE - distance) / volume;
 }
 
-// fn get_density(pos: vec2<f32>) -> f32 {
-//     let grid = pos_to_grid(pos);
-//     var density = 0.0;
+fn get_density(pos: vec2<f32>) -> f32 {
+    let grid = pos_to_grid(pos);
+    var density = 0.0;
 
-//     // for (var gx: i32 = -grids_to_check.x; gx <= grids_to_check.x; gx=gx+1){
-//     //     for(var gy: i32 = -grids_to_check.y; gy <= grids_to_check.y; gy=gy+1){
-//         for (var g: i32 = 0; g < (grids_to_check.x * 2 + 1) * (grids_to_check.y * 2 + 1); g=g+1){
-//             let gx: i32 = g / (grids_to_check.y * 2 + 1) - grids_to_check.x;
-//             let gy: i32 = g % (grids_to_check.y * 2 + 1) - grids_to_check.y;
+    for (var g: i32 = 0; g < (grids_to_check.x * 2 + 1) * (grids_to_check.y * 2 + 1); g=g+1){
+        let gx: i32 = g / (grids_to_check.y * 2 + 1) - grids_to_check.x;
+        let gy: i32 = g % (grids_to_check.y * 2 + 1) - grids_to_check.y;
 
-//             if grid.x + gx < 0 || grid.x + gx >= i32(GRID_SIZE.x) || grid.y + gy < 0 || grid.y + gy >= i32(GRID_SIZE.y) {
-//                 continue;
-//             }
-//             let first_grid_index = grid_to_index(grid_add(grid, Grid(gx, gy)));
-//             if first_grid_index < 0 || first_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
-//                 continue;
-//             }
+        if grid.x + gx < 0 || grid.x + gx >= i32(GRID_SIZE.x) || grid.y + gy < 0 || grid.y + gy >= i32(GRID_SIZE.y) {
+            continue;
+        }
+        let first_grid_index = grid_to_index(grid_add(grid, Grid(gx, gy)));
+        if first_grid_index < 0 || first_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y) {
+            continue;
+        }
             
-//             let starting_index = particle_lookup[first_grid_index];
-//             if starting_index == -1 {
-//                 continue;
-//             }
+        let starting_index = particle_lookup[first_grid_index];
+        if starting_index == -1 {
+            continue;
+        }
             
-//             var ending_index = starting_index + particle_counts[first_grid_index];
+        var ending_index = starting_index + particle_counts[first_grid_index];
 
-//             for (var i: u32 = u32(starting_index); i <= u32(ending_index); i=i+1){
-//                 let distance = length(pos - (particle_positions[i] + particle_velocities[i] * LOOK_AHEAD_TIME));
-//                 if distance <= RADIUS_OF_INFLUENCE {
-//                     let influence = smoothing_kernel(distance);
-//                     density += influence * 3.141592653589 * TEMP_PARTICLE_RADII * TEMP_PARTICLE_RADII;
-//                 }
-//             }
+        for (var i: u32 = u32(starting_index); i <= u32(ending_index); i=i+1){
+            let distance = length(pos - (particles[i].position + particles[i].velocity * LOOK_AHEAD_TIME));
+            if distance <= RADIUS_OF_INFLUENCE {
+                let influence = smoothing_kernel(distance);
+                density += influence * 3.141592653589 * particles[i].radius * particles[i].radius;
+            }
+        }
 
-//         }
+    }
 
-//     //     }
-//     // }
-
-//     return density;
-// }
+    return density;
+}
 
 fn pos_to_grid(pos: vec2<f32>) -> Grid {
     return Grid(
@@ -256,92 +237,88 @@ fn grid_add(grid: Grid, offset: Grid) -> Grid {
     return Grid(grid.x + offset.x, grid.y + offset.y);
 }
 
-// fn calculate_forces(index: u32) -> vec4<f32> {
-//     var forces = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+fn calculate_forces(index: u32) -> vec4<f32> {
+    var forces = vec4<f32>(0.0, 0.0, 0.0, 0.0);
 
-//     // NOTE: index is already the index of the particle in the grid_index_map
-//     let position: vec2<f32> = particle_positions[index] + particle_velocities[index] * LOOK_AHEAD_TIME;
+    // NOTE: index is already the index of the particle in the grid_index_map
+    let position: vec2<f32> = particles[index].position + particles[index].velocity * LOOK_AHEAD_TIME;
 
-//     let grid = pos_to_grid(position);
+    let grid = pos_to_grid(position);
 
-//     let density: f32 = particle_densities[index];
+    let density: f32 = particles[index].density;
 
-//     // for (var gx: i32 = -grids_to_check.x; gx <= grids_to_check.x; gx=gx+1){
-//     //     for (var gy: i32 = -grids_to_check.y; gy <= grids_to_check.y; gy=gy+1){
-//         for (var g: i32 = 0; g < (grids_to_check.x * 2 + 1) * (grids_to_check.y * 2 + 1); g=g+1){
-//             let gx: i32 = g / (grids_to_check.y * 2 + 1) - grids_to_check.x;
-//             let gy: i32 = g % (grids_to_check.y * 2 + 1) - grids_to_check.y;
+    for (var g: i32 = 0; g < (grids_to_check.x * 2 + 1) * (grids_to_check.y * 2 + 1); g=g+1){
+        let gx: i32 = g / (grids_to_check.y * 2 + 1) - grids_to_check.x;
+        let gy: i32 = g % (grids_to_check.y * 2 + 1) - grids_to_check.y;
             
-//             if grid.x + gx < 0 || grid.x + gx >= i32(GRID_SIZE.x) || grid.y + gy < 0 || grid.y + gy >= i32(GRID_SIZE.y) {
-//                 continue;
-//             }
+        if grid.x + gx < 0 || grid.x + gx >= i32(GRID_SIZE.x) || grid.y + gy < 0 || grid.y + gy >= i32(GRID_SIZE.y) {
+            continue;
+        }
             
-//             let first_grid_index: i32 = grid_to_index(grid_add(grid, Grid(gx, gy)));
-//             if (first_grid_index < 0 || first_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y)) {
-//                 continue;
-//             }
+        let first_grid_index: i32 = grid_to_index(grid_add(grid, Grid(gx, gy)));
+        if (first_grid_index < 0 || first_grid_index >= i32(GRID_SIZE.x * GRID_SIZE.y)) {
+            continue;
+        }
 
-//             let starting_index = particle_lookup[first_grid_index];
-//             if starting_index == -1 {
-//                 continue;
-//             }
+        let starting_index = particle_lookup[first_grid_index];
+        if starting_index == -1 {
+            continue;
+        }
 
-//             var ending_index: i32 = starting_index + particle_counts[first_grid_index];
+        var ending_index: i32 = starting_index + particle_counts[first_grid_index];
 
-//             for(var i: i32 = starting_index; i <= ending_index; i=i+1){
-//                 if i == -1 || i == i32(index) || i >= i32(TOTAL_PARTICLES) {
-//                     continue;
-//                 }
-//                 let offset: vec2<f32> = position - (particle_positions[i] + particle_velocities[i] * LOOK_AHEAD_TIME);
-//                 let distance: f32 = sqrt(offset.x * offset.x + offset.y * offset.y);
-//                 if distance == 0.0 || distance > RADIUS_OF_INFLUENCE {
-//                     continue;
-//                 }
-//                 let dir = vec2<f32>(offset.x / distance, offset.y / distance);
+        for(var i: i32 = starting_index; i <= ending_index; i=i+1){
+            if i == -1 || i == i32(index) || i >= i32(TOTAL_PARTICLES) {
+                continue;
+            }
+            let offset: vec2<f32> = position - (particles[i].position + particles[i].velocity * LOOK_AHEAD_TIME);
+            let distance: f32 = sqrt(offset.x * offset.x + offset.y * offset.y);
+            if distance == 0.0 || distance > RADIUS_OF_INFLUENCE {
+                continue;
+            }
+            let dir = vec2<f32>(offset.x / distance, offset.y / distance);
 
-//                 let slope = smoothing_kernel_derivative(distance);
-//                 let other_density = particle_densities[i];
-//                 let shared_pressure = calculate_shared_pressure(density, other_density);
+            let slope = smoothing_kernel_derivative(distance);
+            let other_density = particles[i].density;
+            let shared_pressure = calculate_shared_pressure(density, other_density);
 
-//                 // Pressure force
-//                 let pressure_force = dir * shared_pressure * slope * 3.141592653589 * particle_radii[i] * particle_radii[i] / max(density, 0.000001);
-//                 // if density == 0.0 {
-//                 //     continue;
-//                 // }
+            // Pressure force
+            let pressure_force = dir * shared_pressure * slope * 3.141592653589 * particles[i].radius * particles[i].radius / max(density, 0.000001);
+            // if density == 0.0 {
+            //     continue;
+            // }
                     
-//                 // Viscosity force
-//                 let viscosity_influence = viscosity_kernel(distance);
-//                 var viscosity_force = (particle_velocities[i] - particle_velocities[index]) * viscosity_influence;
-//                 viscosity_force *= VISCOSITY;
+            // Viscosity force
+            let viscosity_influence = viscosity_kernel(distance);
+            var viscosity_force = (particles[i].velocity - particles[index].velocity) * viscosity_influence;
+            viscosity_force *= VISCOSITY;
 
-//                 // Apply the forces
-//                 forces += vec4<f32>(pressure_force.x, pressure_force.y, viscosity_force.x, viscosity_force.y);
-//             }
-//     //     }
-//     // }
-//         }
+            // Apply the forces
+            forces += vec4<f32>(pressure_force.x, pressure_force.y, viscosity_force.x, viscosity_force.y);
+        }
+    }
 
-//     // Check for mouse interaction
-//     if mouse_info[0] == 1.0 || mouse_info[3] == 1.0 {
-//         let mouse_pos = vec2<f32>(mouse_info[1], mouse_info[2]);
-//         let offset = position - mouse_pos;
-//         let distance = sqrt(offset.x * offset.x + offset.y * offset.y);
-//         if distance < RADIUS_OF_INFLUENCE {
-//             let dir = vec2<f32>(offset.x / distance, offset.y / distance);
-//             var mouse_force = dir * smoothing_kernel(distance) * 100000.0;
-//             if mouse_info[3] == 1.0 {
-//                 mouse_force *= -0.005; // Attract
-//             }
-//             else {
-//                 mouse_force *= 0.5; // Repel
-//             }
-//             forces += vec4<f32>(mouse_force.x, mouse_force.y, 0.0, 0.0);
-//         }
-//     }
+    // Check for mouse interaction
+    if mouse_info[0] == 1.0 || mouse_info[3] == 1.0 {
+        let mouse_pos = vec2<f32>(mouse_info[1], mouse_info[2]);
+        let offset = position - mouse_pos;
+        let distance = sqrt(offset.x * offset.x + offset.y * offset.y);
+        if distance < RADIUS_OF_INFLUENCE {
+            let dir = vec2<f32>(offset.x / distance, offset.y / distance);
+            var mouse_force = dir * smoothing_kernel(distance) * 100000.0;
+            if mouse_info[3] == 1.0 {
+                mouse_force *= -0.005; // Attract
+            }
+            else {
+                mouse_force *= 0.5; // Repel
+            }
+            forces += vec4<f32>(mouse_force.x, mouse_force.y, 0.0, 0.0);
+        }
+    }
 
-//     return forces;
+    return forces;
 
-// }
+}
 
 fn smoothing_kernel_derivative(distance: f32) -> f32 {
     if distance >= RADIUS_OF_INFLUENCE {

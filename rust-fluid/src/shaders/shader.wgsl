@@ -20,8 +20,8 @@ const WORKGROUP_SIZE: u32 = 16;
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
 const GRID_SIZE: vec2<f32> = vec2<f32>(80.0, 40.0);
 
-const PARTICLE_AMOUNT_X: u32 = 96; // The number of particles in the x direction
-const PARTICLE_AMOUNT_Y: u32 = 48; // The number of particles in the y direction
+const PARTICLE_AMOUNT_X: u32 = 192 * 2; // The number of particles in the x direction
+const PARTICLE_AMOUNT_Y: u32 = 96 * 2; // The number of particles in the y direction
 const TOTAL_PARTICLES: i32 = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y); // The total number of particles
 const RADIUS_OF_INFLUENCE: f32 = 75.0 / 4.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
@@ -37,7 +37,7 @@ const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_
 @group(0) @binding(1) var<storage, read> particle_lookup: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
 @group(0) @binding(2) var<storage, read> particle_counts: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
 @group(0) @binding(3) var<storage, read> mouse_info: array<f32, 4>; // 0-Up; 1-Down, x-pos, y-pos, 0-Repel; 1-Attract
-const TEMP_PARTICLE_RADII: f32 = 2.5;
+const TEMP_PARTICLE_RADII: f32 = 1.25 / 2.0;
 
 @vertex
 fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {

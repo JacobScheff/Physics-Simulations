@@ -243,6 +243,7 @@ impl<'a> State<'a> {
                 particles.push(Particle::new([x, y], [0.0, 0.0], PARTICLE_RADIUS));
             }
         }
+        // println!("{:?}", particles[1]);
         let particle_lookup: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
         let particle_counts: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
 

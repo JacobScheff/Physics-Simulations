@@ -36,11 +36,12 @@ const DISPATCH_SIZE: (u32, u32) = (
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 struct Particle {
-    position: [f32; 2],
-    velocity: [f32; 2],
-    radius: f32,
-    density: f32,
-    forces: [f32; 4],
+    position: [f32; 2], // 8 bytes
+    velocity: [f32; 2], // 8 bytes
+    radius: f32, // 4 bytes
+    density: f32, // 4 bytes
+    _padding: [f32; 2], // Padding, 8 bytes
+    forces: [f32; 4], // 16 bytes
 }
 
 impl Particle {
@@ -50,6 +51,7 @@ impl Particle {
             velocity,
             radius,
             density: 0.0,
+            _padding: [0.0, 0.0],
             forces: [0.0, 0.0, 0.0, 0.0],
         }
     }
@@ -253,6 +255,12 @@ impl<'a> State<'a> {
             contents: bytemuck::cast_slice(&particles),
             usage: BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
         });
+        let particle_reader_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Particle Reader Buffer"),
+            size: (std::mem::size_of::<Particle>() * particles.len()) as u64,
+            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
         let particle_lookup_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Particle Lookup Buffer Data"),
             contents: bytemuck::cast_slice(&particle_lookup),
@@ -280,14 +288,6 @@ impl<'a> State<'a> {
             0,
             bytemuck::cast_slice(&particle_counts),
         );
-
-        // Reader buffers
-        let particle_reader_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Particle Reader Buffer"),
-            size: (std::mem::size_of::<Particle>() * particles.len()) as u64,
-            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
 
         // Mouse info
         let mouse_info = [0.0, 0.0, 0.0, 0.0];
@@ -350,7 +350,7 @@ impl<'a> State<'a> {
         );
         self.queue.submit(std::iter::once(encoder.finish()));
 
-        // Map position_reading_buffer for reading asynchronously
+        // Map particle_reading_buffer for reading asynchronously
         let buffer_slice = self.particle_reader_buffer.slice(..);
         let (sender, receiver) = futures_intrusive::channel::shared::oneshot_channel();
         buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
@@ -364,7 +364,7 @@ impl<'a> State<'a> {
         if let Ok(()) = receiver.receive().await.unwrap() {
             let data = buffer_slice.get_mapped_range();
             let particles: &[f32] = bytemuck::cast_slice(&data);
-            // Update the particle positions
+            // Update the particles
             for i in 0..self.particles.len() {
                 self.particles[i] = Particle::new(
                     [particles[i * 6], particles[i * 6 + 1]],

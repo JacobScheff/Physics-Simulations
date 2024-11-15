@@ -8,11 +8,11 @@ struct Grid {
 }
 
 struct Particle {
-    position: vec2<f32>,
-    radius: f32,
-    velocity: vec2<f32>,
-    density: f32,
-    forces: vec4<f32>,
+    position: vec2<f32>, // 16 bytes
+    radius: f32, // 4 bytes
+    velocity: vec2<f32>, // 8 bytes
+    density: f32, // 4 bytes
+    forces: vec4<f32>, // 16 bytes
 }
 
 const WORKGROUP_SIZE: u32 = 16;

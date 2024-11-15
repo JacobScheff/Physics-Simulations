@@ -8,9 +8,9 @@ struct Grid {
 }
 
 struct Particle {
-    position: vec2<f32>, // 16 bytes
-    radius: f32, // 4 bytes
+    position: vec2<f32>, // 8 bytes
     velocity: vec2<f32>, // 8 bytes
+    radius: f32, // 4 bytes
     density: f32, // 4 bytes
     forces: vec4<f32>, // 16 bytes
 }

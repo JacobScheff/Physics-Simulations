@@ -363,16 +363,8 @@ impl<'a> State<'a> {
         // Check if the mapping was successful
         if let Ok(()) = receiver.receive().await.unwrap() {
             let data = buffer_slice.get_mapped_range();
-            let particles: &[f32] = bytemuck::cast_slice(&data);
-            // Update the particles
-            for i in 0..self.particles.len() {
-                self.particles[i] = Particle::new(
-                    [particles[i * 6], particles[i * 6 + 1]],
-                    [particles[i * 6 + 2], particles[i * 6 + 3]],
-                    particles[i * 6 + 4],
-                );
-            }
-
+            self.particles = bytemuck::cast_slice(&data).to_vec();
+            
             drop(data);
             self.particle_reader_buffer.unmap();
         } else {

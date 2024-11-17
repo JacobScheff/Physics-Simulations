@@ -16,6 +16,7 @@ struct Particle {
 }
 
 const WORKGROUP_SIZE: u32 = 16;
+const IPS_WORKGROUP_SIZE: u32 = 16;
 
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
 const GRID_SIZE: vec2<f32> = vec2<f32>(80.0, 40.0);
@@ -32,11 +33,22 @@ const VISCOSITY: f32 = 0.1; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 const dt: f32 = 1.0 / 8.0; // The time step
 
+const BASE: i32 = 10; // Base for the histogram
+const BUCKET_SIZE: u32 = 32; // The amount of numbers in each bucket for the inclusive prefix sum
+const NUM_BUCKETS: u32 = (u32(TOTAL_PARTICLES) + BUCKET_SIZE - 1) / BUCKET_SIZE;
+
 const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_SIZE.x + 1.0), i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.y * GRID_SIZE.y + 1.0));
 @group(0) @binding(0) var<storage, read_write> particles: array<Particle, u32(TOTAL_PARTICLES)>;
 @group(0) @binding(1) var<storage, read> particle_lookup: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
 @group(0) @binding(2) var<storage, read> particle_counts: array<i32, u32(GRID_SIZE.x * GRID_SIZE.y)>;
 @group(0) @binding(3) var<storage, read> mouse_info: array<f32, 4>; // 0-Up; 1-Down, x-pos, y-pos, 0-Repel; 1-Attract
+@group(0) @binding(4) var<storage, read_write> histogram: array<array<atomic<u32>, u32(NUM_BUCKETS)>, u32(BASE)>;
+@group(0) @binding(5) var<storage, read_write> inclusive_prefix_sum: array<array<atomic<u32>, u32(NUM_BUCKETS)>, u32(BASE)>;
+@group(0) @binding(6) var<storage, read> current_digit_index: u32;
+@group(0) @binding(7) var<storage, read_write> sorted_data: array<i32, u32(TOTAL_PARTICLES)>;
+@group(0) @binding(8) var<storage, read> scan_stage: u32;
+@group(0) @binding(9) var<storage, read_write> scanned_inclusive_prefix_sum: array<array<u32, u32(NUM_BUCKETS)>, u32(BASE)>;
+@group(0) @binding(10) var<storage, read_write> digit_histogram: array<atomic<u32>, u32(BASE)>;
 
 @vertex
 fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {

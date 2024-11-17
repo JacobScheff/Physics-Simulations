@@ -25,13 +25,22 @@ const GRID_SIZE: (i32, i32) = (80, 40); // How many grid cells to divide the scr
 const PARTICLE_RADIUS: f32 = 1.25 / 2.0; // The radius of the particles
 const PARTICLE_AMOUNT_X: u32 = 192 * 2; // The number of particles in the x direction
 const PARTICLE_AMOUNT_Y: u32 = 96 * 2; // The number of particles in the y direction
+const TOTAL_PARTICLES: u32 = PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y; // The total number of particles
 const PADDING: f32 = 50.0; // The padding around the screen
+
+const BASE: u32 = 10;
+const NUM_DIGITS: u32 = 3;
+const BUCKET_SIZE: u32 = 32; // The amount of numbers in each bucket for the inclusive prefix sum
+const NUM_BUCKETS: u32 = TOTAL_PARTICLES.div_ceil(BUCKET_SIZE); // The number of buckets
 
 const WORKGROUP_SIZE: u32 = 16;
 const DISPATCH_SIZE: (u32, u32) = (
     (PARTICLE_AMOUNT_X + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,
     (PARTICLE_AMOUNT_Y + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,
 );
+
+const IPS_WORKGROUP_SIZE: u32 = 16;
+const IPS_DISPATCH_SIZE: u32 = ((NUM_BUCKETS + IPS_WORKGROUP_SIZE - 1) / IPS_WORKGROUP_SIZE) as u32;
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
@@ -81,6 +90,18 @@ struct State<'a> {
     particle_counts_buffer: wgpu::Buffer,
     mouse_info: [f32; 4], // 0-up; 1-down, x-pos, y-pos, 0-Atttract; 1-Repel
     mouse_info_buffer: wgpu::Buffer,
+    histogram: Vec<Vec<u32>>,
+    histogram_buffer: wgpu::Buffer,
+    histogram_read_buffer: wgpu::Buffer,
+    digit_histogram_buffer: wgpu::Buffer,
+    scanned_inclusive_prefix_sum_buffer: wgpu::Buffer,
+    inclusive_prefix_sum: Vec<Vec<u32>>,
+    inclusive_prefix_sum_buffer: wgpu::Buffer,
+    inclusive_prefix_sum_read_buffer: wgpu::Buffer,
+    scan_stage_buffer: wgpu::Buffer,
+    current_digit_index: u32,
+    current_digit_index_buffer: wgpu::Buffer,
+    sorted_data_buffer: wgpu::Buffer,
 }
 
 #[allow(unused)]
@@ -131,7 +152,10 @@ impl<'a> State<'a> {
 
         let device_descriptor = wgpu::DeviceDescriptor {
             required_features: wgpu::Features::empty(),
-            required_limits: wgpu::Limits::default(),
+            required_limits: wgpu::Limits {
+                max_storage_buffers_per_shader_stage: 11,
+                ..wgpu::Limits::default()
+            },
             label: Some("Device"),
         };
         let (device, queue) = adapter
@@ -297,6 +321,69 @@ impl<'a> State<'a> {
             usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
         });
 
+        // --- Sort Buffers --- //
+        let histogram = vec![vec![0u32; NUM_BUCKETS as usize]; BASE as usize];
+        let inclusive_prefix_sum = vec![vec![0u32; NUM_BUCKETS as usize]; BASE as usize];
+
+        let current_digit_index_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Current Digit Index Buffer"),
+            contents: bytemuck::cast_slice(&[0u32]),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
+        });
+
+        let histogram_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Histogram Buffer"),
+            contents: bytemuck::cast_slice(&histogram.concat()),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
+        });
+
+        let histogram_read_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Histogram Read Buffer"),
+            size: (histogram.len() * histogram[0].len() * std::mem::size_of::<u32>()) as u64,
+            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let digit_histogram_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Digit Histogram Buffer"),
+            contents: bytemuck::cast_slice(&[0u32; BASE as usize]),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
+        });
+
+        let scanned_inclusive_prefix_sum_buffer =
+            device.create_buffer_init(&BufferInitDescriptor {
+                label: Some("Sorted Data Buffer"),
+                contents: bytemuck::cast_slice(&inclusive_prefix_sum.concat()),
+                usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
+            });
+
+        let inclusive_prefix_sum_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("inclusive Prefix Sum Buffer"),
+            contents: bytemuck::cast_slice(&inclusive_prefix_sum.concat()),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
+        });
+
+        let inclusive_prefix_sum_read_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("inclusive Prefix Sum Read Buffer"),
+            size: (inclusive_prefix_sum.len()
+                * inclusive_prefix_sum[0].len()
+                * std::mem::size_of::<u32>()) as u64,
+            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let sorted_data_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Sorted Data Buffer"),
+            contents: bytemuck::cast_slice(&particles),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
+        });
+
+        let scan_stage_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Scan Stage Buffer"),
+            contents: bytemuck::cast_slice(&[0u32]),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
+        });
+
         Self {
             window,
             surface,
@@ -322,6 +409,18 @@ impl<'a> State<'a> {
             particle_counts_buffer,
             mouse_info,
             mouse_info_buffer,
+            histogram,
+            histogram_buffer,
+            histogram_read_buffer,
+            digit_histogram_buffer,
+            scanned_inclusive_prefix_sum_buffer,
+            inclusive_prefix_sum,
+            inclusive_prefix_sum_buffer,
+            inclusive_prefix_sum_read_buffer,
+            scan_stage_buffer,
+            current_digit_index: 0,
+            current_digit_index_buffer,
+            sorted_data_buffer,
         }
     }
 
@@ -717,6 +816,36 @@ fn create_bind_group(
             wgpu::BindGroupEntry {
                 binding: 3,
                 resource: state.mouse_info_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 4,
+                resource: state.histogram_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 5,
+                resource: state.inclusive_prefix_sum_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 6,
+                resource: state.current_digit_index_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 7,
+                resource: state.sorted_data_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 8,
+                resource: state.scan_stage_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 9,
+                resource: state
+                    .scanned_inclusive_prefix_sum_buffer
+                    .as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 10,
+                resource: state.digit_histogram_buffer.as_entire_binding(),
             },
         ],
     });

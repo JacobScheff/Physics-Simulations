@@ -356,3 +356,78 @@ fn calculate_shared_pressure(density_a: f32, density_b: f32) -> f32 {
     let pressure_b = density_to_pressure(density_b);
     return (pressure_a + pressure_b) / 2.0;
 }
+
+// --- Sort --- //
+fn val_to_digit(val: i32, digit_index: u32) -> i32 {
+    let valf32 = f32(val);
+    let divisor = pow(f32(BASE), f32(digit_index));
+    let digit = i32(floor(valf32 / divisor)) % BASE;
+
+    return digit;
+}
+
+@compute @workgroup_size(WORKGROUP_SIZE, 1)
+fn update_histogram(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    // let index: u32 = global_id.x;
+    // if (index >= TOTAL_PARTICLES) {
+    //     return;
+    // }
+    
+    // let bucket_index: u32 = index / BUCKET_SIZE;
+    // let digit = val_to_digit(data[index], current_digit_index);
+
+    // // Update the inclusive prefix sum
+    // atomicAdd(&histogram[digit][bucket_index], 1u);
+
+    // // Update the digit histogram
+    // atomicAdd(&digit_histogram[digit], 1u);
+}
+
+@compute @workgroup_size(IPS_WORKGROUP_SIZE, 1)
+// https://www.youtube.com/watch?v=RdfmxfZBHpo, Hillis Steele Scan
+fn update_inclusive_prefix_sum(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    // let index: u32 = global_id.x;
+    // let digit: u32 = global_id.y;
+    // if (index >= NUM_BUCKETS || digit >= u32(BASE)) {
+    //     return;
+    // }
+    
+    // let lookup_distance: u32 = u32(pow(2.0, f32(scan_stage)));
+
+    // if (index >= lookup_distance) {
+    //     scanned_inclusive_prefix_sum[digit][index] = inclusive_prefix_sum[digit][index] + inclusive_prefix_sum[digit][index - lookup_distance];
+    // } else {
+    //     scanned_inclusive_prefix_sum[digit][index] = inclusive_prefix_sum[digit][index];
+    // }
+}
+
+@compute @workgroup_size(WORKGROUP_SIZE, 1)
+fn update_indices(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    // let index: u32 = global_id.x;
+    // if (index >= TOTAL_PARTICLES) {
+    //     return;
+    // }
+
+    // let digit: i32 = val_to_digit(data[index], current_digit_index);
+
+    // // Calculate the number of elements before it
+    // var global_offset: i32 = 0;
+    // for (var i: i32 = 0; i < digit; i = i + 1) {
+    //     global_offset += i32(digit_histogram[i]);
+    // }
+
+    // // Calculate the local offset
+    // let bucket_index: u32 = index / BUCKET_SIZE;
+    // let bucket_start: u32 = bucket_index * BUCKET_SIZE;
+    // let bucket_end: u32 = min(bucket_start + BUCKET_SIZE, DATA_COUNT);
+
+    // var local_offset: u32 = inclusive_prefix_sum[digit][bucket_index] - 1u;
+    // for (var i: u32 = bucket_end - 1; i > index; i = i - 1u) {
+    //     if (val_to_digit(data[i], current_digit_index) == digit) {
+    //         local_offset -= 1u;
+    //     }
+    // }
+
+    // let new_index: i32 = i32(local_offset) + global_offset;
+    // sorted_data[new_index] = data[index];
+}

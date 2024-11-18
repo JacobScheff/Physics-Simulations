@@ -808,8 +808,19 @@ impl<'a> State<'a> {
 
         self.queue.submit(std::iter::once(encoder.finish()));
 
+        // Reset particle lookup and counts
+        self.queue.write_buffer(
+            &self.particle_lookup_buffer,
+            0,
+            bytemuck::cast_slice(&vec![-1; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize]),
+        );
+        self.queue.write_buffer(
+            &self.particle_counts_buffer,
+            0,
+            bytemuck::cast_slice(&vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize]),
+        );
+        
         // Sort the particles
-        // pollster::block_on(self.sort_particles());
         self.sort_particles();
 
         // Render the particles

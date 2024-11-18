@@ -860,7 +860,7 @@ impl<'a> State<'a> {
         if self.frame_count % 10 == 0 {
             let elapsed_time = start_time.elapsed();
             println!(
-                "fps: {}",
+                "fps: {}, NOTE: LOOKUP AND COUNTS NEEDS TO BE UPDATED IN GPU TOO",
                 1.0 / elapsed_time.as_micros() as f32 * 1000.0 * 1000.0
             );
             // println!("Compute shaders and rendering time: {} ms", (density_elapsed_time.as_micros() as f32 + forces_elapsed_time.as_micros() as f32 + render_elapsed_time.as_micros() as f32) / 1000.0);

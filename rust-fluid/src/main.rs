@@ -109,6 +109,8 @@ struct State<'a> {
     update_inclusive_prefix_sum_bind_group: wgpu::BindGroup,
     update_indices_pipeline: wgpu::ComputePipeline,
     update_indices_bind_group: wgpu::BindGroup,
+    update_lookup_pipeline: wgpu::ComputePipeline,
+    update_lookup_bind_group: wgpu::BindGroup,
 }
 
 #[allow(unused)]
@@ -245,6 +247,13 @@ impl<'a> State<'a> {
         );
         let update_indices_pipeline = update_indices_pipeline_builder.build_pipeline(&device);
 
+        let mut update_lookup_pipeline_builder = ComputePipelineBuilder::new();
+        update_lookup_pipeline_builder.set_shader_module("shaders/shader.wgsl", "update_lookup");
+        update_lookup_pipeline_builder.set_bind_group_layout(
+            bind_group_layout_generator::get_bind_group_layout(&device),
+        );
+        let update_lookup_pipeline = update_lookup_pipeline_builder.build_pipeline(&device);
+
         // Create temporary bind groups
         let temp_render_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Temporary Render Bind Group"),
@@ -308,6 +317,15 @@ impl<'a> State<'a> {
             layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &[],
                 label: Some("Temporary Update Indices Bind Group Layout"),
+            }),
+            entries: &[],
+        });
+
+        let temp_update_lookup_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Temporary Update Lookup Bind Group"),
+            layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[],
+                label: Some("Temporary Update Lookup Bind Group Layout"),
             }),
             entries: &[],
         });
@@ -485,6 +503,8 @@ impl<'a> State<'a> {
             update_inclusive_prefix_sum_bind_group: temp_update_inclusive_prefix_sum_bind_group,
             update_indices_pipeline,
             update_indices_bind_group: temp_update_indices_bind_group,
+            update_lookup_pipeline,
+            update_lookup_bind_group: temp_update_lookup_bind_group,
         }
     }
 
@@ -937,6 +957,10 @@ async fn run() {
         bind_group_layout_generator::get_bind_group_layout(&state.device);
     state.update_indices_bind_group = create_bind_group(&mut state, &update_indices_bind_group_layout);
 
+    let update_lookup_bind_group_layout =
+        bind_group_layout_generator::get_bind_group_layout(&state.device);
+    state.update_lookup_bind_group = create_bind_group(&mut state, &update_lookup_bind_group_layout);
+
     // Pass bind group layout to pipeline builder
     let mut render_pipeline_builder = PipelineBuilder::new();
     render_pipeline_builder.set_shader_module("shaders/shader.wgsl", "vs_main", "fs_main");
@@ -977,6 +1001,11 @@ async fn run() {
     update_indices_pipeline_builder.set_shader_module("shaders/shader.wgsl", "update_indices");
     update_indices_pipeline_builder.set_bind_group_layout(update_indices_bind_group_layout);
     state.update_indices_pipeline = update_indices_pipeline_builder.build_pipeline(&state.device);
+
+    let mut update_lookup_pipeline_builder = ComputePipelineBuilder::new();
+    update_lookup_pipeline_builder.set_shader_module("shaders/shader.wgsl", "update_lookup");
+    update_lookup_pipeline_builder.set_bind_group_layout(update_lookup_bind_group_layout);
+    state.update_lookup_pipeline = update_lookup_pipeline_builder.build_pipeline(&state.device);
 
     // Sort the particles
     // pollster::block_on(state.sort_particles());

@@ -38,6 +38,7 @@ const DISPATCH_SIZE: (u32, u32) = (
     (PARTICLE_AMOUNT_X + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,
     (PARTICLE_AMOUNT_Y + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,
 );
+const SORT_DISPATCH_SIZE: u32 = ((TOTAL_PARTICLES + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE) as u32;
 
 const IPS_WORKGROUP_SIZE: u32 = 16;
 const IPS_DISPATCH_SIZE: u32 = ((NUM_BUCKETS + IPS_WORKGROUP_SIZE - 1) / IPS_WORKGROUP_SIZE) as u32;
@@ -536,71 +537,212 @@ impl<'a> State<'a> {
             return;
         }
     }
-
-    async fn sort_particles(&mut self) {
-        if false {
-            return;
+    
+    fn sort_particles(&mut self) {
+        for i in 0..NUM_DIGITS {
+            self.sort_particles_by_digit(i);
         }
+    }
 
-        // Update the particles from the buffer
-        self.update_particles_from_buffer().await;
-
-        // Map all particles to their grid cell
-        let mut index_map: Vec<Vec<Vec<i32>>> =
-            vec![vec![vec![]; GRID_SIZE.1 as usize]; GRID_SIZE.0 as usize];
-        for i in 0..self.particles.len() {
-            let grid = self.pos_to_grid(self.particles[i].position);
-            index_map[grid.0 as usize][grid.1 as usize].push(i as i32);
-        }
-
-        // Create a new list of particles
-        let mut new_particles: Vec<Particle> = vec![];
-        let mut lookup_table = vec![-1; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
-        let mut new_counts: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
-
-        // Iterate over all grid cells
-        for i in 0..GRID_SIZE.0 {
-            for j in 0..GRID_SIZE.1 {
-                let grid_index = i + j * GRID_SIZE.0;
-                let mut index = -1;
-
-                // Iterate over all particles in the grid cell
-                for k in 0..index_map[i as usize][j as usize].len() {
-                    let particle_index = index_map[i as usize][j as usize][k] as usize;
-                    new_particles.push(self.particles[particle_index]);
-
-                    if index == -1 {
-                        index = new_particles.len() as i32 - 1;
-                    }
-                    new_counts[grid_index as usize] += 1;
-                }
-
-                lookup_table[grid_index as usize] = index;
-            }
-        }
-
-        self.particles = new_particles;
-        self.particle_lookup = lookup_table;
-        self.particle_counts = new_counts;
-
+    fn sort_particles_by_digit(&mut self, digit: u32) {
+        // Reset the histogram buffer
         self.queue.write_buffer(
+            &self.histogram_buffer,
+            0,
+            bytemuck::cast_slice(&[0u32; NUM_BUCKETS as usize * BASE as usize]),
+        );
+
+        // Reset the digit histogram buffer
+        self.queue.write_buffer(
+            &self.digit_histogram_buffer,
+            0,
+            bytemuck::cast_slice(&[0u32; BASE as usize]),
+        );
+
+        // Set the current digit index
+        self.queue.write_buffer(
+            &self.current_digit_index_buffer,
+            0,
+            bytemuck::cast_slice(&[digit]),
+        );
+
+        // Dispatch the histogram compute shader
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Compute Histogram Encoder"),
+            });
+        {
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("Compute Pass"),
+                timestamp_writes: None,
+            });
+            compute_pass.set_pipeline(&self.update_histogram_pipeline);
+            compute_pass.set_bind_group(0, &self.update_histogram_bind_group, &[]);
+            compute_pass.dispatch_workgroups(SORT_DISPATCH_SIZE, 1, 1);
+        }
+
+        self.queue.submit(std::iter::once(encoder.finish()));
+
+        // Set the inclusive prefix sum buffer to the histogram buffer
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Copy Encoder"),
+            });
+        encoder.copy_buffer_to_buffer(
+            &self.histogram_buffer,
+            0,
+            &self.inclusive_prefix_sum_buffer,
+            0,
+            (self.histogram.len() * self.histogram[0].len() * std::mem::size_of::<u32>()) as u64,
+        );
+
+        self.queue.submit(std::iter::once(encoder.finish()));
+
+        // Dispatch the inclusive prefix sum compute shader
+        let loops_needed = (NUM_BUCKETS as f32).log2().ceil() as u32;
+        for i in 0..loops_needed {
+            // Update the scan stage buffer
+            self.queue
+                .write_buffer(&self.scan_stage_buffer, 0, bytemuck::cast_slice(&[i]));
+
+            // Dispatch the inclusive prefix sum compute shader
+            let mut encoder = self
+                .device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Compute Inclusive Prefix Sum Encoder"),
+                });
+            {
+                let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: Some("Compute Pass"),
+                    timestamp_writes: None,
+                });
+                compute_pass.set_pipeline(&self.update_inclusive_prefix_sum_pipeline);
+                compute_pass.set_bind_group(0, &self.update_inclusive_prefix_sum_bind_group, &[]);
+                compute_pass.dispatch_workgroups(IPS_DISPATCH_SIZE, BASE, 1);
+            }
+
+            self.queue.submit(std::iter::once(encoder.finish()));
+
+            // Copy the scanned inclusive prefix sum buffer to the inclusive prefix sum buffer
+            let mut encoder = self
+                .device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Copy Encoder"),
+                });
+            encoder.copy_buffer_to_buffer(
+                &self.scanned_inclusive_prefix_sum_buffer,
+                0,
+                &self.inclusive_prefix_sum_buffer,
+                0,
+                (self.inclusive_prefix_sum.len()
+                    * self.inclusive_prefix_sum[0].len()
+                    * std::mem::size_of::<u32>()) as u64,
+            );
+
+            self.queue.submit(std::iter::once(encoder.finish()));
+        }
+
+        // Dispatch the indices compute shader
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Compute Indices Encoder"),
+            });
+        {
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("Compute Pass"),
+                timestamp_writes: None,
+            });
+            compute_pass.set_pipeline(&self.update_indices_pipeline);
+            compute_pass.set_bind_group(0, &self.update_indices_bind_group, &[]);
+            compute_pass.dispatch_workgroups(SORT_DISPATCH_SIZE, 1, 1);
+        }
+
+        self.queue.submit(std::iter::once(encoder.finish()));
+
+        // Copy the sorted data to the data buffer
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Copy Encoder"),
+            });
+        encoder.copy_buffer_to_buffer(
+            &self.sorted_data_buffer,
+            0,
             &self.particle_buffer,
             0,
-            bytemuck::cast_slice(&self.particles),
+            (self.particles.len() * std::mem::size_of::<Particle>()) as u64,
         );
 
-        self.queue.write_buffer(
-            &self.particle_lookup_buffer,
-            0,
-            bytemuck::cast_slice(&self.particle_lookup),
-        );
-
-        self.queue.write_buffer(
-            &self.particle_counts_buffer,
-            0,
-            bytemuck::cast_slice(&self.particle_counts),
-        );
+        self.queue.submit(std::iter::once(encoder.finish()));
     }
+
+    // async fn sort_particles(&mut self) {
+    //     if false {
+    //         return;
+    //     }
+
+    //     // Update the particles from the buffer
+    //     self.update_particles_from_buffer().await;
+
+    //     // Map all particles to their grid cell
+    //     let mut index_map: Vec<Vec<Vec<i32>>> =
+    //         vec![vec![vec![]; GRID_SIZE.1 as usize]; GRID_SIZE.0 as usize];
+    //     for i in 0..self.particles.len() {
+    //         let grid = self.pos_to_grid(self.particles[i].position);
+    //         index_map[grid.0 as usize][grid.1 as usize].push(i as i32);
+    //     }
+
+    //     // Create a new list of particles
+    //     let mut new_particles: Vec<Particle> = vec![];
+    //     let mut lookup_table = vec![-1; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
+    //     let mut new_counts: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
+
+    //     // Iterate over all grid cells
+    //     for i in 0..GRID_SIZE.0 {
+    //         for j in 0..GRID_SIZE.1 {
+    //             let grid_index = i + j * GRID_SIZE.0;
+    //             let mut index = -1;
+
+    //             // Iterate over all particles in the grid cell
+    //             for k in 0..index_map[i as usize][j as usize].len() {
+    //                 let particle_index = index_map[i as usize][j as usize][k] as usize;
+    //                 new_particles.push(self.particles[particle_index]);
+
+    //                 if index == -1 {
+    //                     index = new_particles.len() as i32 - 1;
+    //                 }
+    //                 new_counts[grid_index as usize] += 1;
+    //             }
+
+    //             lookup_table[grid_index as usize] = index;
+    //         }
+    //     }
+
+    //     self.particles = new_particles;
+    //     self.particle_lookup = lookup_table;
+    //     self.particle_counts = new_counts;
+
+    //     self.queue.write_buffer(
+    //         &self.particle_buffer,
+    //         0,
+    //         bytemuck::cast_slice(&self.particles),
+    //     );
+
+    //     self.queue.write_buffer(
+    //         &self.particle_lookup_buffer,
+    //         0,
+    //         bytemuck::cast_slice(&self.particle_lookup),
+    //     );
+
+    //     self.queue.write_buffer(
+    //         &self.particle_counts_buffer,
+    //         0,
+    //         bytemuck::cast_slice(&self.particle_counts),
+    //     );
+    // }
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let start_time = std::time::Instant::now();
@@ -667,7 +809,8 @@ impl<'a> State<'a> {
         self.queue.submit(std::iter::once(encoder.finish()));
 
         // Sort the particles
-        pollster::block_on(self.sort_particles());
+        // pollster::block_on(self.sort_particles());
+        self.sort_particles();
 
         // Render the particles
         let drawable = self.surface.get_current_texture()?;
@@ -825,7 +968,8 @@ async fn run() {
     state.update_indices_pipeline = update_indices_pipeline_builder.build_pipeline(&state.device);
 
     // Sort the particles
-    pollster::block_on(state.sort_particles());
+    // pollster::block_on(state.sort_particles());
+    state.sort_particles();
 
     event_loop
         .run(move |event, elwt| match event {

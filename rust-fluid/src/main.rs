@@ -29,7 +29,7 @@ const TOTAL_PARTICLES: u32 = PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y; // The total
 const PADDING: f32 = 50.0; // The padding around the screen
 
 const BASE: u32 = 10;
-const NUM_DIGITS: u32 = 3;
+const NUM_DIGITS: u32 = 4;
 const BUCKET_SIZE: u32 = 32; // The amount of numbers in each bucket for the inclusive prefix sum
 const NUM_BUCKETS: u32 = TOTAL_PARTICLES.div_ceil(BUCKET_SIZE); // The number of buckets
 

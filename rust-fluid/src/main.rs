@@ -693,7 +693,8 @@ impl<'a> State<'a> {
             0,
             &self.particle_buffer,
             0,
-            (self.particles.len() * std::mem::size_of::<Particle>()) as u64,
+            (self.particles.len() * std::mem::size_of::<Particle>())
+                as u64,
         );
 
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -719,71 +720,6 @@ impl<'a> State<'a> {
             self.queue.submit(std::iter::once(encoder.finish()));
         }
     }
-
-    // async fn sort_particles(&mut self) {
-    //     if false {
-    //         return;
-    //     }
-
-    //     // Update the particles from the buffer
-    //     self.update_particles_from_buffer().await;
-
-    //     // Map all particles to their grid cell
-    //     let mut index_map: Vec<Vec<Vec<i32>>> =
-    //         vec![vec![vec![]; GRID_SIZE.1 as usize]; GRID_SIZE.0 as usize];
-    //     for i in 0..self.particles.len() {
-    //         let grid = self.pos_to_grid(self.particles[i].position);
-    //         index_map[grid.0 as usize][grid.1 as usize].push(i as i32);
-    //     }
-
-    //     // Create a new list of particles
-    //     let mut new_particles: Vec<Particle> = vec![];
-    //     let mut lookup_table = vec![-1; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
-    //     let mut new_counts: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
-
-    //     // Iterate over all grid cells
-    //     for i in 0..GRID_SIZE.0 {
-    //         for j in 0..GRID_SIZE.1 {
-    //             let grid_index = i + j * GRID_SIZE.0;
-    //             let mut index = -1;
-
-    //             // Iterate over all particles in the grid cell
-    //             for k in 0..index_map[i as usize][j as usize].len() {
-    //                 let particle_index = index_map[i as usize][j as usize][k] as usize;
-    //                 new_particles.push(self.particles[particle_index]);
-
-    //                 if index == -1 {
-    //                     index = new_particles.len() as i32 - 1;
-    //                 }
-    //                 new_counts[grid_index as usize] += 1;
-    //             }
-
-    //             lookup_table[grid_index as usize] = index;
-    //         }
-    //     }
-
-    //     self.particles = new_particles;
-    //     self.particle_lookup = lookup_table;
-    //     self.particle_counts = new_counts;
-
-    //     self.queue.write_buffer(
-    //         &self.particle_buffer,
-    //         0,
-    //         bytemuck::cast_slice(&self.particles),
-    //     );
-
-    //     self.queue.write_buffer(
-    //         &self.particle_lookup_buffer,
-    //         0,
-    //         bytemuck::cast_slice(&self.particle_lookup),
-    //     );
-
-    //     self.queue.write_buffer(
-    //         &self.particle_counts_buffer,
-    //         0,
-    //         bytemuck::cast_slice(&self.particle_counts),
-    //     );
-    // }
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let start_time = std::time::Instant::now();
@@ -1029,7 +965,6 @@ async fn run() {
     state.update_lookup_pipeline = update_lookup_pipeline_builder.build_pipeline(&state.device);
 
     // Sort the particles
-    // pollster::block_on(state.sort_particles());
     state.sort_particles();
 
     event_loop

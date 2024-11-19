@@ -94,43 +94,43 @@ fn main_forces(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
 fn main_move(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    // let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;
-    // if index < 0 || index >= u32(TOTAL_PARTICLES) {
-    //     return;
+    let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;
+    if index < 0 || index >= u32(TOTAL_PARTICLES) {
+        return;
+    }
+
+    // Move the particle
+    let force = particles[index].forces;
+    let radius = particles[index].radius;
+    let density = particles[index].density;
+
+    var acceleration = vec2<f32>(force.xy / max(density, 0.0001));
+    acceleration += force.zw;
+    acceleration.y += GRAVITY;
+    // if density == 0.0 {
+    //     acceleration = vec2<f32>(0.0, GRAVITY);
     // }
 
-    // // Move the particle
-    // let force = particles[index].forces;
-    // let radius = particles[index].radius;
-    // let density = particles[index].density;
+    particles[index].velocity += acceleration;
+    particles[index].position += particles[index].velocity * dt;
 
-    // var acceleration = vec2<f32>(force.xy / max(density, 0.0001));
-    // acceleration += force.zw;
-    // acceleration.y += GRAVITY;
-    // // if density == 0.0 {
-    // //     acceleration = vec2<f32>(0.0, GRAVITY);
-    // // }
-
-    // particles[index].velocity += acceleration;
-    // particles[index].position += particles[index].velocity * dt;
-
-    // // Collide with the walls
-    // if particles[index].position.x - radius < 0.0 {
-    //     particles[index].position.x = radius;
-    //     particles[index].velocity.x = -particles[index].velocity.x * DAMPENING;
-    // }
-    // if particles[index].position.x + radius > SCREEN_SIZE.x {
-    //     particles[index].position.x = SCREEN_SIZE.x - radius;
-    //     particles[index].velocity.x = -particles[index].velocity.x * DAMPENING;
-    // }
-    // if particles[index].position.y - radius < 0.0 {
-    //     particles[index].position.y = radius;
-    //     particles[index].velocity.y = -particles[index].velocity.y * DAMPENING;
-    // }
-    // if particles[index].position.y + radius > SCREEN_SIZE.y {
-    //     particles[index].position.y = SCREEN_SIZE.y - radius;
-    //     particles[index].velocity.y = -particles[index].velocity.y * DAMPENING;
-    // }
+    // Collide with the walls
+    if particles[index].position.x - radius < 0.0 {
+        particles[index].position.x = radius;
+        particles[index].velocity.x = -particles[index].velocity.x * DAMPENING;
+    }
+    if particles[index].position.x + radius > SCREEN_SIZE.x {
+        particles[index].position.x = SCREEN_SIZE.x - radius;
+        particles[index].velocity.x = -particles[index].velocity.x * DAMPENING;
+    }
+    if particles[index].position.y - radius < 0.0 {
+        particles[index].position.y = radius;
+        particles[index].velocity.y = -particles[index].velocity.y * DAMPENING;
+    }
+    if particles[index].position.y + radius > SCREEN_SIZE.y {
+        particles[index].position.y = SCREEN_SIZE.y - radius;
+        particles[index].velocity.y = -particles[index].velocity.y * DAMPENING;
+    }
 }
 
 @fragment

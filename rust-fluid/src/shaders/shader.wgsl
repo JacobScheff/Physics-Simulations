@@ -19,10 +19,10 @@ const WORKGROUP_SIZE: u32 = 16;
 const IPS_WORKGROUP_SIZE: u32 = 16;
 
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
-const GRID_SIZE: vec2<f32> = vec2<f32>(80.0, 40.0);
+const GRID_SIZE: vec2<f32> = vec2<f32>(8.0, 4.0);
 
-const PARTICLE_AMOUNT_X: u32 = 192 * 2; // The number of particles in the x direction
-const PARTICLE_AMOUNT_Y: u32 = 96 * 2; // The number of particles in the y direction
+const PARTICLE_AMOUNT_X: u32 = 48; // The number of particles in the x direction
+const PARTICLE_AMOUNT_Y: u32 = 24; // The number of particles in the y direction
 const TOTAL_PARTICLES: i32 = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y); // The total number of particles
 const RADIUS_OF_INFLUENCE: f32 = 75.0 / 4.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
@@ -46,7 +46,7 @@ const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_
 @group(0) @binding(4) var<storage, read_write> histogram: array<array<atomic<u32>, u32(NUM_BUCKETS)>, u32(BASE)>;
 @group(0) @binding(5) var<storage, read_write> inclusive_prefix_sum: array<array<atomic<u32>, u32(NUM_BUCKETS)>, u32(BASE)>;
 @group(0) @binding(6) var<storage, read> current_digit_index: u32;
-@group(0) @binding(7) var<storage, read_write> sorted_data: array<i32, u32(TOTAL_PARTICLES)>;
+@group(0) @binding(7) var<storage, read_write> sorted_data: array<Particle, u32(TOTAL_PARTICLES)>;
 @group(0) @binding(8) var<storage, read> scan_stage: u32;
 @group(0) @binding(9) var<storage, read_write> scanned_inclusive_prefix_sum: array<array<u32, u32(NUM_BUCKETS)>, u32(BASE)>;
 @group(0) @binding(10) var<storage, read_write> digit_histogram: array<atomic<u32>, u32(BASE)>;
@@ -440,7 +440,7 @@ fn update_indices(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     let new_index: i32 = i32(local_offset) + global_offset;
-    particles[new_index] = particles[index];
+    sorted_data[new_index] = particles[index];
 }
 
 @compute @workgroup_size(WORKGROUP_SIZE, 1)

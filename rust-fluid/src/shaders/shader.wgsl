@@ -387,6 +387,8 @@ fn update_histogram(@builtin(global_invocation_id) global_id: vec3<u32>) {
     // Update particle counts if is the last digit being sorted
     if (current_digit_index == NUM_DIGITS - 1) {
         particle_counts[grid_index] += 1;
+    } else {
+        particle_counts[grid_index] = 0;
     }
 }
 
@@ -439,4 +441,23 @@ fn update_indices(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
     let new_index: i32 = i32(local_offset) + global_offset;
     particles[new_index] = particles[index];
+}
+
+@compute @workgroup_size(WORKGROUP_SIZE, 1)
+fn update_lookup(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let index: u32 = global_id.x;
+    if (i32(index) >= TOTAL_PARTICLES) {
+        return;
+    }
+
+    let grid_index = grid_to_index(pos_to_grid(particles[index].position));
+
+    if (index == 0) {
+        particle_lookup[grid_index] = i32(index);
+    } else {
+        let prev_grid_index = grid_to_index(pos_to_grid(particles[index - 1].position));
+        if (grid_index != prev_grid_index) {
+            particle_lookup[grid_index] = i32(index);
+        }
+    }   
 }

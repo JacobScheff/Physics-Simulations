@@ -697,6 +697,27 @@ impl<'a> State<'a> {
         );
 
         self.queue.submit(std::iter::once(encoder.finish()));
+
+        // Update particle lookup if it is the last digit
+        if digit == NUM_DIGITS - 1 {
+            // Dispatch the lookup compute shader
+            let mut encoder = self
+                .device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Compute Lookup Encoder"),
+                });
+            {
+                let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                    label: Some("Compute Pass"),
+                    timestamp_writes: None,
+                });
+                compute_pass.set_pipeline(&self.update_lookup_pipeline);
+                compute_pass.set_bind_group(0, &self.update_lookup_bind_group, &[]);
+                compute_pass.dispatch_workgroups(SORT_DISPATCH_SIZE, 1, 1);
+            }
+
+            self.queue.submit(std::iter::once(encoder.finish()));
+        }
     }
 
     // async fn sort_particles(&mut self) {

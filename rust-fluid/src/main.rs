@@ -580,6 +580,15 @@ impl<'a> State<'a> {
             bytemuck::cast_slice(&[0u32; BASE as usize]),
         );
 
+        // Reset particle counts if it is the last digit
+        if digit == NUM_DIGITS - 1 {
+            self.queue.write_buffer(
+                &self.particle_counts_buffer,
+                0,
+                bytemuck::cast_slice(&vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize]),
+            );
+        }
+
         // Set the current digit index
         self.queue.write_buffer(
             &self.current_digit_index_buffer,
@@ -786,16 +795,11 @@ impl<'a> State<'a> {
 
         self.queue.submit(std::iter::once(encoder.finish()));
 
-        // Reset particle lookup and counts
+        // Reset particle lookup
         self.queue.write_buffer(
             &self.particle_lookup_buffer,
             0,
             bytemuck::cast_slice(&vec![-1; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize]),
-        );
-        self.queue.write_buffer(
-            &self.particle_counts_buffer,
-            0,
-            bytemuck::cast_slice(&vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize]),
         );
         
         // Sort the particles

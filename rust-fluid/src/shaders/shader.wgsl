@@ -15,14 +15,14 @@ struct Particle {
     forces: vec4<f32>, // 16 bytes
 }
 
-const WORKGROUP_SIZE: u32 = 16;
+const WORKGROUP_SIZE: u32 = 32;
 const IPS_WORKGROUP_SIZE: u32 = 16;
 
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
-const GRID_SIZE: vec2<f32> = vec2<f32>(160.0, 80.0);
+const GRID_SIZE: vec2<f32> = vec2<f32>(80.0, 40.0);
 
-const PARTICLE_AMOUNT_X: u32 = 96; // The number of particles in the x direction
-const PARTICLE_AMOUNT_Y: u32 = 48; // The number of particles in the y direction
+const PARTICLE_AMOUNT_X: u32 = 192 * 2; // The number of particles in the x direction
+const PARTICLE_AMOUNT_Y: u32 = 96 * 2; // The number of particles in the y direction
 const TOTAL_PARTICLES: i32 = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y); // The total number of particles
 const RADIUS_OF_INFLUENCE: f32 = 75.0 / 4.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
@@ -71,25 +71,25 @@ fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
 fn main_density(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    // let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;
-    // if index < 0 || index >= u32(TOTAL_PARTICLES) {
-    //     return;
-    // }
+    let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;
+    if index < 0 || index >= u32(TOTAL_PARTICLES) {
+        return;
+    }
 
-    // // Update the density of the particle
-    // let density = get_density(particles[index].position);
-    // particles[index].density = density;
+    // Update the density of the particle
+    let density = get_density(particles[index].position);
+    particles[index].density = density;
 }
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
 fn main_forces(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    // let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;
-    // if index < 0 || index >= u32(TOTAL_PARTICLES) {
-    //     return;
-    // }
+    let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;
+    if index < 0 || index >= u32(TOTAL_PARTICLES) {
+        return;
+    }
     
-    // // Calculate the forces on the particle
-    // particles[index].forces = calculate_forces(index);
+    // Calculate the forces on the particle
+    particles[index].forces = calculate_forces(index);
 }
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
@@ -386,7 +386,7 @@ fn update_histogram(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
     // Update particle counts if is the last digit being sorted
     if (current_digit_index == NUM_DIGITS - 1) {
-        particle_counts[grid_index] += 1;
+        particle_counts[grid_index] += 100;
     } else {
         particle_counts[grid_index] = 0;
     }

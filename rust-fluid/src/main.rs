@@ -20,11 +20,11 @@ use winit::{
 
 const SCREEN_SIZE: (u32, u32) = (1200, 600);
 const TIME_BETWEEN_FRAMES: u64 = 2;
-const GRID_SIZE: (i32, i32) = (160, 80); // How many grid cells to divide the screen into
+const GRID_SIZE: (i32, i32) = (80, 40); // How many grid cells to divide the screen into
 
-const PARTICLE_RADIUS: f32 = 1.25 / 2.0 * 2.0; // The radius of the particles
-const PARTICLE_AMOUNT_X: u32 = 96; // The number of particles in the x direction
-const PARTICLE_AMOUNT_Y: u32 = 48; // The number of particles in the y direction
+const PARTICLE_RADIUS: f32 = 1.25 / 2.0; // The radius of the particles
+const PARTICLE_AMOUNT_X: u32 = 192 * 2; // The number of particles in the x direction
+const PARTICLE_AMOUNT_Y: u32 = 96 * 2; // The number of particles in the y direction
 const TOTAL_PARTICLES: u32 = PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y; // The total number of particles
 const PADDING: f32 = 50.0; // The padding around the screen
 
@@ -33,7 +33,7 @@ const NUM_DIGITS: u32 = 4;
 const BUCKET_SIZE: u32 = 32; // The amount of numbers in each bucket for the inclusive prefix sum
 const NUM_BUCKETS: u32 = TOTAL_PARTICLES.div_ceil(BUCKET_SIZE); // The number of buckets
 
-const WORKGROUP_SIZE: u32 = 16;
+const WORKGROUP_SIZE: u32 = 32;
 const DISPATCH_SIZE: (u32, u32) = (
     (PARTICLE_AMOUNT_X + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,
     (PARTICLE_AMOUNT_Y + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,
@@ -155,7 +155,7 @@ impl<'a> State<'a> {
         let adapter = instance
             .enumerate_adapters(wgpu::Backends::all())
             .into_iter()
-            .nth(0)
+            .nth(1)
             .unwrap();
         println!("{:?}", adapter.get_info());
 
@@ -163,6 +163,7 @@ impl<'a> State<'a> {
             required_features: wgpu::Features::empty(),
             required_limits: wgpu::Limits {
                 max_storage_buffers_per_shader_stage: 11,
+                max_compute_invocations_per_workgroup: 1024,
                 ..wgpu::Limits::default()
             },
             label: Some("Device"),

@@ -19,10 +19,10 @@ const WORKGROUP_SIZE: u32 = 32;
 const IPS_WORKGROUP_SIZE: u32 = 16;
 
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
-const GRID_SIZE: vec2<f32> = vec2<f32>(80.0, 40.0);
+const GRID_SIZE: vec2<f32> = vec2<f32>(160.0, 80.0);
 
-const PARTICLE_AMOUNT_X: u32 = 192 * 2; // The number of particles in the x direction
-const PARTICLE_AMOUNT_Y: u32 = 96 * 2; // The number of particles in the y direction
+const PARTICLE_AMOUNT_X: u32 = 192 * 4; // The number of particles in the x direction
+const PARTICLE_AMOUNT_Y: u32 = 96 * 4; // The number of particles in the y direction
 const TOTAL_PARTICLES: i32 = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y); // The total number of particles
 const RADIUS_OF_INFLUENCE: f32 = 75.0 / 4.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
@@ -33,7 +33,7 @@ const VISCOSITY: f32 = 0.1; // The viscosity of the fluid
 const DAMPENING: f32 = 0.95; // How much to slow down particles when they collide with the walls
 const dt: f32 = 1.0 / 8.0; // The time step
 
-const NUM_DIGITS: u32 = 4; // The number of digits in the grid index
+const NUM_DIGITS: u32 = 5; // The number of digits in the grid index
 const BASE: i32 = 10; // Base for the histogram
 const BUCKET_SIZE: u32 = 32; // The amount of numbers in each bucket for the inclusive prefix sum
 const NUM_BUCKETS: u32 = (u32(TOTAL_PARTICLES) + BUCKET_SIZE - 1) / BUCKET_SIZE;

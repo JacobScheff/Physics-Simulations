@@ -19,10 +19,10 @@ const WORKGROUP_SIZE: u32 = 32;
 const IPS_WORKGROUP_SIZE: u32 = 16;
 
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
-const GRID_SIZE: vec2<f32> = vec2<f32>(320.0, 160.0);
+const GRID_SIZE: vec2<f32> = vec2<f32>(80.0, 40.0);
 
-const PARTICLE_AMOUNT_X: u32 = 192 * 4; // The number of particles in the x direction
-const PARTICLE_AMOUNT_Y: u32 = 96 * 4; // The number of particles in the y direction
+const PARTICLE_AMOUNT_X: u32 = 192 * 2; // The number of particles in the x direction
+const PARTICLE_AMOUNT_Y: u32 = 96 * 2; // The number of particles in the y direction
 const TOTAL_PARTICLES: i32 = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y); // The total number of particles
 const RADIUS_OF_INFLUENCE: f32 = 75.0 / 4.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
@@ -83,54 +83,54 @@ fn main_density(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
 fn main_forces(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    // let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;
-    // if index < 0 || index >= u32(TOTAL_PARTICLES) {
-    //     return;
-    // }
+    let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;
+    if index < 0 || index >= u32(TOTAL_PARTICLES) {
+        return;
+    }
     
-    // // Calculate the forces on the particle
-    // particles[index].forces = calculate_forces(index);
+    // Calculate the forces on the particle
+    particles[index].forces = calculate_forces(index);
 }
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
 fn main_move(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    // let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;
-    // if index < 0 || index >= u32(TOTAL_PARTICLES) {
-    //     return;
+    let index = global_id.y * PARTICLE_AMOUNT_X + global_id.x;
+    if index < 0 || index >= u32(TOTAL_PARTICLES) {
+        return;
+    }
+
+    // Move the particle
+    let force = particles[index].forces;
+    let radius = particles[index].radius;
+    let density = particles[index].density;
+
+    var acceleration = vec2<f32>(force.xy / max(density, 0.0001));
+    acceleration += force.zw;
+    acceleration.y += GRAVITY;
+    // if density == 0.0 {
+    //     acceleration = vec2<f32>(0.0, GRAVITY);
     // }
 
-    // // Move the particle
-    // let force = particles[index].forces;
-    // let radius = particles[index].radius;
-    // let density = particles[index].density;
+    particles[index].velocity += acceleration;
+    particles[index].position += particles[index].velocity * dt;
 
-    // var acceleration = vec2<f32>(force.xy / max(density, 0.0001));
-    // acceleration += force.zw;
-    // acceleration.y += GRAVITY;
-    // // if density == 0.0 {
-    // //     acceleration = vec2<f32>(0.0, GRAVITY);
-    // // }
-
-    // particles[index].velocity += acceleration;
-    // particles[index].position += particles[index].velocity * dt;
-
-    // // Collide with the walls
-    // if particles[index].position.x - radius < 0.0 {
-    //     particles[index].position.x = radius;
-    //     particles[index].velocity.x = -particles[index].velocity.x * DAMPENING;
-    // }
-    // if particles[index].position.x + radius > SCREEN_SIZE.x {
-    //     particles[index].position.x = SCREEN_SIZE.x - radius;
-    //     particles[index].velocity.x = -particles[index].velocity.x * DAMPENING;
-    // }
-    // if particles[index].position.y - radius < 0.0 {
-    //     particles[index].position.y = radius;
-    //     particles[index].velocity.y = -particles[index].velocity.y * DAMPENING;
-    // }
-    // if particles[index].position.y + radius > SCREEN_SIZE.y {
-    //     particles[index].position.y = SCREEN_SIZE.y - radius;
-    //     particles[index].velocity.y = -particles[index].velocity.y * DAMPENING;
-    // }
+    // Collide with the walls
+    if particles[index].position.x - radius < 0.0 {
+        particles[index].position.x = radius;
+        particles[index].velocity.x = -particles[index].velocity.x * DAMPENING;
+    }
+    if particles[index].position.x + radius > SCREEN_SIZE.x {
+        particles[index].position.x = SCREEN_SIZE.x - radius;
+        particles[index].velocity.x = -particles[index].velocity.x * DAMPENING;
+    }
+    if particles[index].position.y - radius < 0.0 {
+        particles[index].position.y = radius;
+        particles[index].velocity.y = -particles[index].velocity.y * DAMPENING;
+    }
+    if particles[index].position.y + radius > SCREEN_SIZE.y {
+        particles[index].position.y = SCREEN_SIZE.y - radius;
+        particles[index].velocity.y = -particles[index].velocity.y * DAMPENING;
+    }
 }
 
 @fragment

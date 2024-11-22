@@ -15,7 +15,7 @@ struct Particle {
     forces: vec4<f32>, // 16 bytes
 }
 
-const WORKGROUP_SIZE: u32 = 32;
+const WORKGROUP_SIZE: u32 = 16;
 const IPS_WORKGROUP_SIZE: u32 = 16;
 
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen

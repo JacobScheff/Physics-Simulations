@@ -33,7 +33,7 @@ const NUM_DIGITS: u32 = 5;
 const BUCKET_SIZE: u32 = 32; // The amount of numbers in each bucket for the inclusive prefix sum
 const NUM_BUCKETS: u32 = TOTAL_PARTICLES.div_ceil(BUCKET_SIZE); // The number of buckets
 
-const WORKGROUP_SIZE: u32 = 32;
+const WORKGROUP_SIZE: u32 = 16;
 const DISPATCH_SIZE: (u32, u32) = (
     (PARTICLE_AMOUNT_X + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,
     (PARTICLE_AMOUNT_Y + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,

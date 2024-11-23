@@ -6,6 +6,7 @@ struct Particle {
     velocity: vec2<f32>, // 8 bytes
     density: f32, // 4 bytes
     divergence: f32, // 4 bytes
+    pressure: f32, // 4 bytes
 }
 
 const WORKGROUP_SIZE: u32 = 16;
@@ -83,7 +84,8 @@ fn main_divergence(@builtin(global_invocation_id) global_id: vec3<u32>) {
 fn main_velocity(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let index: vec2<u32> = global_id.xy;
 
-    let divergence = particles[index.y][index.x].divergence;
+    let me = particles[index.y][index.x];
+    let divergence = me.divergence;
 
     // Check how many valid neighbors there are
     var neighbors = 0;
@@ -114,4 +116,7 @@ fn main_velocity(@builtin(global_invocation_id) global_id: vec3<u32>) {
     if (index.y < u32(SIM_SIZE.y) - 1) { // Top neighbor
         particles[index.y + 1][index.x].velocity.y -= change;
     }
+
+    // Update pressure
+    particles[index.y][index.x].pressure += change * me.density * (f32(SCREEN_SIZE.x) / f32(SIM_SIZE.x) * f32(SCREEN_SIZE.y) / f32(SIM_SIZE.y)) / f32(neighbors) * dt;
 }

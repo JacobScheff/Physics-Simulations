@@ -34,6 +34,7 @@ struct Particle {
     velocity: [f32; 2], // 8 bytes
     density: f32, // 4 bytes
     divergence: f32, // 4 bytes
+    pressure: f32, // 4 bytes
     _padding: f32, // 4 bytes
 }
 
@@ -43,6 +44,7 @@ impl Particle {
             velocity: velocity,
             density: density,
             divergence: 0.0,
+            pressure: 0.0,
             _padding: 0.0,
         }
     }

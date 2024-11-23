@@ -13,6 +13,7 @@ const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
 const SIM_SIZE: vec2<f32> = vec2<f32>(500.0, 250.0);
 
 const GRAVITY = vec2<f32>(0.0, -0.1);
+const dt: f32 = 1.0 / 8.0; // Time step
 
 @group(0) @binding(0) var<storage, read_write> particles: array<array<Particle, u32(SIM_SIZE.x)>, u32(SIM_SIZE.y)>;
 
@@ -49,7 +50,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
 fn main_gravity(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let index = global_id.xy;
-    particles[index.y][index.x].velocity += GRAVITY;
+    particles[index.y][index.x].velocity += GRAVITY * dt;
 }
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)

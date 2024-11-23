@@ -32,14 +32,24 @@ fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
     return out;
 }
 
+fn pos_to_grid(pos: vec2<f32>) -> vec2<i32> {
+    return vec2<i32>(i32(pos.x * f32(SIM_SIZE.x) / SCREEN_SIZE.x), i32(pos.y * f32(SIM_SIZE.y) / SCREEN_SIZE.y));
+}
+
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+    // Get the particle at the current position
+    let pos = in.pos.xy;
+    let gridPos = pos_to_grid(pos);
+
     return vec4<f32>(0.0, 0.0, 0.0, 1.0);
 }
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
 fn main_density(@builtin(global_invocation_id) global_id: vec3<u32>) {
-
+    var particle: Particle = particles_read[global_id.y][global_id.x];
+    particle.density = f32(global_id.x) / f32(SIM_SIZE.x);
+    particles_write[global_id.y][global_id.x] = particle;
 }
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)

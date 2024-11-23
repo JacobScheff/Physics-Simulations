@@ -189,8 +189,6 @@ impl<'a> State<'a> {
             ];
             SIM_SIZE.1 as usize
         ];
-
-        particle_data[3][2] = Particle::new([5.0, 9.0], 22.0);
         
         let particle_data_flat: Vec<Particle> = particle_data.into_iter().flatten().collect();
         let particle_data_u8: Vec<u8> = bytemuck::cast_slice(&particle_data_flat).to_vec();

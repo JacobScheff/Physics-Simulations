@@ -194,7 +194,20 @@ impl<'a> State<'a> {
         let particle_data_flat: Vec<Particle> = particle_data.into_iter().flatten().collect();
         let particle_data_u8: Vec<u8> = bytemuck::cast_slice(&particle_data_flat).to_vec();
 
-        let mut velocity_data = vec![0.0; SIM_SIZE.1 as usize - 1];
+        let horizontal_velocity_data = vec![
+            vec![0.0; SIM_SIZE.0 as usize - 1];
+            SIM_SIZE.1 as usize
+        ];
+        let horizontal_velocity_data_flat: Vec<f32> = horizontal_velocity_data.into_iter().flatten().collect();
+        let horizontal_velocity_data_u8: Vec<u8> = bytemuck::cast_slice(&horizontal_velocity_data_flat).to_vec();
+
+        let vertical_velocity_data = vec![
+            vec![0.0; SIM_SIZE.0 as usize];
+            SIM_SIZE.1 as usize - 1
+        ];
+
+        let vertical_velocity_data_flat: Vec<f32> = vertical_velocity_data.into_iter().flatten().collect();
+        let vertical_velocity_data_u8: Vec<u8> = bytemuck::cast_slice(&vertical_velocity_data_flat).to_vec();
 
         // Buffers
         let particle_buffer = device.create_buffer_init(&BufferInitDescriptor {
@@ -205,13 +218,13 @@ impl<'a> State<'a> {
         
         let horizontal_velocity_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Horizontal Velocity Buffer"),
-            contents: bytemuck::cast_slice(&velocity_data),
+            contents: bytemuck::cast_slice(&horizontal_velocity_data_u8),
             usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
         });
 
         let vertical_velocity_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Vertical Velocity Buffer"),
-            contents: bytemuck::cast_slice(&velocity_data),
+            contents: bytemuck::cast_slice(&vertical_velocity_data_u8),
             usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
         });
         

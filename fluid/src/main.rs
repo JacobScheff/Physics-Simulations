@@ -187,7 +187,7 @@ impl<'a> State<'a> {
 
         let mut particle_data = vec![
             vec![
-                Particle::new([0.0, 0.0], 0.0);
+                Particle::new([0.0, 0.0], 0.5);
                 SIM_SIZE.0 as usize
             ];
             SIM_SIZE.1 as usize

@@ -5,7 +5,6 @@ use renderer_backend::{
     pipeline_builder::PipelineBuilder,
 };
 mod renderer_backend;
-// use rand::Rng;
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
     BufferUsages,
@@ -20,52 +19,15 @@ use winit::{
 
 const SCREEN_SIZE: (u32, u32) = (1200, 600);
 const TIME_BETWEEN_FRAMES: u64 = 2;
-const GRID_SIZE: (i32, i32) = (80, 40); // How many grid cells to divide the screen into
-
-const PARTICLE_RADIUS: f32 = 1.25 / 2.0; // The radius of the particles
-const PARTICLE_AMOUNT_X: u32 = 192 * 2; // The number of particles in the x direction
-const PARTICLE_AMOUNT_Y: u32 = 96 * 2; // The number of particles in the y direction
-const TOTAL_PARTICLES: u32 = PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y; // The total number of particles
+const SIM_SIZE: (i32, i32) = (500, 250); // How many grid cells to divide the screen into
 const PADDING: f32 = 50.0; // The padding around the screen
-
-const BASE: u32 = 10;
-const NUM_DIGITS: u32 = 5;
-const BUCKET_SIZE: u32 = 32; // The amount of numbers in each bucket for the inclusive prefix sum
-const NUM_BUCKETS: u32 = TOTAL_PARTICLES.div_ceil(BUCKET_SIZE); // The number of buckets
 
 const WORKGROUP_SIZE: u32 = 16;
 const DISPATCH_SIZE: (u32, u32) = (
-    (PARTICLE_AMOUNT_X + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,
-    (PARTICLE_AMOUNT_Y + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,
+    ((SIM_SIZE.0 as u32) + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,
+    ((SIM_SIZE.1 as u32) + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,
 );
-const SORT_DISPATCH_SIZE: u32 = ((TOTAL_PARTICLES + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE) as u32;
 
-const IPS_WORKGROUP_SIZE: u32 = 16;
-const IPS_DISPATCH_SIZE: u32 = ((NUM_BUCKETS + IPS_WORKGROUP_SIZE - 1) / IPS_WORKGROUP_SIZE) as u32;
-
-#[repr(C)]
-#[derive(Debug, Clone, Copy, Pod, Zeroable)]
-struct Particle {
-    position: [f32; 2], // 8 bytes
-    velocity: [f32; 2], // 8 bytes
-    radius: f32, // 4 bytes
-    density: f32, // 4 bytes
-    _padding: [f32; 2], // Padding, 8 bytes
-    forces: [f32; 4], // 16 bytes
-}
-
-impl Particle {
-    fn new(position: [f32; 2], velocity: [f32; 2], radius: f32) -> Self {
-        Self {
-            position,
-            velocity,
-            radius,
-            density: 0.0,
-            _padding: [0.0, 0.0],
-            forces: [0.0, 0.0, 0.0, 0.0],
-        }
-    }
-}
 struct State<'a> {
     surface: wgpu::Surface<'a>,
     device: wgpu::Device,
@@ -81,66 +43,12 @@ struct State<'a> {
     compute_densities_bind_group: wgpu::BindGroup,
     compute_forces_bind_group: wgpu::BindGroup,
     compute_move_bind_group: wgpu::BindGroup,
+    particle_buffer_read: wgpu::Buffer,
+    particle_buffer_write: wgpu::Buffer,
     frame_count: u32,
-    particles: Vec<Particle>,
-    particle_buffer: wgpu::Buffer,
-    particle_reader_buffer: wgpu::Buffer,
-    particle_lookup: Vec<i32>,
-    particle_lookup_buffer: wgpu::Buffer,
-    particle_counts: Vec<i32>,
-    particle_counts_buffer: wgpu::Buffer,
-    mouse_info: [f32; 4], // 0-up; 1-down, x-pos, y-pos, 0-Atttract; 1-Repel
-    mouse_info_buffer: wgpu::Buffer,
-    histogram: Vec<Vec<u32>>,
-    histogram_buffer: wgpu::Buffer,
-    histogram_read_buffer: wgpu::Buffer,
-    digit_histogram_buffer: wgpu::Buffer,
-    scanned_inclusive_prefix_sum_buffer: wgpu::Buffer,
-    inclusive_prefix_sum: Vec<Vec<u32>>,
-    inclusive_prefix_sum_buffer: wgpu::Buffer,
-    inclusive_prefix_sum_read_buffer: wgpu::Buffer,
-    scan_stage_buffer: wgpu::Buffer,
-    current_digit_index: u32,
-    current_digit_index_buffer: wgpu::Buffer,
-    sorted_data_buffer: wgpu::Buffer,
-    update_histogram_pipeline: wgpu::ComputePipeline,
-    update_histogram_bind_group: wgpu::BindGroup,
-    update_inclusive_prefix_sum_pipeline: wgpu::ComputePipeline,
-    update_inclusive_prefix_sum_bind_group: wgpu::BindGroup,
-    update_indices_pipeline: wgpu::ComputePipeline,
-    update_indices_bind_group: wgpu::BindGroup,
-    update_lookup_pipeline: wgpu::ComputePipeline,
-    update_lookup_bind_group: wgpu::BindGroup,
-}
-
-#[allow(unused)]
-fn pos_to_grid_index(pos: (f32, f32)) -> i32 {
-    let x = ((pos.0 / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32) as i32)
-        .min(GRID_SIZE.0 - 1)
-        .max(0) as i32;
-    let y = ((pos.1 / SCREEN_SIZE.1 as f32 * GRID_SIZE.1 as f32) as i32)
-        .min(GRID_SIZE.1 - 1)
-        .max(0) as i32;
-
-    x + y * GRID_SIZE.0
 }
 
 impl<'a> State<'a> {
-    const GRID_DIV_SCREEN_SIZE: (f32, f32) = (
-        GRID_SIZE.0 as f32 / SCREEN_SIZE.0 as f32,
-        GRID_SIZE.1 as f32 / SCREEN_SIZE.1 as f32,
-    );
-    fn pos_to_grid(&self, pos: [f32; 2]) -> (i32, i32) {
-        let x = (pos[0] * Self::GRID_DIV_SCREEN_SIZE.0)
-            .min(GRID_SIZE.0 as f32 - 1.0)
-            .max(0.0) as i32;
-        let y = (pos[1] * Self::GRID_DIV_SCREEN_SIZE.1)
-            .min(GRID_SIZE.1 as f32 - 1.0)
-            .max(0.0) as i32;
-
-        (x, y)
-    }
-
     async fn new(window: &'a Window) -> Self {
         let size = window.inner_size();
 
@@ -161,11 +69,7 @@ impl<'a> State<'a> {
 
         let device_descriptor = wgpu::DeviceDescriptor {
             required_features: wgpu::Features::empty(),
-            required_limits: wgpu::Limits {
-                max_storage_buffers_per_shader_stage: 11,
-                max_compute_invocations_per_workgroup: 1024,
-                ..wgpu::Limits::default()
-            },
+            required_limits: wgpu::Limits::default(),
             label: Some("Device"),
         };
         let (device, queue) = adapter
@@ -226,35 +130,6 @@ impl<'a> State<'a> {
         );
         let compute_forces_pipeline = compute_forces_pipeline_builder.build_pipeline(&device);
 
-        // --- Sort Pipelines --- //
-        let mut update_histogram_pipeline_builder = ComputePipelineBuilder::new();
-        update_histogram_pipeline_builder.set_shader_module("shaders/shader.wgsl", "update_histogram");
-        update_histogram_pipeline_builder.set_bind_group_layout(
-            bind_group_layout_generator::get_bind_group_layout(&device),
-        );
-        let update_histogram_pipeline = update_histogram_pipeline_builder.build_pipeline(&device);
-
-        let mut update_inclusive_prefix_sum_pipeline_builder = ComputePipelineBuilder::new();
-        update_inclusive_prefix_sum_pipeline_builder.set_shader_module("shaders/shader.wgsl", "update_inclusive_prefix_sum");
-        update_inclusive_prefix_sum_pipeline_builder.set_bind_group_layout(
-            bind_group_layout_generator::get_bind_group_layout(&device),
-        );
-        let update_inclusive_prefix_sum_pipeline = update_inclusive_prefix_sum_pipeline_builder.build_pipeline(&device);
-
-        let mut update_indices_pipeline_builder = ComputePipelineBuilder::new();
-        update_indices_pipeline_builder.set_shader_module("shaders/shader.wgsl", "update_indices");
-        update_indices_pipeline_builder.set_bind_group_layout(
-            bind_group_layout_generator::get_bind_group_layout(&device),
-        );
-        let update_indices_pipeline = update_indices_pipeline_builder.build_pipeline(&device);
-
-        let mut update_lookup_pipeline_builder = ComputePipelineBuilder::new();
-        update_lookup_pipeline_builder.set_shader_module("shaders/shader.wgsl", "update_lookup");
-        update_lookup_pipeline_builder.set_bind_group_layout(
-            bind_group_layout_generator::get_bind_group_layout(&device),
-        );
-        let update_lookup_pipeline = update_lookup_pipeline_builder.build_pipeline(&device);
-
         // Create temporary bind groups
         let temp_render_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Temporary Render Bind Group"),
@@ -293,172 +168,34 @@ impl<'a> State<'a> {
             entries: &[],
         });
 
-        // --- Sort Bind Groups --- //
-        let temp_update_histogram_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Temporary Update Histogram Bind Group"),
-            layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                entries: &[],
-                label: Some("Temporary Update Histogram Bind Group Layout"),
-            }),
-            entries: &[],
+        // Store particle data in a texture
+        let particle_texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Particle Data Texture"),
+            size: wgpu::Extent3d {
+                width: SIM_SIZE.0 as u32,
+                height: SIM_SIZE.1 as u32,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba32Float,
+            usage: wgpu::TextureUsages::STORAGE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
         });
 
-        let temp_update_inclusive_prefix_sum_bind_group =
-            device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("Temporary Update Inclusive Prefix Sum Bind Group"),
-                layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    entries: &[],
-                    label: Some("Temporary Update Inclusive Prefix Sum Bind Group Layout"),
-                }),
-                entries: &[],
-            });
-
-        let temp_update_indices_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Temporary Update Indices Bind Group"),
-            layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                entries: &[],
-                label: Some("Temporary Update Indices Bind Group Layout"),
-            }),
-            entries: &[],
-        });
-
-        let temp_update_lookup_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Temporary Update Lookup Bind Group"),
-            layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                entries: &[],
-                label: Some("Temporary Update Lookup Bind Group Layout"),
-            }),
-            entries: &[],
-        });
-
-        // Create particle data
-        let mut particles = vec![];
-        for i in 0..PARTICLE_AMOUNT_X {
-            for j in 0..PARTICLE_AMOUNT_Y {
-                let x = (i as f32 + 0.5) * (SCREEN_SIZE.0 as f32 - 2.0 * PADDING)
-                    / PARTICLE_AMOUNT_X as f32
-                    + PADDING;
-                let y = (j as f32 + 0.5) * (SCREEN_SIZE.1 as f32 - 2.0 * PADDING)
-                    / PARTICLE_AMOUNT_Y as f32
-                    + PADDING;
-
-
-                particles.push(Particle::new([x, y], [0.0, 0.0], PARTICLE_RADIUS));
-            }
-        }
-        // println!("{:?}", particles[1]);
-        let particle_lookup: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
-        let particle_counts: Vec<i32> = vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize];
-
-        // Buffer for particles
-        let particle_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("Particle Buffer Data"),
-            contents: bytemuck::cast_slice(&particles),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
-        });
-        let particle_reader_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Particle Reader Buffer"),
-            size: (std::mem::size_of::<Particle>() * particles.len()) as u64,
-            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        let particle_lookup_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("Particle Lookup Buffer Data"),
-            contents: bytemuck::cast_slice(&particle_lookup),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
-        });
-        let particle_counts_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("Particle Counts Buffer Data"),
-            contents: bytemuck::cast_slice(&particle_counts),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
-        });
-
-        // Write data to buffers
-        queue.write_buffer(
-            &particle_buffer,
-            0,
-            bytemuck::cast_slice(&particles),
-        );
-        queue.write_buffer(
-            &particle_lookup_buffer,
-            0,
-            bytemuck::cast_slice(&particle_lookup),
-        );
-        queue.write_buffer(
-            &particle_counts_buffer,
-            0,
-            bytemuck::cast_slice(&particle_counts),
-        );
-
-        // Mouse info
-        let mouse_info = [0.0, 0.0, 0.0, 0.0];
-        let mouse_info_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("Mouse Info Buffer Data"),
-            contents: bytemuck::cast_slice(&mouse_info),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
-        });
-
-        // --- Sort Buffers --- //
-        let histogram = vec![vec![0u32; NUM_BUCKETS as usize]; BASE as usize];
-        let inclusive_prefix_sum = vec![vec![0u32; NUM_BUCKETS as usize]; BASE as usize];
-
-        let current_digit_index_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("Current Digit Index Buffer"),
-            contents: bytemuck::cast_slice(&[0u32]),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
-        });
-
-        let histogram_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("Histogram Buffer"),
-            contents: bytemuck::cast_slice(&histogram.concat()),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
-        });
-
-        let histogram_read_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Histogram Read Buffer"),
-            size: (histogram.len() * histogram[0].len() * std::mem::size_of::<u32>()) as u64,
-            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
+        let particle_buffer_read = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Particle Data Buffer"),
+            size: (SIM_SIZE.0 * SIM_SIZE.1 * 4 * 4) as u64,
+            usage: BufferUsages::COPY_DST | BufferUsages::STORAGE,
             mapped_at_creation: false,
         });
 
-        let digit_histogram_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("Digit Histogram Buffer"),
-            contents: bytemuck::cast_slice(&[0u32; BASE as usize]),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
-        });
-
-        let scanned_inclusive_prefix_sum_buffer =
-            device.create_buffer_init(&BufferInitDescriptor {
-                label: Some("Sorted Data Buffer"),
-                contents: bytemuck::cast_slice(&inclusive_prefix_sum.concat()),
-                usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
-            });
-
-        let inclusive_prefix_sum_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("inclusive Prefix Sum Buffer"),
-            contents: bytemuck::cast_slice(&inclusive_prefix_sum.concat()),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
-        });
-
-        let inclusive_prefix_sum_read_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("inclusive Prefix Sum Read Buffer"),
-            size: (inclusive_prefix_sum.len()
-                * inclusive_prefix_sum[0].len()
-                * std::mem::size_of::<u32>()) as u64,
-            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
+        let particle_buffer_write = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Particle Data Buffer"),
+            size: (SIM_SIZE.0 * SIM_SIZE.1 * 4 * 4) as u64,
+            usage: BufferUsages::COPY_DST | BufferUsages::STORAGE,
             mapped_at_creation: false,
-        });
-
-        let sorted_data_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("Sorted Data Buffer"),
-            contents: bytemuck::cast_slice(&particles),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
-        });
-
-        let scan_stage_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("Scan Stage Buffer"),
-            contents: bytemuck::cast_slice(&[0u32]),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
         });
 
         Self {
@@ -476,36 +213,9 @@ impl<'a> State<'a> {
             compute_densities_bind_group: temp_compute_density_bind_group,
             compute_forces_bind_group: temp_compute_forces_bind_group,
             compute_move_bind_group: temp_compute_move_bind_group,
+            particle_buffer_read,
+            particle_buffer_write,
             frame_count: 0,
-            particles,
-            particle_buffer,
-            particle_reader_buffer,
-            particle_lookup,
-            particle_lookup_buffer,
-            particle_counts,
-            particle_counts_buffer,
-            mouse_info,
-            mouse_info_buffer,
-            histogram,
-            histogram_buffer,
-            histogram_read_buffer,
-            digit_histogram_buffer,
-            scanned_inclusive_prefix_sum_buffer,
-            inclusive_prefix_sum,
-            inclusive_prefix_sum_buffer,
-            inclusive_prefix_sum_read_buffer,
-            scan_stage_buffer,
-            current_digit_index: 0,
-            current_digit_index_buffer,
-            sorted_data_buffer,
-            update_histogram_pipeline,
-            update_histogram_bind_group: temp_update_histogram_bind_group,
-            update_inclusive_prefix_sum_pipeline,
-            update_inclusive_prefix_sum_bind_group: temp_update_inclusive_prefix_sum_bind_group,
-            update_indices_pipeline,
-            update_indices_bind_group: temp_update_indices_bind_group,
-            update_lookup_pipeline,
-            update_lookup_bind_group: temp_update_lookup_bind_group,
         }
     }
 
@@ -518,292 +228,8 @@ impl<'a> State<'a> {
         }
     }
 
-    async fn update_particles_from_buffer(&mut self) {
-        // Copy particles to particle_reading_buffer
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Copy Encoder"),
-            });
-        encoder.copy_buffer_to_buffer(
-            &self.particle_buffer,
-            0,
-            &self.particle_reader_buffer,
-            0,
-            self.particle_buffer.size(),
-        );
-        self.queue.submit(std::iter::once(encoder.finish()));
-
-        // Map particle_reading_buffer for reading asynchronously
-        let buffer_slice = self.particle_reader_buffer.slice(..);
-        let (sender, receiver) = futures_intrusive::channel::shared::oneshot_channel();
-        buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
-            sender.send(result).unwrap();
-        });
-
-        // Wait for the mapping to complete
-        self.device.poll(wgpu::Maintain::Wait);
-
-        // Check if the mapping was successful
-        if let Ok(()) = receiver.receive().await.unwrap() {
-            let data = buffer_slice.get_mapped_range();
-            self.particles = bytemuck::cast_slice(&data).to_vec();
-            
-            drop(data);
-            self.particle_reader_buffer.unmap();
-        } else {
-            // Handle mapping error
-            eprintln!("Error mapping buffer");
-            // return Err(wgpu::SurfaceError::Lost); // Or handle the error appropriately
-            return;
-        }
-    }
-    
-    fn sort_particles(&mut self) {
-        for i in 0..NUM_DIGITS {
-            self.sort_particles_by_digit(i);
-        }
-    }
-
-    fn sort_particles_by_digit(&mut self, digit: u32) {
-        // Reset the histogram buffer
-        self.queue.write_buffer(
-            &self.histogram_buffer,
-            0,
-            bytemuck::cast_slice(&[0u32; NUM_BUCKETS as usize * BASE as usize]),
-        );
-
-        // Reset the digit histogram buffer
-        self.queue.write_buffer(
-            &self.digit_histogram_buffer,
-            0,
-            bytemuck::cast_slice(&[0u32; BASE as usize]),
-        );
-
-        // Reset particle counts if it is the last digit
-        if digit == NUM_DIGITS - 1 {
-            self.queue.write_buffer(
-                &self.particle_counts_buffer,
-                0,
-                bytemuck::cast_slice(&vec![0; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize]),
-            );
-        }
-
-        // Set the current digit index
-        self.queue.write_buffer(
-            &self.current_digit_index_buffer,
-            0,
-            bytemuck::cast_slice(&[digit]),
-        );
-
-        // Dispatch the histogram compute shader
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Compute Histogram Encoder"),
-            });
-        {
-            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("Compute Pass"),
-                timestamp_writes: None,
-            });
-            compute_pass.set_pipeline(&self.update_histogram_pipeline);
-            compute_pass.set_bind_group(0, &self.update_histogram_bind_group, &[]);
-            compute_pass.dispatch_workgroups(SORT_DISPATCH_SIZE, 1, 1);
-        }
-
-        self.queue.submit(std::iter::once(encoder.finish()));
-
-        // Set the inclusive prefix sum buffer to the histogram buffer
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Copy Encoder"),
-            });
-        encoder.copy_buffer_to_buffer(
-            &self.histogram_buffer,
-            0,
-            &self.inclusive_prefix_sum_buffer,
-            0,
-            (self.histogram.len() * self.histogram[0].len() * std::mem::size_of::<u32>()) as u64,
-        );
-
-        self.queue.submit(std::iter::once(encoder.finish()));
-
-        // Dispatch the inclusive prefix sum compute shader
-        let loops_needed = (NUM_BUCKETS as f32).log2().ceil() as u32;
-        for i in 0..loops_needed {
-            // Update the scan stage buffer
-            self.queue
-                .write_buffer(&self.scan_stage_buffer, 0, bytemuck::cast_slice(&[i]));
-
-            // Dispatch the inclusive prefix sum compute shader
-            let mut encoder = self
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Compute Inclusive Prefix Sum Encoder"),
-                });
-            {
-                let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some("Compute Pass"),
-                    timestamp_writes: None,
-                });
-                compute_pass.set_pipeline(&self.update_inclusive_prefix_sum_pipeline);
-                compute_pass.set_bind_group(0, &self.update_inclusive_prefix_sum_bind_group, &[]);
-                compute_pass.dispatch_workgroups(IPS_DISPATCH_SIZE, BASE, 1);
-            }
-
-            self.queue.submit(std::iter::once(encoder.finish()));
-
-            // Copy the scanned inclusive prefix sum buffer to the inclusive prefix sum buffer
-            let mut encoder = self
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Copy Encoder"),
-                });
-            encoder.copy_buffer_to_buffer(
-                &self.scanned_inclusive_prefix_sum_buffer,
-                0,
-                &self.inclusive_prefix_sum_buffer,
-                0,
-                (self.inclusive_prefix_sum.len()
-                    * self.inclusive_prefix_sum[0].len()
-                    * std::mem::size_of::<u32>()) as u64,
-            );
-
-            self.queue.submit(std::iter::once(encoder.finish()));
-        }
-
-        // Dispatch the indices compute shader
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Compute Indices Encoder"),
-            });
-        {
-            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("Compute Pass"),
-                timestamp_writes: None,
-            });
-            compute_pass.set_pipeline(&self.update_indices_pipeline);
-            compute_pass.set_bind_group(0, &self.update_indices_bind_group, &[]);
-            compute_pass.dispatch_workgroups(SORT_DISPATCH_SIZE, 1, 1);
-        }
-
-        self.queue.submit(std::iter::once(encoder.finish()));
-
-        // Copy the sorted data to the data buffer
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Copy Encoder"),
-            });
-        encoder.copy_buffer_to_buffer(
-            &self.sorted_data_buffer,
-            0,
-            &self.particle_buffer,
-            0,
-            (self.particles.len() * std::mem::size_of::<Particle>())
-                as u64,
-        );
-
-        self.queue.submit(std::iter::once(encoder.finish()));
-
-        // Update particle lookup if it is the last digit
-        if digit == NUM_DIGITS - 1 {
-            // Dispatch the lookup compute shader
-            let mut encoder = self
-                .device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Compute Lookup Encoder"),
-                });
-            {
-                let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                    label: Some("Compute Pass"),
-                    timestamp_writes: None,
-                });
-                compute_pass.set_pipeline(&self.update_lookup_pipeline);
-                compute_pass.set_bind_group(0, &self.update_lookup_bind_group, &[]);
-                compute_pass.dispatch_workgroups(SORT_DISPATCH_SIZE, 1, 1);
-            }
-
-            self.queue.submit(std::iter::once(encoder.finish()));
-        }
-    }
-
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let start_time = std::time::Instant::now();
-
-        // Send mouse info to the GPU
-        self.queue.write_buffer(
-            &self.mouse_info_buffer,
-            0,
-            bytemuck::cast_slice(&[self.mouse_info]),
-        );
-
-        // Dispatch the compute density shader
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Compute Encoder"),
-            });
-        {
-            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("Compute Pass"),
-                timestamp_writes: None,
-            });
-            compute_pass.set_pipeline(&self.compute_density_pipeline);
-            compute_pass.set_bind_group(0, &self.compute_densities_bind_group, &[]);
-            compute_pass.dispatch_workgroups(DISPATCH_SIZE.0, DISPATCH_SIZE.1, 1);
-        }
-
-        self.queue.submit(std::iter::once(encoder.finish()));
-
-        // Dispatch the compute forces shader
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Compute Forces Encoder"),
-            });
-        {
-            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("Compute Forces Pass"),
-                timestamp_writes: None,
-            });
-            compute_pass.set_pipeline(&self.compute_forces_pipeline);
-            compute_pass.set_bind_group(0, &self.compute_forces_bind_group, &[]);
-            compute_pass.dispatch_workgroups(DISPATCH_SIZE.0, DISPATCH_SIZE.1, 1);
-        }
-
-        self.queue.submit(std::iter::once(encoder.finish()));
-
-        // Dispatch the compute move shader
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Compute Move Encoder"),
-            });
-        {
-            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("Compute Move Pass"),
-                timestamp_writes: None,
-            });
-            compute_pass.set_pipeline(&self.compute_move_pipeline);
-            compute_pass.set_bind_group(0, &self.compute_move_bind_group, &[]);
-            compute_pass.dispatch_workgroups(DISPATCH_SIZE.0, DISPATCH_SIZE.1, 1);
-        }
-
-        self.queue.submit(std::iter::once(encoder.finish()));
-
-        // Reset particle lookup
-        self.queue.write_buffer(
-            &self.particle_lookup_buffer,
-            0,
-            bytemuck::cast_slice(&vec![-1; GRID_SIZE.0 as usize * GRID_SIZE.1 as usize]),
-        );
-        
-        // Sort the particles
-        self.sort_particles();
 
         // Render the particles
         let drawable = self.surface.get_current_texture()?;
@@ -906,23 +332,6 @@ async fn run() {
         bind_group_layout_generator::get_bind_group_layout(&state.device);
     state.compute_move_bind_group = create_bind_group(&mut state, &compute_move_bind_group_layout);
 
-    // --- Sort Bind Groups --- //
-    let update_histogram_bind_group_layout =
-        bind_group_layout_generator::get_bind_group_layout(&state.device);
-    state.update_histogram_bind_group = create_bind_group(&mut state, &update_histogram_bind_group_layout);
-
-    let update_inclusive_prefix_sum_bind_group_layout =
-        bind_group_layout_generator::get_bind_group_layout(&state.device);
-    state.update_inclusive_prefix_sum_bind_group = create_bind_group(&mut state, &update_inclusive_prefix_sum_bind_group_layout);
-
-    let update_indices_bind_group_layout =
-        bind_group_layout_generator::get_bind_group_layout(&state.device);
-    state.update_indices_bind_group = create_bind_group(&mut state, &update_indices_bind_group_layout);
-
-    let update_lookup_bind_group_layout =
-        bind_group_layout_generator::get_bind_group_layout(&state.device);
-    state.update_lookup_bind_group = create_bind_group(&mut state, &update_lookup_bind_group_layout);
-
     // Pass bind group layout to pipeline builder
     let mut render_pipeline_builder = PipelineBuilder::new();
     render_pipeline_builder.set_shader_module("shaders/shader.wgsl", "vs_main", "fs_main");
@@ -948,30 +357,6 @@ async fn run() {
     compute_move_pipeline_builder.set_bind_group_layout(compute_move_bind_group_layout);
     state.compute_move_pipeline = compute_move_pipeline_builder.build_pipeline(&state.device);
 
-    // --- Sort Pipelines --- //
-    let mut update_histogram_pipeline_builder = ComputePipelineBuilder::new();
-    update_histogram_pipeline_builder.set_shader_module("shaders/shader.wgsl", "update_histogram");
-    update_histogram_pipeline_builder.set_bind_group_layout(update_histogram_bind_group_layout);
-    state.update_histogram_pipeline = update_histogram_pipeline_builder.build_pipeline(&state.device);
-
-    let mut update_inclusive_prefix_sum_pipeline_builder = ComputePipelineBuilder::new();
-    update_inclusive_prefix_sum_pipeline_builder.set_shader_module("shaders/shader.wgsl", "update_inclusive_prefix_sum");
-    update_inclusive_prefix_sum_pipeline_builder.set_bind_group_layout(update_inclusive_prefix_sum_bind_group_layout);
-    state.update_inclusive_prefix_sum_pipeline = update_inclusive_prefix_sum_pipeline_builder.build_pipeline(&state.device);
-
-    let mut update_indices_pipeline_builder = ComputePipelineBuilder::new();
-    update_indices_pipeline_builder.set_shader_module("shaders/shader.wgsl", "update_indices");
-    update_indices_pipeline_builder.set_bind_group_layout(update_indices_bind_group_layout);
-    state.update_indices_pipeline = update_indices_pipeline_builder.build_pipeline(&state.device);
-
-    let mut update_lookup_pipeline_builder = ComputePipelineBuilder::new();
-    update_lookup_pipeline_builder.set_shader_module("shaders/shader.wgsl", "update_lookup");
-    update_lookup_pipeline_builder.set_bind_group_layout(update_lookup_bind_group_layout);
-    state.update_lookup_pipeline = update_lookup_pipeline_builder.build_pipeline(&state.device);
-
-    // Sort the particles
-    state.sort_particles();
-
     event_loop
         .run(move |event, elwt| match event {
             Event::UserEvent(..) => {
@@ -983,20 +368,6 @@ async fn run() {
                 ref event,
             } if window_id == state.window.id() => match event {
                 WindowEvent::Resized(physical_size) => state.resize(*physical_size),
-
-                WindowEvent::CursorMoved { position, .. } => {
-                    state.mouse_info[1] = position.x as f32;
-                    state.mouse_info[2] = position.y as f32;
-                    // println!("Mouse position: {:?}", state.mouse_info);
-                }
-                WindowEvent::MouseInput { state: element_state, button, .. } => {
-                    if *button == MouseButton::Left {
-                        state.mouse_info[0] = if *element_state == ElementState::Pressed {1.0} else {0.0};
-                    }
-                    if *button == MouseButton::Right {
-                        state.mouse_info[3] = if *element_state == ElementState::Pressed {1.0} else {0.0};
-                    }
-                }
 
                 WindowEvent::CloseRequested
                 | WindowEvent::KeyboardInput {
@@ -1040,49 +411,11 @@ fn create_bind_group(
         entries: &[
             wgpu::BindGroupEntry {
                 binding: 0,
-                resource: state.particle_buffer.as_entire_binding(),
+                resource: state.particle_buffer_read.as_entire_binding(),
             },
             wgpu::BindGroupEntry {
                 binding: 1,
-                resource: state.particle_lookup_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 2,
-                resource: state.particle_counts_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 3,
-                resource: state.mouse_info_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 4,
-                resource: state.histogram_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 5,
-                resource: state.inclusive_prefix_sum_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 6,
-                resource: state.current_digit_index_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 7,
-                resource: state.sorted_data_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 8,
-                resource: state.scan_stage_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 9,
-                resource: state
-                    .scanned_inclusive_prefix_sum_buffer
-                    .as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 10,
-                resource: state.digit_histogram_buffer.as_entire_binding(),
+                resource: state.particle_buffer_write.as_entire_binding(),
             },
         ],
     });

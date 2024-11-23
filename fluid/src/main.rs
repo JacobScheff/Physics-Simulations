@@ -33,6 +33,7 @@ const DISPATCH_SIZE: (u32, u32) = (
 struct Particle {
     velocity: [f32; 2], // 8 bytes
     density: f32, // 4 bytes
+    divergence: f32, // 4 bytes
     _padding: f32, // 4 bytes
 }
 
@@ -41,6 +42,7 @@ impl Particle {
         Self {
             velocity: velocity,
             density: density,
+            divergence: 0.0,
             _padding: 0.0,
         }
     }
@@ -55,12 +57,12 @@ struct State<'a> {
     window: &'a Window,
     render_pipeline: wgpu::RenderPipeline,
     compute_gravity_pipeline: wgpu::ComputePipeline,
-    compute_forces_pipeline: wgpu::ComputePipeline,
-    compute_move_pipeline: wgpu::ComputePipeline,
+    compute_divergence_pipeline: wgpu::ComputePipeline,
+    compute_velocity_pipeline: wgpu::ComputePipeline,
     render_bind_group: wgpu::BindGroup,
     compute_gravity_bind_group: wgpu::BindGroup,
-    compute_forces_bind_group: wgpu::BindGroup,
-    compute_move_bind_group: wgpu::BindGroup,
+    compute_divergence_bind_group: wgpu::BindGroup,
+    compute_velocity_bind_group: wgpu::BindGroup,
     particle_buffer: wgpu::Buffer,
     frame_count: u32,
 }
@@ -129,19 +131,19 @@ impl<'a> State<'a> {
             .set_bind_group_layout(bind_group_layout_generator::get_bind_group_layout(&device));
         let compute_gravity_pipeline = compute_gravity_pipeline_builder.build_pipeline(&device);
 
-        // Pass bind group layout to compute move pipeline builder
-        let mut compute_move_pipeline_builder = ComputePipelineBuilder::new();
-        compute_move_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_move");
-        compute_move_pipeline_builder
+        // Pass bind group layout to compute velocity pipeline builder
+        let mut compute_velocity_pipeline_builder = ComputePipelineBuilder::new();
+        compute_velocity_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_velocity");
+        compute_velocity_pipeline_builder
             .set_bind_group_layout(bind_group_layout_generator::get_bind_group_layout(&device));
-        let compute_move_pipeline = compute_move_pipeline_builder.build_pipeline(&device);
+        let compute_velocity_pipeline = compute_velocity_pipeline_builder.build_pipeline(&device);
 
-        // Pass bind group layout to compute forces pipeline builder
-        let mut compute_forces_pipeline_builder = ComputePipelineBuilder::new();
-        compute_forces_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_forces");
-        compute_forces_pipeline_builder
+        // Pass bind group layout to compute divergence pipeline builder
+        let mut compute_divergence_pipeline_builder = ComputePipelineBuilder::new();
+        compute_divergence_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_divergence");
+        compute_divergence_pipeline_builder
             .set_bind_group_layout(bind_group_layout_generator::get_bind_group_layout(&device));
-        let compute_forces_pipeline = compute_forces_pipeline_builder.build_pipeline(&device);
+        let compute_divergence_pipeline = compute_divergence_pipeline_builder.build_pipeline(&device);
 
         // Create temporary bind groups
         let temp_render_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -163,20 +165,20 @@ impl<'a> State<'a> {
                 entries: &[],
             });
 
-        let temp_compute_move_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Temporary Compute Move Bind Group"),
+        let temp_compute_velocity_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Temporary Compute velocity Bind Group"),
             layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &[],
-                label: Some("Temporary Compute Move Bind Group Layout"),
+                label: Some("Temporary Compute velocity Bind Group Layout"),
             }),
             entries: &[],
         });
 
-        let temp_compute_forces_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Temporary Compute Forces Bind Group"),
+        let temp_compute_divergence_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Temporary Compute divergence Bind Group"),
             layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 entries: &[],
-                label: Some("Temporary Compute Forces Bind Group Layout"),
+                label: Some("Temporary Compute divergence Bind Group Layout"),
             }),
             entries: &[],
         });
@@ -208,12 +210,12 @@ impl<'a> State<'a> {
             size,
             render_pipeline,
             compute_gravity_pipeline,
-            compute_forces_pipeline,
-            compute_move_pipeline,
+            compute_divergence_pipeline,
+            compute_velocity_pipeline,
             render_bind_group: temp_render_bind_group,
             compute_gravity_bind_group: temp_compute_gravity_bind_group,
-            compute_forces_bind_group: temp_compute_forces_bind_group,
-            compute_move_bind_group: temp_compute_move_bind_group,
+            compute_divergence_bind_group: temp_compute_divergence_bind_group,
+            compute_velocity_bind_group: temp_compute_velocity_bind_group,
             particle_buffer,
             frame_count: 0,
         }
@@ -343,14 +345,14 @@ async fn run() {
     state.compute_gravity_bind_group =
         create_bind_group(&mut state, &compute_gravity_bind_group_layout);
 
-    let compute_forces_bind_group_layout =
+    let compute_divergence_bind_group_layout =
         bind_group_layout_generator::get_bind_group_layout(&state.device);
-    state.compute_forces_bind_group =
-        create_bind_group(&mut state, &compute_forces_bind_group_layout);
+    state.compute_divergence_bind_group =
+        create_bind_group(&mut state, &compute_divergence_bind_group_layout);
 
-    let compute_move_bind_group_layout =
+    let compute_velocity_bind_group_layout =
         bind_group_layout_generator::get_bind_group_layout(&state.device);
-    state.compute_move_bind_group = create_bind_group(&mut state, &compute_move_bind_group_layout);
+    state.compute_velocity_bind_group = create_bind_group(&mut state, &compute_velocity_bind_group_layout);
 
     // Pass bind group layout to pipeline builder
     let mut render_pipeline_builder = PipelineBuilder::new();
@@ -365,17 +367,17 @@ async fn run() {
     compute_gravity_pipeline_builder.set_bind_group_layout(compute_gravity_bind_group_layout);
     state.compute_gravity_pipeline = compute_gravity_pipeline_builder.build_pipeline(&state.device);
 
-    // Pass bind group layout to compute forces pipeline builder
-    let mut compute_forces_pipeline_builder = ComputePipelineBuilder::new();
-    compute_forces_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_forces");
-    compute_forces_pipeline_builder.set_bind_group_layout(compute_forces_bind_group_layout);
-    state.compute_forces_pipeline = compute_forces_pipeline_builder.build_pipeline(&state.device);
+    // Pass bind group layout to compute divergence pipeline builder
+    let mut compute_divergence_pipeline_builder = ComputePipelineBuilder::new();
+    compute_divergence_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_divergence");
+    compute_divergence_pipeline_builder.set_bind_group_layout(compute_divergence_bind_group_layout);
+    state.compute_divergence_pipeline = compute_divergence_pipeline_builder.build_pipeline(&state.device);
 
-    // Pass bind group layout to compute move pipeline builder
-    let mut compute_move_pipeline_builder = ComputePipelineBuilder::new();
-    compute_move_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_move");
-    compute_move_pipeline_builder.set_bind_group_layout(compute_move_bind_group_layout);
-    state.compute_move_pipeline = compute_move_pipeline_builder.build_pipeline(&state.device);
+    // Pass bind group layout to compute velocity pipeline builder
+    let mut compute_velocity_pipeline_builder = ComputePipelineBuilder::new();
+    compute_velocity_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_velocity");
+    compute_velocity_pipeline_builder.set_bind_group_layout(compute_velocity_bind_group_layout);
+    state.compute_velocity_pipeline = compute_velocity_pipeline_builder.build_pipeline(&state.device);
 
     event_loop
         .run(move |event, elwt| match event {

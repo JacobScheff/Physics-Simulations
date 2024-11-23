@@ -28,6 +28,13 @@ const DISPATCH_SIZE: (u32, u32) = (
     ((SIM_SIZE.1 as u32) + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE,
 );
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Pod, Zeroable)]
+struct Particle {
+    velocity: [f32; 2], // 8 bytes
+    density: f32, // 4 bytes
+}
+
 struct State<'a> {
     surface: wgpu::Surface<'a>,
     device: wgpu::Device,
@@ -164,19 +171,27 @@ impl<'a> State<'a> {
             entries: &[],
         });
 
+        let particle_data = vec![
+            Particle {
+                velocity: [0.0, 0.0],
+                density: 0.0,
+            };
+            (SIM_SIZE.0 * SIM_SIZE.1) as usize
+        ];
+        
+        let particle_data_u8: Vec<u8> = bytemuck::cast_slice(&particle_data).to_vec();
+
         // Store particle data in a texture
-        let particle_buffer_read = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Particle Data Buffer"),
-            size: (SIM_SIZE.0 * SIM_SIZE.1 * 4 * 4) as u64,
-            usage: BufferUsages::COPY_DST | BufferUsages::STORAGE,
-            mapped_at_creation: false,
+        let particle_buffer_read = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Particle Data Buffer Read"),
+            contents: &particle_data_u8,
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
         });
 
-        let particle_buffer_write = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Particle Data Buffer"),
-            size: (SIM_SIZE.0 * SIM_SIZE.1 * 4 * 4) as u64,
-            usage: BufferUsages::COPY_DST | BufferUsages::STORAGE | BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
+        let particle_buffer_write = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Particle Data Buffer Write"),
+            contents: &particle_data_u8,
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
         });
 
         Self {
@@ -244,7 +259,7 @@ impl<'a> State<'a> {
                 0,
                 &self.particle_buffer_read,
                 0,
-                (SIM_SIZE.0 * SIM_SIZE.1 * 4 * 4) as u64,
+                (SIM_SIZE.0 * SIM_SIZE.1) as u64 * std::mem::size_of::<Particle>() as u64,
             );
         }
 

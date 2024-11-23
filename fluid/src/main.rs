@@ -58,7 +58,7 @@ struct State<'a> {
     compute_forces_pipeline: wgpu::ComputePipeline,
     compute_move_pipeline: wgpu::ComputePipeline,
     render_bind_group: wgpu::BindGroup,
-    compute_densities_bind_group: wgpu::BindGroup,
+    compute_gravity_bind_group: wgpu::BindGroup,
     compute_forces_bind_group: wgpu::BindGroup,
     compute_move_bind_group: wgpu::BindGroup,
     particle_buffer: wgpu::Buffer,
@@ -211,7 +211,7 @@ impl<'a> State<'a> {
             compute_forces_pipeline,
             compute_move_pipeline,
             render_bind_group: temp_render_bind_group,
-            compute_densities_bind_group: temp_compute_gravity_bind_group,
+            compute_gravity_bind_group: temp_compute_gravity_bind_group,
             compute_forces_bind_group: temp_compute_forces_bind_group,
             compute_move_bind_group: temp_compute_move_bind_group,
             particle_buffer,
@@ -244,7 +244,7 @@ impl<'a> State<'a> {
                 timestamp_writes: None,
             });
             compute_pass.set_pipeline(&self.compute_gravity_pipeline);
-            compute_pass.set_bind_group(0, &self.compute_densities_bind_group, &[]);
+            compute_pass.set_bind_group(0, &self.compute_gravity_bind_group, &[]);
             compute_pass.dispatch_workgroups(DISPATCH_SIZE.0, DISPATCH_SIZE.1, 1);
         }
 
@@ -340,7 +340,7 @@ async fn run() {
 
     let compute_gravity_bind_group_layout =
         bind_group_layout_generator::get_bind_group_layout(&state.device);
-    state.compute_densities_bind_group =
+    state.compute_gravity_bind_group =
         create_bind_group(&mut state, &compute_gravity_bind_group_layout);
 
     let compute_forces_bind_group_layout =

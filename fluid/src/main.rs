@@ -31,21 +31,17 @@ const DISPATCH_SIZE: (u32, u32) = (
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 struct Particle {
-    velocity: [f32; 2], // 8 bytes
     density: f32, // 4 bytes
     divergence: f32, // 4 bytes
     pressure: f32, // 4 bytes
-    _padding: f32, // 4 bytes
 }
 
 impl Particle {    
-    fn new(velocity: [f32; 2], density: f32) -> Self {
+    fn new(density: f32) -> Self {
         Self {
-            velocity: velocity,
             density: density,
             divergence: 0.0,
             pressure: 0.0,
-            _padding: 0.0,
         }
     }
 }
@@ -66,6 +62,8 @@ struct State<'a> {
     compute_divergence_bind_group: wgpu::BindGroup,
     compute_velocity_bind_group: wgpu::BindGroup,
     particle_buffer: wgpu::Buffer,
+    horizontal_velocity_buffer: wgpu::Buffer,
+    vertical_velocity_buffer: wgpu::Buffer,
     frame_count: u32,
 }
 
@@ -187,7 +185,7 @@ impl<'a> State<'a> {
 
         let mut particle_data = vec![
             vec![
-                Particle::new([0.0, 0.0], 0.5);
+                Particle::new(0.5);
                 SIM_SIZE.0 as usize
             ];
             SIM_SIZE.1 as usize
@@ -196,13 +194,27 @@ impl<'a> State<'a> {
         let particle_data_flat: Vec<Particle> = particle_data.into_iter().flatten().collect();
         let particle_data_u8: Vec<u8> = bytemuck::cast_slice(&particle_data_flat).to_vec();
 
-        // Store particle data in a texture
+        let mut velocity_data = vec![0.0; SIM_SIZE.1 as usize - 1];
+
+        // Buffers
         let particle_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Particle Data Buffer"),
             contents: &particle_data_u8,
             usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
         });
+        
+        let horizontal_velocity_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Horizontal Velocity Buffer"),
+            contents: bytemuck::cast_slice(&velocity_data),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
+        });
 
+        let vertical_velocity_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Vertical Velocity Buffer"),
+            contents: bytemuck::cast_slice(&velocity_data),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
+        });
+        
         Self {
             window,
             surface,
@@ -219,6 +231,8 @@ impl<'a> State<'a> {
             compute_divergence_bind_group: temp_compute_divergence_bind_group,
             compute_velocity_bind_group: temp_compute_velocity_bind_group,
             particle_buffer,
+            horizontal_velocity_buffer,
+            vertical_velocity_buffer,
             frame_count: 0,
         }
     }
@@ -472,6 +486,14 @@ fn create_bind_group(
             wgpu::BindGroupEntry {
                 binding: 0,
                 resource: state.particle_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: state.horizontal_velocity_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 2,
+                resource: state.vertical_velocity_buffer.as_entire_binding(),
             },
         ],
     });

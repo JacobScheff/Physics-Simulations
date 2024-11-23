@@ -12,7 +12,7 @@ const WORKGROUP_SIZE: u32 = 16;
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
 const SIM_SIZE: vec2<f32> = vec2<f32>(500.0, 250.0);
 
-@group(0) @binding(0) var<storage, read_write> particles_read: array<array<Particle, u32(SIM_SIZE.x)>, u32(SIM_SIZE.y)>;
+@group(0) @binding(0) var<storage, read> particles_read: array<array<Particle, u32(SIM_SIZE.x)>, u32(SIM_SIZE.y)>;
 @group(0) @binding(1) var<storage, read_write> particles_write: array<array<Particle, u32(SIM_SIZE.x)>, u32(SIM_SIZE.y)>;
 
 @vertex
@@ -34,7 +34,12 @@ fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return vec4<f32>(0.0, 0.0, 0.0, 1.0);
+    if (particles_read[3][2].velocity.x == 5.0) {
+        return vec4<f32>(0.0, 1.0, 0.0, 1.0);
+    }
+    else {
+        return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+    }
 }
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)

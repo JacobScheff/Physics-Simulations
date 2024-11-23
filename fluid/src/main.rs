@@ -33,6 +33,17 @@ const DISPATCH_SIZE: (u32, u32) = (
 struct Particle {
     velocity: [f32; 2], // 8 bytes
     density: f32, // 4 bytes
+    _padding: f32, // 4 bytes
+}
+
+impl Particle {    
+    fn new(velocity: [f32; 2], density: f32) -> Self {
+        Self {
+            velocity: velocity,
+            density: density,
+            _padding: 0.0,
+        }
+    }
 }
 
 struct State<'a> {
@@ -171,15 +182,18 @@ impl<'a> State<'a> {
             entries: &[],
         });
 
-        let particle_data = vec![
-            Particle {
-                velocity: [0.0, 0.0],
-                density: 0.0,
-            };
-            (SIM_SIZE.0 * SIM_SIZE.1) as usize
+        let mut particle_data = vec![
+            vec![
+                Particle::new([0.0, 0.0], 0.0);
+                SIM_SIZE.0 as usize
+            ];
+            SIM_SIZE.1 as usize
         ];
+
+        particle_data[3][2] = Particle::new([5.0, 9.0], 22.0);
         
-        let particle_data_u8: Vec<u8> = bytemuck::cast_slice(&particle_data).to_vec();
+        let particle_data_flat: Vec<Particle> = particle_data.into_iter().flatten().collect();
+        let particle_data_u8: Vec<u8> = bytemuck::cast_slice(&particle_data_flat).to_vec();
 
         // Store particle data in a texture
         let particle_buffer_read = device.create_buffer_init(&BufferInitDescriptor {

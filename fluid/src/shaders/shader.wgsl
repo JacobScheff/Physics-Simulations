@@ -34,12 +34,7 @@ fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    if (particles_read[3][2].velocity.x == 5.0) {
-        return vec4<f32>(0.0, 1.0, 0.0, 1.0);
-    }
-    else {
-        return vec4<f32>(1.0, 0.0, 0.0, 1.0);
-    }
+    return vec4<f32>(0.0, 0.0, 0.0, 1.0);
 }
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)

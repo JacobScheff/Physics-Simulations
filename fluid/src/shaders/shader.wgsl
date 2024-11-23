@@ -17,6 +17,7 @@ const GRAVITY: f32 = 0.1;
 const OVER_RELAXATION: f32 = 1.9;
 const dt: f32 = 1.0 / 8.0; // Time step
 
+// NOTE: For the staggered grid, consider cell (i, j). The horizontal velocity at (i, j) is the right edge of the cell.
 @group(0) @binding(0) var<storage, read_write> particles: array<array<Particle, u32(SIM_SIZE.x)>, u32(SIM_SIZE.y)>;
 @group(0) @binding(1) var<storage, read_write> horizontal_velocities: array<array<f32, u32(SIM_SIZE.x - 1)>, u32(SIM_SIZE.y)>;
 @group(0) @binding(2) var<storage, read_write> vertical_velocities: array<array<f32, u32(SIM_SIZE.x)>, u32(SIM_SIZE.y - 1)>;
@@ -65,26 +66,26 @@ fn main_gravity(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
 fn main_divergence(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    // let index = global_id.xy;
+    let index = global_id.xy;
     
-    // var divergence = 0.0;
-    // // Left neighbor
-    // if (index.x > 0) {
-    //     divergence += -particles[index.y][index.x - 1].velocity.x;
-    // }
-    // // Right neighbor
-    // if (index.x < u32(SIM_SIZE.x) - 1) {
-    //     divergence += particles[index.y][index.x + 1].velocity.x;
-    // }
-    // // Bottom neighbor
-    // if (index.y > 0) {
-    //     divergence += -particles[index.y - 1][index.x].velocity.y;
-    // }
-    // // Top neighbor
-    // if (index.y < u32(SIM_SIZE.y) - 1) {
-    //     divergence += particles[index.y + 1][index.x].velocity.y;
-    // }
-    // particles[index.y][index.x].divergence = divergence * OVER_RELAXATION;
+    var divergence = 0.0;
+    // Left neighbor
+    if (index.x > 0) {
+        divergence -= horizontal_velocities[index.y][index.x  - 1];
+    }
+    // Right neighbor
+    if (index.x < u32(SIM_SIZE.x) - 1) {
+        divergence += horizontal_velocities[index.y][index.x];
+    }
+    // Bottom neighbor
+    if (index.y > 0) {
+        divergence -= vertical_velocities[index.y - 1][index.x];
+    }
+    // Top neighbor
+    if (index.y < u32(SIM_SIZE.y) - 1) {
+        divergence += vertical_velocities[index.y][index.x];
+    }
+    particles[index.y][index.x].divergence = divergence * OVER_RELAXATION;
 }
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)

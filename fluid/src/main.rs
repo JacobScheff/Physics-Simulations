@@ -1,5 +1,5 @@
-use core::f32;
 use bytemuck::{Pod, Zeroable};
+use core::f32;
 use renderer_backend::{
     bind_group_layout_generator, compute_pipeline_builder::ComputePipelineBuilder,
     pipeline_builder::PipelineBuilder,
@@ -101,33 +101,29 @@ impl<'a> State<'a> {
         let mut render_pipeline_builder = PipelineBuilder::new();
         render_pipeline_builder.set_shader_module("shaders/shader.wgsl", "vs_main", "fs_main");
         render_pipeline_builder.set_pixel_format(config.format);
-        render_pipeline_builder.set_bind_group_layout(
-            bind_group_layout_generator::get_bind_group_layout(&device),
-        );
+        render_pipeline_builder
+            .set_bind_group_layout(bind_group_layout_generator::get_bind_group_layout(&device));
         let render_pipeline = render_pipeline_builder.build_pipeline(&device);
 
         // Pass bind group layout to compute density pipeline builder
         let mut compute_density_pipeline_builder = ComputePipelineBuilder::new();
         compute_density_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_density");
-        compute_density_pipeline_builder.set_bind_group_layout(
-            bind_group_layout_generator::get_bind_group_layout(&device),
-        );
+        compute_density_pipeline_builder
+            .set_bind_group_layout(bind_group_layout_generator::get_bind_group_layout(&device));
         let compute_density_pipeline = compute_density_pipeline_builder.build_pipeline(&device);
 
         // Pass bind group layout to compute move pipeline builder
         let mut compute_move_pipeline_builder = ComputePipelineBuilder::new();
         compute_move_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_move");
-        compute_move_pipeline_builder.set_bind_group_layout(
-            bind_group_layout_generator::get_bind_group_layout(&device),
-        );
+        compute_move_pipeline_builder
+            .set_bind_group_layout(bind_group_layout_generator::get_bind_group_layout(&device));
         let compute_move_pipeline = compute_move_pipeline_builder.build_pipeline(&device);
 
         // Pass bind group layout to compute forces pipeline builder
         let mut compute_forces_pipeline_builder = ComputePipelineBuilder::new();
         compute_forces_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_forces");
-        compute_forces_pipeline_builder.set_bind_group_layout(
-            bind_group_layout_generator::get_bind_group_layout(&device),
-        );
+        compute_forces_pipeline_builder
+            .set_bind_group_layout(bind_group_layout_generator::get_bind_group_layout(&device));
         let compute_forces_pipeline = compute_forces_pipeline_builder.build_pipeline(&device);
 
         // Create temporary bind groups
@@ -169,21 +165,6 @@ impl<'a> State<'a> {
         });
 
         // Store particle data in a texture
-        let particle_texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("Particle Data Texture"),
-            size: wgpu::Extent3d {
-                width: SIM_SIZE.0 as u32,
-                height: SIM_SIZE.1 as u32,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba32Float,
-            usage: wgpu::TextureUsages::STORAGE_BINDING | wgpu::TextureUsages::COPY_DST,
-            view_formats: &[],
-        });
-
         let particle_buffer_read = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Particle Data Buffer"),
             size: (SIM_SIZE.0 * SIM_SIZE.1 * 4 * 4) as u64,
@@ -194,7 +175,7 @@ impl<'a> State<'a> {
         let particle_buffer_write = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Particle Data Buffer"),
             size: (SIM_SIZE.0 * SIM_SIZE.1 * 4 * 4) as u64,
-            usage: BufferUsages::COPY_DST | BufferUsages::STORAGE,
+            usage: BufferUsages::COPY_DST | BufferUsages::STORAGE | BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });
 
@@ -230,6 +211,44 @@ impl<'a> State<'a> {
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let start_time = std::time::Instant::now();
+
+        // Compute the density of the particles
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Desisty Compute Encoder"),
+            });
+
+        {
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("Density Compute Pass"),
+                timestamp_writes: None,
+            });
+            compute_pass.set_pipeline(&self.compute_density_pipeline);
+            compute_pass.set_bind_group(0, &self.compute_densities_bind_group, &[]);
+            compute_pass.dispatch_workgroups(DISPATCH_SIZE.0, DISPATCH_SIZE.1, 1);
+        }
+
+        self.queue.submit(std::iter::once(encoder.finish()));
+
+        // Copy particle data from the write buffer to the read buffer
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Copy Encoder"),
+            });
+
+        {
+            encoder.copy_buffer_to_buffer(
+                &self.particle_buffer_write,
+                0,
+                &self.particle_buffer_read,
+                0,
+                (SIM_SIZE.0 * SIM_SIZE.1 * 4 * 4) as u64,
+            );
+        }
+
+        self.queue.submit(std::iter::once(encoder.finish()));
 
         // Render the particles
         let drawable = self.surface.get_current_texture()?;
@@ -322,11 +341,13 @@ async fn run() {
 
     let compute_density_bind_group_layout =
         bind_group_layout_generator::get_bind_group_layout(&state.device);
-    state.compute_densities_bind_group = create_bind_group(&mut state, &compute_density_bind_group_layout);
+    state.compute_densities_bind_group =
+        create_bind_group(&mut state, &compute_density_bind_group_layout);
 
     let compute_forces_bind_group_layout =
         bind_group_layout_generator::get_bind_group_layout(&state.device);
-    state.compute_forces_bind_group = create_bind_group(&mut state, &compute_forces_bind_group_layout);
+    state.compute_forces_bind_group =
+        create_bind_group(&mut state, &compute_forces_bind_group_layout);
 
     let compute_move_bind_group_layout =
         bind_group_layout_generator::get_bind_group_layout(&state.device);
@@ -384,9 +405,7 @@ async fn run() {
                     elwt.exit();
                 }
 
-                WindowEvent::RedrawRequested => match {
-                    state.render()
-                } {
+                WindowEvent::RedrawRequested => match { state.render() } {
                     Ok(_) => {}
                     Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
                     Err(wgpu::SurfaceError::OutOfMemory) => elwt.exit(),

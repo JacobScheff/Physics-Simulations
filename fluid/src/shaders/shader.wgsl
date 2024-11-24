@@ -161,11 +161,33 @@ fn main_advection(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let vel = vec2<f32>(u, v_avg);
     let pos = vec2<f32>(f32(index.x) + 0.5 * GRID_SPACING.x, f32(index.y) + 0.5 * GRID_SPACING.y);
 
-    let prev_pos = pos - dt * vel;
+    let prev_pos: vec2<f32> = pos - dt * vel;
+    var prev_index: vec2<i32> = pos_to_grid(prev_pos);
 
-    // Calculate the old velocity using weighted average
-    let prev_vel = vec2<f32>(0.0, 0.0); // Temp
+    // If the position is in the top half of the cell, add 1 to the y index to uuse the correct 4 horizontal velocities
+    if (prev_pos.y > f32(prev_index.y) + 0.5 * GRID_SPACING.y) {
+        prev_index.y += 1;
+    }
 
-    // Update the velocity
-    advected_horizontal_velocities[index.y][index.x] = prev_vel.x;
+    // Calculate the old horizontal velocity using weighted average
+    let w00: f32 = 1.0 - prev_pos.x / GRID_SPACING.x;
+    let w01: f32 = prev_pos.x / GRID_SPACING.x;
+    let w10: f32 = 1.0 - prev_pos.y / GRID_SPACING.y;
+    let w11: f32 = prev_pos.y / GRID_SPACING.y;
+    var prev_horizontal_vel: f32 = 0.0;
+    if (prev_index.x > 0 && prev_index.y > 0) { // Bottom left
+        prev_horizontal_vel += w00 * w10 * horizontal_velocities[prev_index.y - 1][prev_index.x - 1];
+    }
+    if (prev_index.x < i32(SIM_SIZE.x) - 1 && prev_index.y > 0) { // Bottom right
+        prev_horizontal_vel += w01 * w10 * horizontal_velocities[prev_index.y - 1][prev_index.x];
+    }
+    if (prev_index.x > 0 && prev_index.y < i32(SIM_SIZE.y) - 1) { // Top left
+        prev_horizontal_vel += w01 * w11 * horizontal_velocities[prev_index.y][prev_index.x - 1];
+    }
+    if (prev_index.x < i32(SIM_SIZE.x) - 1 && prev_index.y < i32(SIM_SIZE.y) - 1) { // Top right
+        prev_horizontal_vel += w00 * w11 * horizontal_velocities[prev_index.y][prev_index.x];
+    }
+
+    // Update the horizontal velocity
+    advected_horizontal_velocities[index.y][index.x] = prev_horizontal_vel;
 }

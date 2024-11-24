@@ -102,13 +102,13 @@ fn main_velocity(@builtin(global_invocation_id) global_id: vec3<u32>) {
     if (index.x > 0) { // Left neighbor
         new_s += cells[index.y][index.x - 1].s;
     }
-    if (index.x < u32(SIM_SIZE.x)) { // Right neighbor
+    if (index.x < u32(SIM_SIZE.x) - 1) { // Right neighbor
         new_s += cells[index.y][index.x + 1].s;
     }
     if (index.y > 0) { // Bottom neighbor
         new_s += cells[index.y - 1][index.x].s;
     }
-    if (index.y < u32(SIM_SIZE.y)) { // Top neighbor
+    if (index.y < u32(SIM_SIZE.y) - 1) { // Top neighbor
         new_s += cells[index.y + 1][index.x].s;
     }
 

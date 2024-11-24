@@ -227,7 +227,7 @@ impl<'a> State<'a> {
         let cell_data_u8: Vec<u8> = bytemuck::cast_slice(&cell_data_flat).to_vec();
 
         let horizontal_velocity_data = vec![
-            vec![0.0; SIM_SIZE.0 as usize - 1];
+            vec![1.0; SIM_SIZE.0 as usize - 1];
             SIM_SIZE.1 as usize
         ];
         let horizontal_velocity_data_flat: Vec<f32> = horizontal_velocity_data.into_iter().flatten().collect();

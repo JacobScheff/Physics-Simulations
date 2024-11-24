@@ -183,17 +183,17 @@ fn main_advection(@builtin(global_invocation_id) global_id: vec3<u32>) {
         v_avg /= f32(v_div);
 
         let vel = vec2<f32>(u, v_avg);
-        let pos = vec2<f32>(f32(index.x) + 0.5, f32(index.y) + 0.5);
+        let pos = vec2<f32>(f32(index.x) + 0.5, f32(index.y));
 
         let prev_pos: vec2<f32> = pos - dt * vel;
         var prev_index: vec2<i32> = vec2<i32>(floor(prev_pos));
         let diff: vec2<f32> = prev_pos - vec2<f32>(prev_index);
 
         // Clamp indices to avoid out-of-bounds access
-        let x0 = clamp(prev_index.x, 0, i32(SIM_SIZE.x - 2));
-        let x1 = clamp(prev_index.x + 1, 0, i32(SIM_SIZE.x - 2));
-        let y0 = clamp(prev_index.y, 0, i32(SIM_SIZE.y - 1));
-        let y1 = clamp(prev_index.y + 1, 0, i32(SIM_SIZE.y - 1));
+        let x0 = clamp(prev_index.x - 1, 0, i32(SIM_SIZE.x - 2));
+        let x1 = clamp(prev_index.x, 0, i32(SIM_SIZE.x - 2));
+        let y0 = clamp(prev_index.y - 1, 0, i32(SIM_SIZE.y - 1));
+        let y1 = clamp(prev_index.y, 0, i32(SIM_SIZE.y - 1));
         
         let u00 = horizontal_velocities[y0][x0];
         let u01 = horizontal_velocities[y0][x1];
@@ -240,10 +240,10 @@ fn main_advection(@builtin(global_invocation_id) global_id: vec3<u32>) {
         let diff: vec2<f32> = prev_pos - vec2<f32>(prev_index);
 
         // Clamp indices to avoid out-of-bounds access
-        let x0 = clamp(prev_index.x, 0, i32(SIM_SIZE.x - 1));
-        let x1 = clamp(prev_index.x + 1, 0, i32(SIM_SIZE.x - 1));
-        let y0 = clamp(prev_index.y, 0, i32(SIM_SIZE.y - 2));
-        let y1 = clamp(prev_index.y + 1, 0, i32(SIM_SIZE.y - 2));
+        let x0 = clamp(prev_index.x - 1, 0, i32(SIM_SIZE.x - 1));
+        let x1 = clamp(prev_index.x, 0, i32(SIM_SIZE.x - 1));
+        let y0 = clamp(prev_index.y - 1, 0, i32(SIM_SIZE.y - 2));
+        let y1 = clamp(prev_index.y, 0, i32(SIM_SIZE.y - 2));
         
         let v00 = vertical_velocities[y0][x0];
         let v01 = vertical_velocities[y0][x1];

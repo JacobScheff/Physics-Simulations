@@ -68,6 +68,8 @@ struct State<'a> {
     cell_buffer: wgpu::Buffer,
     horizontal_velocity_buffer: wgpu::Buffer,
     vertical_velocity_buffer: wgpu::Buffer,
+    advected_horizontal_velocity_buffer: wgpu::Buffer,
+    advected_vertical_velocity_buffer: wgpu::Buffer,
     frame_count: u32,
 }
 
@@ -257,6 +259,18 @@ impl<'a> State<'a> {
             contents: bytemuck::cast_slice(&vertical_velocity_data_u8),
             usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
         });
+
+        let advected_horizontal_velocity_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Advected Horizontal Velocity Buffer"),
+            contents: bytemuck::cast_slice(&horizontal_velocity_data_u8),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
+        });
+
+        let advected_vertical_velocity_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("Advected Vertical Velocity Buffer"),
+            contents: bytemuck::cast_slice(&vertical_velocity_data_u8),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
+        });
         
         Self {
             window,
@@ -278,6 +292,8 @@ impl<'a> State<'a> {
             cell_buffer,
             horizontal_velocity_buffer,
             vertical_velocity_buffer,
+            advected_horizontal_velocity_buffer,
+            advected_vertical_velocity_buffer,
             frame_count: 0,
         }
     }
@@ -568,6 +584,14 @@ fn create_bind_group(
             wgpu::BindGroupEntry {
                 binding: 2,
                 resource: state.vertical_velocity_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 3,
+                resource: state.advected_horizontal_velocity_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 4,
+                resource: state.advected_vertical_velocity_buffer.as_entire_binding(),
             },
         ],
     });

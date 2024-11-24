@@ -2,7 +2,7 @@ struct VertexOutput {
     @builtin(position) pos: vec4<f32>,
 };
 
-struct Particle {
+struct Cell {
     density: f32, // 4 bytes
     divergence: f32, // 4 bytes
     pressure: f32, // 4 bytes
@@ -18,7 +18,7 @@ const OVER_RELAXATION: f32 = 1.9;
 const dt: f32 = 1.0 / 8.0; // Time step
 
 // NOTE: For the staggered grid, consider cell (i, j). The horizontal velocity at (i, j) is the right edge of the cell.
-@group(0) @binding(0) var<storage, read_write> particles: array<array<Particle, u32(SIM_SIZE.x)>, u32(SIM_SIZE.y)>;
+@group(0) @binding(0) var<storage, read_write> cells: array<array<Cell, u32(SIM_SIZE.x)>, u32(SIM_SIZE.y)>;
 @group(0) @binding(1) var<storage, read_write> horizontal_velocities: array<array<f32, u32(SIM_SIZE.x - 1)>, u32(SIM_SIZE.y)>;
 @group(0) @binding(2) var<storage, read_write> vertical_velocities: array<array<f32, u32(SIM_SIZE.x)>, u32(SIM_SIZE.y - 1)>;
 
@@ -45,12 +45,12 @@ fn pos_to_grid(pos: vec2<f32>) -> vec2<i32> {
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    // Get the particle at the current position
+    // Get the cell at the current position
     let pos = in.pos.xy;
     let gridPos = pos_to_grid(pos);
 
-    let particle = particles[gridPos.y][gridPos.x];
-    let pressure = particle.pressure;
+    let cell = cells[gridPos.y][gridPos.x];
+    let pressure = cell.pressure;
     
     return vec4<f32>(0.0, 0.0, pressure, 1.0);
 
@@ -85,14 +85,14 @@ fn main_divergence(@builtin(global_invocation_id) global_id: vec3<u32>) {
     if (index.y < u32(SIM_SIZE.y) - 1) {
         divergence += vertical_velocities[index.y][index.x];
     }
-    particles[index.y][index.x].divergence = divergence * OVER_RELAXATION;
+    cells[index.y][index.x].divergence = divergence * OVER_RELAXATION;
 }
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
 fn main_velocity(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let index: vec2<u32> = global_id.xy;
 
-    let me = particles[index.y][index.x];
+    let me = cells[index.y][index.x];
     let divergence = me.divergence;
 
     // Check how many valid neighbors there are
@@ -126,5 +126,5 @@ fn main_velocity(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     // Update pressure
-    particles[index.y][index.x].pressure += change * me.density * (f32(SCREEN_SIZE.x) / f32(SIM_SIZE.x) * f32(SCREEN_SIZE.y) / f32(SIM_SIZE.y)) / f32(neighbors) * dt;
+    cells[index.y][index.x].pressure += change * me.density * (f32(SCREEN_SIZE.x) / f32(SIM_SIZE.x) * f32(SCREEN_SIZE.y) / f32(SIM_SIZE.y)) / f32(neighbors) * dt;
 }

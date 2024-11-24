@@ -20,7 +20,7 @@ use winit::{
 const SCREEN_SIZE: (u32, u32) = (1200, 600);
 const TIME_BETWEEN_FRAMES: u64 = 2;
 const SIM_SIZE: (i32, i32) = (500, 250); // How many grid cells to divide the screen into
-const PADDING: f32 = 50.0; // The padding around the screen
+// const PADDING: f32 = 50.0; // The padding around the screen
 
 const WORKGROUP_SIZE: u32 = 16;
 const DISPATCH_SIZE: (u32, u32) = (
@@ -30,13 +30,13 @@ const DISPATCH_SIZE: (u32, u32) = (
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
-struct Particle {
+struct Cell {
     density: f32, // 4 bytes
     divergence: f32, // 4 bytes
     pressure: f32, // 4 bytes
 }
 
-impl Particle {    
+impl Cell {    
     fn new(density: f32) -> Self {
         Self {
             density: density,
@@ -61,7 +61,7 @@ struct State<'a> {
     compute_gravity_bind_group: wgpu::BindGroup,
     compute_divergence_bind_group: wgpu::BindGroup,
     compute_velocity_bind_group: wgpu::BindGroup,
-    particle_buffer: wgpu::Buffer,
+    cell_buffer: wgpu::Buffer,
     horizontal_velocity_buffer: wgpu::Buffer,
     vertical_velocity_buffer: wgpu::Buffer,
     frame_count: u32,
@@ -183,16 +183,16 @@ impl<'a> State<'a> {
             entries: &[],
         });
 
-        let particle_data = vec![
+        let cell_data = vec![
             vec![
-                Particle::new(0.5);
+                Cell::new(0.5);
                 SIM_SIZE.0 as usize
             ];
             SIM_SIZE.1 as usize
         ];
         
-        let particle_data_flat: Vec<Particle> = particle_data.into_iter().flatten().collect();
-        let particle_data_u8: Vec<u8> = bytemuck::cast_slice(&particle_data_flat).to_vec();
+        let cell_data_flat: Vec<Cell> = cell_data.into_iter().flatten().collect();
+        let cell_data_u8: Vec<u8> = bytemuck::cast_slice(&cell_data_flat).to_vec();
 
         let horizontal_velocity_data = vec![
             vec![0.0; SIM_SIZE.0 as usize - 1];
@@ -210,9 +210,9 @@ impl<'a> State<'a> {
         let vertical_velocity_data_u8: Vec<u8> = bytemuck::cast_slice(&vertical_velocity_data_flat).to_vec();
 
         // Buffers
-        let particle_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("Particle Data Buffer"),
-            contents: &particle_data_u8,
+        let cell_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("cell Data Buffer"),
+            contents: &cell_data_u8,
             usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
         });
         
@@ -243,7 +243,7 @@ impl<'a> State<'a> {
             compute_gravity_bind_group: temp_compute_gravity_bind_group,
             compute_divergence_bind_group: temp_compute_divergence_bind_group,
             compute_velocity_bind_group: temp_compute_velocity_bind_group,
-            particle_buffer,
+            cell_buffer,
             horizontal_velocity_buffer,
             vertical_velocity_buffer,
             frame_count: 0,
@@ -262,7 +262,7 @@ impl<'a> State<'a> {
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let start_time = std::time::Instant::now();
 
-        // Compute the gravity of the particles
+        // Compute the gravity of the cells
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -281,7 +281,7 @@ impl<'a> State<'a> {
 
         self.queue.submit(std::iter::once(encoder.finish()));
 
-        // Compute the divergence of the particles
+        // Compute the divergence of the cells
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -300,7 +300,7 @@ impl<'a> State<'a> {
 
         self.queue.submit(std::iter::once(encoder.finish()));
 
-        // Compute the velocity of the particles
+        // Compute the velocity of the cells
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -319,7 +319,7 @@ impl<'a> State<'a> {
 
         self.queue.submit(std::iter::once(encoder.finish()));
 
-        // Render the particles
+        // Render the cells
         let drawable = self.surface.get_current_texture()?;
         let image_view_descriptor = wgpu::TextureViewDescriptor::default();
         let image_view = drawable.texture.create_view(&image_view_descriptor);
@@ -493,12 +493,12 @@ fn create_bind_group(
     bind_group_layout: &wgpu::BindGroupLayout,
 ) -> wgpu::BindGroup {
     let bind_group = state.device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some("Particle Data Bind Group"),
+        label: Some("cell Data Bind Group"),
         layout: bind_group_layout,
         entries: &[
             wgpu::BindGroupEntry {
                 binding: 0,
-                resource: state.particle_buffer.as_entire_binding(),
+                resource: state.cell_buffer.as_entire_binding(),
             },
             wgpu::BindGroupEntry {
                 binding: 1,

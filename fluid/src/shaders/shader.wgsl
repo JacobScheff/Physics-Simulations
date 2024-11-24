@@ -129,7 +129,7 @@ fn main_velocity(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     // Update pressure
-    cells[index.y][index.x].pressure += me.density * (f32(SCREEN_SIZE.x) / f32(SIM_SIZE.x) * f32(SCREEN_SIZE.y) / f32(SIM_SIZE.y)) / f32(new_s) * dt;
+    cells[index.y][index.x].pressure += divergence *  me.density * (f32(SCREEN_SIZE.x) / f32(SIM_SIZE.x) * f32(SCREEN_SIZE.y) / f32(SIM_SIZE.y)) / f32(new_s) * dt;
 }
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)

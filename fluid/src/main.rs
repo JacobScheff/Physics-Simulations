@@ -34,6 +34,8 @@ struct Cell {
     density: f32, // 4 bytes
     divergence: f32, // 4 bytes
     pressure: f32, // 4 bytes
+    s: i32, // 4 bytes
+    new_s: i32, // 4 bytes
 }
 
 impl Cell {    
@@ -42,6 +44,8 @@ impl Cell {
             density: density,
             divergence: 0.0,
             pressure: 0.0,
+            s: 1,
+            new_s: 1,
         }
     }
 }
@@ -57,10 +61,12 @@ struct State<'a> {
     compute_gravity_pipeline: wgpu::ComputePipeline,
     compute_divergence_pipeline: wgpu::ComputePipeline,
     compute_velocity_pipeline: wgpu::ComputePipeline,
+    compute_advection_pipeline: wgpu::ComputePipeline,
     render_bind_group: wgpu::BindGroup,
     compute_gravity_bind_group: wgpu::BindGroup,
     compute_divergence_bind_group: wgpu::BindGroup,
     compute_velocity_bind_group: wgpu::BindGroup,
+    compute_advection_bind_group: wgpu::BindGroup,
     cell_buffer: wgpu::Buffer,
     horizontal_velocity_buffer: wgpu::Buffer,
     vertical_velocity_buffer: wgpu::Buffer,
@@ -145,6 +151,13 @@ impl<'a> State<'a> {
             .set_bind_group_layout(bind_group_layout_generator::get_bind_group_layout(&device));
         let compute_divergence_pipeline = compute_divergence_pipeline_builder.build_pipeline(&device);
 
+        // Pass bind group layout to compute advection pipeline builder
+        let mut compute_advection_pipeline_builder = ComputePipelineBuilder::new();
+        compute_advection_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_advection");
+        compute_advection_pipeline_builder
+            .set_bind_group_layout(bind_group_layout_generator::get_bind_group_layout(&device));
+        let compute_advection_pipeline = compute_advection_pipeline_builder.build_pipeline(&device);
+
         // Create temporary bind groups
         let temp_render_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Temporary Render Bind Group"),
@@ -183,13 +196,32 @@ impl<'a> State<'a> {
             entries: &[],
         });
 
-        let cell_data = vec![
+        let temp_compute_advection_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Temporary Compute advection Bind Group"),
+            layout: &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[],
+                label: Some("Temporary Compute advection Bind Group Layout"),
+            }),
+            entries: &[],
+        });
+
+        let mut cell_data = vec![
             vec![
                 Cell::new(0.5);
                 SIM_SIZE.0 as usize
             ];
             SIM_SIZE.1 as usize
         ];
+
+        // Set s to 0 for border cells
+        for i in 0..SIM_SIZE.0 as usize {
+            cell_data[0][i].s = 0;
+            cell_data[SIM_SIZE.1 as usize - 1][i].s = 0;
+        }
+        for i in 0..SIM_SIZE.1 as usize {
+            cell_data[i][0].s = 0;
+            cell_data[i][SIM_SIZE.0 as usize - 1].s = 0;
+        }
         
         let cell_data_flat: Vec<Cell> = cell_data.into_iter().flatten().collect();
         let cell_data_u8: Vec<u8> = bytemuck::cast_slice(&cell_data_flat).to_vec();
@@ -239,10 +271,12 @@ impl<'a> State<'a> {
             compute_gravity_pipeline,
             compute_divergence_pipeline,
             compute_velocity_pipeline,
+            compute_advection_pipeline,
             render_bind_group: temp_render_bind_group,
             compute_gravity_bind_group: temp_compute_gravity_bind_group,
             compute_divergence_bind_group: temp_compute_divergence_bind_group,
             compute_velocity_bind_group: temp_compute_velocity_bind_group,
+            compute_advection_bind_group: temp_compute_advection_bind_group,
             cell_buffer,
             horizontal_velocity_buffer,
             vertical_velocity_buffer,
@@ -314,6 +348,25 @@ impl<'a> State<'a> {
             });
             compute_pass.set_pipeline(&self.compute_velocity_pipeline);
             compute_pass.set_bind_group(0, &self.compute_velocity_bind_group, &[]);
+            compute_pass.dispatch_workgroups(DISPATCH_SIZE.0, DISPATCH_SIZE.1, 1);
+        }
+
+        self.queue.submit(std::iter::once(encoder.finish()));
+
+        // Dispatch the advection compute shader
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Desisty Compute Encoder"),
+            });
+
+        {
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("advection Compute Pass"),
+                timestamp_writes: None,
+            });
+            compute_pass.set_pipeline(&self.compute_advection_pipeline);
+            compute_pass.set_bind_group(0, &self.compute_advection_bind_group, &[]);
             compute_pass.dispatch_workgroups(DISPATCH_SIZE.0, DISPATCH_SIZE.1, 1);
         }
 
@@ -421,6 +474,10 @@ async fn run() {
         bind_group_layout_generator::get_bind_group_layout(&state.device);
     state.compute_velocity_bind_group = create_bind_group(&mut state, &compute_velocity_bind_group_layout);
 
+    let compute_advection_bind_group_layout =
+        bind_group_layout_generator::get_bind_group_layout(&state.device);
+    state.compute_advection_bind_group = create_bind_group(&mut state, &compute_advection_bind_group_layout);
+
     // Pass bind group layout to pipeline builder
     let mut render_pipeline_builder = PipelineBuilder::new();
     render_pipeline_builder.set_shader_module("shaders/shader.wgsl", "vs_main", "fs_main");
@@ -445,6 +502,12 @@ async fn run() {
     compute_velocity_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_velocity");
     compute_velocity_pipeline_builder.set_bind_group_layout(compute_velocity_bind_group_layout);
     state.compute_velocity_pipeline = compute_velocity_pipeline_builder.build_pipeline(&state.device);
+
+    // Pass bind group layout to compute advection pipeline builder
+    let mut compute_advection_pipeline_builder = ComputePipelineBuilder::new();
+    compute_advection_pipeline_builder.set_shader_module("shaders/shader.wgsl", "main_advection");
+    compute_advection_pipeline_builder.set_bind_group_layout(compute_advection_bind_group_layout);
+    state.compute_advection_pipeline = compute_advection_pipeline_builder.build_pipeline(&state.device);
 
     event_loop
         .run(move |event, elwt| match event {

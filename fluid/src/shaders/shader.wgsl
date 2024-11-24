@@ -6,6 +6,8 @@ struct Cell {
     density: f32, // 4 bytes
     divergence: f32, // 4 bytes
     pressure: f32, // 4 bytes
+    s: i32,
+    new_s: i32,
 }
 
 const WORKGROUP_SIZE: u32 = 16;
@@ -95,36 +97,45 @@ fn main_velocity(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let me = cells[index.y][index.x];
     let divergence = me.divergence;
 
-    // Check how many valid neighbors there are
-    var neighbors = 0;
+    // Calculate s
+    var new_s = 0;
     if (index.x > 0) { // Left neighbor
-        neighbors += 1;
+        new_s += cells[index.y][index.x - 1].s;
     }
-    if (index.x < u32(SIM_SIZE.x) - 1) { // Right neighbor
-        neighbors += 1;
+    if (index.x < u32(SIM_SIZE.x)) { // Right neighbor
+        new_s += cells[index.y][index.x + 1].s;
     }
     if (index.y > 0) { // Bottom neighbor
-        neighbors += 1;
+        new_s += cells[index.y - 1][index.x].s;
     }
-    if (index.y < u32(SIM_SIZE.y) - 1) { // Top neighbor
-        neighbors += 1;
+    if (index.y < u32(SIM_SIZE.y)) { // Top neighbor
+        new_s += cells[index.y + 1][index.x].s;
     }
 
+    cells[index.y][index.x].new_s = new_s;
+
     // Update the neighbor velocities
-    let change = divergence / f32(neighbors);
     if (index.x > 0) { // Left neighbor
-        horizontal_velocities[index.y][index.x - 1] += change;
+        horizontal_velocities[index.y][index.x - 1] += divergence * f32(cells[index.y][index.x - 1].s) / f32(new_s);
     }
     if (index.x < u32(SIM_SIZE.x) - 1) { // Right neighbor
-        horizontal_velocities[index.y][index.x] -= change;
+        horizontal_velocities[index.y][index.x] -= divergence * f32(cells[index.y][index.x + 1].s) / f32(new_s);
     }
     if (index.y > 0) { // Bottom neighbor
-        vertical_velocities[index.y - 1][index.x] += change;
+        vertical_velocities[index.y - 1][index.x] += divergence * f32(cells[index.y - 1][index.x].s) / f32(new_s);
     }
     if (index.y < u32(SIM_SIZE.y) - 1) { // Top neighbor
-        vertical_velocities[index.y][index.x] -= change;
+        vertical_velocities[index.y][index.x] -= divergence * f32(cells[index.y + 1][index.x].s) / f32(new_s);
     }
 
     // Update pressure
-    cells[index.y][index.x].pressure += change * me.density * (f32(SCREEN_SIZE.x) / f32(SIM_SIZE.x) * f32(SCREEN_SIZE.y) / f32(SIM_SIZE.y)) / f32(neighbors) * dt;
+    cells[index.y][index.x].pressure += me.density * (f32(SCREEN_SIZE.x) / f32(SIM_SIZE.x) * f32(SCREEN_SIZE.y) / f32(SIM_SIZE.y)) / f32(new_s) * dt;
+}
+
+@compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
+fn main_advection(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let index = global_id.xy;
+
+    // Set s to new_s
+    cells[index.y][index.x].s = cells[index.y][index.x].new_s;
 }

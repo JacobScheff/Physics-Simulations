@@ -3,10 +3,10 @@ use renderer_backend::{
     pipeline_builder::PipelineBuilder,
 };
 mod renderer_backend;
-use cgmath::prelude::*;
-use rand::*;
+// use cgmath::prelude::*;
+// use rand::*;
 use wgpu::{
-    core::device::global,
+    // core::device::global,
     util::{BufferInitDescriptor, DeviceExt},
     BufferUsages,
 };
@@ -22,7 +22,7 @@ const SCREEN_SIZE: (u32, u32) = (1200, 600);
 const TIME_BETWEEN_FRAMES: u64 = 10;
 const PARTICLE_COUNT_X: u32 = 100;
 const PARTICLE_COUNT_Y: u32 = 100;
-const OFFSET: (f32, f32) = (10.0, 8.0); // How much to offset all the particle's starting positions
+// const OFFSET: (f32, f32) = (10.0, 8.0); // How much to offset all the particle's starting positions
 const PADDING: f32 = 25.0;
 const GRID_SIZE: (i32, i32) = (20, 10); // How many grid cells to divide the screen into
 const PARTICLE_RADIUS: f32 = 1.0;
@@ -61,11 +61,11 @@ struct State<'a> {
 }
 
 impl<'a> State<'a> {
-    fn pos_to_grid_index(&self, pos: [f32; 2]) -> i32 {
-        let (x, y) = self.pos_to_grid(pos);
+    // fn pos_to_grid_index(&self, pos: [f32; 2]) -> i32 {
+    //     let (x, y) = self.pos_to_grid(pos);
 
-        x + y * GRID_SIZE.0
-    }
+    //     x + y * GRID_SIZE.0
+    // }
 
     fn pos_to_grid(&self, pos: [f32; 2]) -> (i32, i32) {
         let x = (pos[0] / SCREEN_SIZE.0 as f32 * GRID_SIZE.0 as f32)

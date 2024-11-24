@@ -51,9 +51,6 @@ const grids_to_check = vec2<i32>(i32(RADIUS_OF_INFLUENCE / SCREEN_SIZE.x * GRID_
 @group(0) @binding(9) var<storage, read_write> scanned_inclusive_prefix_sum: array<array<u32, u32(NUM_BUCKETS)>, u32(BASE)>;
 @group(0) @binding(10) var<storage, read_write> digit_histogram: array<atomic<u32>, u32(BASE)>;
 
-const RECTANGLE_TOP_LEFT: vec2<f32> = vec2<f32>(800, 100);
-const RECTANGLE_BOTTOM_RIGHT: vec2<f32> = vec2<f32>(900, 500);
-
 @vertex
 fn vs_main(@builtin(vertex_index) i: u32) -> VertexOutput {
     var positions = array<vec2<f32>, 6>(
@@ -134,32 +131,6 @@ fn main_move(@builtin(global_invocation_id) global_id: vec3<u32>) {
         particles[index].position.y = SCREEN_SIZE.y - radius;
         particles[index].velocity.y = -particles[index].velocity.y * DAMPENING;
     }
-
-    // Apply collision with the rectangle
-    if particles[index].position.x - radius > RECTANGLE_TOP_LEFT.x && particles[index].position.x + radius < RECTANGLE_BOTTOM_RIGHT.x && particles[index].position.y - radius > RECTANGLE_TOP_LEFT.y && particles[index].position.y + radius < RECTANGLE_BOTTOM_RIGHT.y {
-        let left = particles[index].position.x - radius - RECTANGLE_TOP_LEFT.x;
-        let right = RECTANGLE_BOTTOM_RIGHT.x - (particles[index].position.x + radius);
-        let top = particles[index].position.y - radius - RECTANGLE_TOP_LEFT.y;
-        let bottom = RECTANGLE_BOTTOM_RIGHT.y - (particles[index].position.y + radius);
-
-        let min_distance = min(min(left, right), min(top, bottom));
-        if min_distance == left {
-            particles[index].position.x = RECTANGLE_TOP_LEFT.x + radius;
-            particles[index].velocity.x = -particles[index].velocity.x * DAMPENING;
-        }
-        if min_distance == right {
-            particles[index].position.x = RECTANGLE_BOTTOM_RIGHT.x - radius;
-            particles[index].velocity.x = -particles[index].velocity.x * DAMPENING;
-        }
-        if min_distance == top {
-            particles[index].position.y = RECTANGLE_TOP_LEFT.y + radius;
-            particles[index].velocity.y = -particles[index].velocity.y * DAMPENING;
-        }
-        if min_distance == bottom {
-            particles[index].position.y = RECTANGLE_BOTTOM_RIGHT.y - radius;
-            particles[index].velocity.y = -particles[index].velocity.y * DAMPENING;
-        }
-    }
 }
 
 @fragment
@@ -209,11 +180,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
                 break;
             }
         }
-    }
-
-    // Check if in the rectangle
-    if x > RECTANGLE_TOP_LEFT.x && x < RECTANGLE_BOTTOM_RIGHT.x && y > RECTANGLE_TOP_LEFT.y && y < RECTANGLE_BOTTOM_RIGHT.y {
-        final_color = vec4<f32>(0.0, 0.4, 0.0, 1.0);
     }
 
     return final_color;

@@ -64,7 +64,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 fn main_gravity(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let index = global_id.xy;
 
-    vertical_velocities[index.y][index.x] -= GRAVITY;
+    vertical_velocities[index.y][index.x] -= GRAVITY * dt;
 }
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)

@@ -35,8 +35,6 @@ struct Cell {
     divergence: f32,
     pressure: f32,
     s: i32,
-    new_s: i32,
-    wall: i32,
 }
 
 impl Cell {    
@@ -46,8 +44,6 @@ impl Cell {
             divergence: 0.0,
             pressure: 0.0,
             s: 1,
-            new_s: 1,
-            wall: 0,
         }
     }
 }
@@ -218,17 +214,11 @@ impl<'a> State<'a> {
         // Set s to 0 for border cells
         for i in 0..SIM_SIZE.0 as usize {
             cell_data[0][i].s = 0;
-            cell_data[0][i].wall = 1;
-
             cell_data[SIM_SIZE.1 as usize - 1][i].s = 0;
-            cell_data[SIM_SIZE.1 as usize - 1][i].wall = 1;
         }
         for i in 0..SIM_SIZE.1 as usize {
             cell_data[i][0].s = 0;
-            cell_data[i][0].wall = 1;
-
             cell_data[i][SIM_SIZE.0 as usize - 1].s = 0;
-            cell_data[i][SIM_SIZE.0 as usize - 1].wall = 1;
         }
         
         let cell_data_flat: Vec<Cell> = cell_data.into_iter().flatten().collect();

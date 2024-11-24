@@ -13,7 +13,6 @@ const WORKGROUP_SIZE: u32 = 16;
 
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
 const SIM_SIZE: vec2<f32> = vec2<f32>(500.0, 250.0);
-const GRID_SPACING: vec2<f32> = vec2<f32>(SCREEN_SIZE.x / SIM_SIZE.x, SCREEN_SIZE.y / SIM_SIZE.y);
 
 const GRAVITY: f32 = 0.1;
 const OVER_RELAXATION: f32 = 1.9;
@@ -56,7 +55,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let cell = cells[gridPos.y][gridPos.x];
     let pressure = cell.pressure;
     
-    return vec4<f32>(0.0, 0.0, pressure * 999999, 1.0);
+    return vec4<f32>(0.0, 0.0, pressure, 1.0);
 
     // return vec4<f32>(0.0, 0.0, 0.0, 1.0);
 }
@@ -65,12 +64,22 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 fn main_gravity(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let index = global_id.xy;
 
+    // Make sure velocity index is within bounds
+    if (index.x >= u32(SIM_SIZE.x - 1) || index.y >= u32(SIM_SIZE.y - 1)) {
+        return;
+    }
+
     vertical_velocities[index.y][index.x] -= GRAVITY * dt;
 }
 
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
 fn main_divergence(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let index = global_id.xy;
+
+    // Make sure cell index is within bounds
+    if (index.x >= u32(SIM_SIZE.x) || index.y >= u32(SIM_SIZE.y)) {
+        return;
+    }
     
     var divergence = 0.0;
     // Left neighbor
@@ -96,6 +105,11 @@ fn main_divergence(@builtin(global_invocation_id) global_id: vec3<u32>) {
 fn main_velocity(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let index: vec2<u32> = global_id.xy;
 
+    // Make sure cell index is within bounds
+    if (index.x >= u32(SIM_SIZE.x) || index.y >= u32(SIM_SIZE.y)) {
+        return;
+    }
+
     let me = cells[index.y][index.x];
     let divergence = me.divergence;
 
@@ -112,6 +126,10 @@ fn main_velocity(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
     if (index.y < u32(SIM_SIZE.y) - 1) { // Top neighbor
         s += cells[index.y + 1][index.x].s;
+    }
+
+    if (s == 0) {
+        return; // Avoid division by zero
     }
 
     // Update the neighbor velocities
@@ -138,6 +156,11 @@ fn main_advection(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
     // Horizontal velocities
     {
+        // Make sure velocity index is within bounds
+        if (index.x >= u32(SIM_SIZE.x - 1) || index.y >= u32(SIM_SIZE.y)) {
+            return;
+        }
+
         let u = horizontal_velocities[index.y][index.x];
         var v_avg = 0.0;
         var v_div = 0;
@@ -160,38 +183,74 @@ fn main_advection(@builtin(global_invocation_id) global_id: vec3<u32>) {
         v_avg /= f32(v_div);
 
         let vel = vec2<f32>(u, v_avg);
-        let pos = vec2<f32>(f32(index.x) + 0.5 * GRID_SPACING.x, f32(index.y) + 0.5 * GRID_SPACING.y);
+        let pos = vec2<f32>(f32(index.x) + 0.5, f32(index.y) + 0.5);
 
         let prev_pos: vec2<f32> = pos - dt * vel;
-        var prev_index: vec2<i32> = pos_to_grid(prev_pos);
+        var prev_index: vec2<i32> = vec2<i32>(floor(prev_pos));
+        let diff: vec2<f32> = prev_pos - vec2<f32>(prev_index);
 
-        // If the position is in the top half of the cell, add 1 to the y index to uuse the correct 4 horizontal velocities
-        if (prev_pos.y > f32(prev_index.y) + 0.5 * GRID_SPACING.y) {
-            prev_index.y += 1;
-        }
+        // Clamp indices to avoid out-of-bounds access
+        let x0 = clamp(prev_index.x, 0, i32(SIM_SIZE.x - 2));
+        let x1 = clamp(prev_index.x + 1, 0, i32(SIM_SIZE.x - 2));
+        let y0 = clamp(prev_index.y, 0, i32(SIM_SIZE.y - 1));
+        let y1 = clamp(prev_index.y + 1, 0, i32(SIM_SIZE.y - 1));
+        
+        let u00 = horizontal_velocities[y0][x0];
+        let u01 = horizontal_velocities[y0][x1];
+        let u10 = horizontal_velocities[y1][x0];
+        let u11 = horizontal_velocities[y1][x1];
+    
 
-        // Calculate the old horizontal velocity using weighted average
-        let w00: f32 = 1.0 - prev_pos.x / GRID_SPACING.x;
-        let w01: f32 = prev_pos.x / GRID_SPACING.x;
-        let w10: f32 = 1.0 - prev_pos.y / GRID_SPACING.y;
-        let w11: f32 = prev_pos.y / GRID_SPACING.y;
-        var prev_horizontal_vel: f32 = 0.0;
-        if (prev_index.x > 0 && prev_index.y > 0) { // Bottom left
-            prev_horizontal_vel += w00 * w10 * horizontal_velocities[prev_index.y - 1][prev_index.x - 1];
-        }
-        if (prev_index.x < i32(SIM_SIZE.x) - 1 && prev_index.y > 0) { // Bottom right
-            prev_horizontal_vel += w01 * w10 * horizontal_velocities[prev_index.y - 1][prev_index.x];
-        }
-        if (prev_index.x > 0 && prev_index.y < i32(SIM_SIZE.y) - 1) { // Top left
-            prev_horizontal_vel += w01 * w11 * horizontal_velocities[prev_index.y][prev_index.x - 1];
-        }
-        if (prev_index.x < i32(SIM_SIZE.x) - 1 && prev_index.y < i32(SIM_SIZE.y) - 1) { // Top right
-            prev_horizontal_vel += w00 * w11 * horizontal_velocities[prev_index.y][prev_index.x];
-        }
-
-        // Update the horizontal velocity
-        advected_horizontal_velocities[index.y][index.x] = prev_horizontal_vel;
+        advected_horizontal_velocities[index.y][index.x] = mix(mix(u00, u01, diff.x), mix(u10, u11, diff.x), diff.y);
     }
 
+    // Vertical velocities
+    {
+        // Make sure velocity index is within bounds
+        if (index.x >= u32(SIM_SIZE.x) || index.y >= u32(SIM_SIZE.y - 1)) {
+            return;
+        }
+
+        let v = vertical_velocities[index.y][index.x];
+        var u_avg = 0.0;
+        var u_div = 0;
+        if(index.x > 0) {
+            u_avg += horizontal_velocities[index.y][index.x - 1];
+            u_div += 1;
+        }
+        if(index.x < u32(SIM_SIZE.x) - 1) {
+            u_avg += horizontal_velocities[index.y][index.x];
+            u_div += 1;
+        }
+        if (index.x > 0) {
+            u_avg += horizontal_velocities[index.y][index.x - 1];
+            u_div += 1;
+        }
+        if (index.x < u32(SIM_SIZE.x) - 1) {
+            u_avg += horizontal_velocities[index.y][index.x];
+            u_div += 1;
+        }
+        u_avg /= f32(u_div);
+
+        let vel = vec2<f32>(u_avg, v);
+        let pos = vec2<f32>(f32(index.x), f32(index.y) + 0.5);
+
+        let prev_pos: vec2<f32> = pos - dt * vel;
+        var prev_index: vec2<i32> = vec2<i32>(floor(prev_pos));
+        let diff: vec2<f32> = prev_pos - vec2<f32>(prev_index);
+
+        // Clamp indices to avoid out-of-bounds access
+        let x0 = clamp(prev_index.x, 0, i32(SIM_SIZE.x - 1));
+        let x1 = clamp(prev_index.x + 1, 0, i32(SIM_SIZE.x - 1));
+        let y0 = clamp(prev_index.y, 0, i32(SIM_SIZE.y - 2));
+        let y1 = clamp(prev_index.y + 1, 0, i32(SIM_SIZE.y - 2));
+        
+        let v00 = vertical_velocities[y0][x0];
+        let v01 = vertical_velocities[y0][x1];
+        let v10 = vertical_velocities[y1][x0];
+        let v11 = vertical_velocities[y1][x1];
     
+
+        advected_vertical_velocities[index.y][index.x] = mix(mix(v00, v01, diff.x), mix(v10, v11, diff.x), diff.y);
+    }
 }

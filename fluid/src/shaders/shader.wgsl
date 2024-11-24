@@ -187,6 +187,15 @@ fn main_advection(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
         let prev_pos: vec2<f32> = pos - dt * vel;
         var prev_index: vec2<i32> = vec2<i32>(floor(prev_pos));
+        
+        // If the previous index is in the top half of the cell, add 1 to the y index
+        if (prev_pos.y - f32(prev_index.y) > 0.5) {
+            prev_index.y += 1;
+            if (prev_index.y >= i32(SIM_SIZE.y)) {
+                prev_index.y = i32(SIM_SIZE.y) - 1;
+            }
+        }
+
         let diff: vec2<f32> = prev_pos - vec2<f32>(prev_index);
 
         // Clamp indices to avoid out-of-bounds access
@@ -237,6 +246,15 @@ fn main_advection(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
         let prev_pos: vec2<f32> = pos - dt * vel;
         var prev_index: vec2<i32> = vec2<i32>(floor(prev_pos));
+
+        // If the previous index is in the right half of the cell, add 1 to the x index
+        if (prev_pos.x - f32(prev_index.x) > 0.5) {
+            prev_index.x += 1;
+            if (prev_index.x >= i32(SIM_SIZE.x)) {
+                prev_index.x = i32(SIM_SIZE.x) - 1;
+            }
+        }
+
         let diff: vec2<f32> = prev_pos - vec2<f32>(prev_index);
 
         // Clamp indices to avoid out-of-bounds access

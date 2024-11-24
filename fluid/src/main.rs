@@ -263,13 +263,13 @@ impl<'a> State<'a> {
         let advected_horizontal_velocity_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Advected Horizontal Velocity Buffer"),
             contents: bytemuck::cast_slice(&horizontal_velocity_data_u8),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
         });
 
         let advected_vertical_velocity_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("Advected Vertical Velocity Buffer"),
             contents: bytemuck::cast_slice(&vertical_velocity_data_u8),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST | BufferUsages::COPY_SRC,
         });
         
         Self {
@@ -383,6 +383,31 @@ impl<'a> State<'a> {
             compute_pass.set_bind_group(0, &self.compute_advection_bind_group, &[]);
             compute_pass.dispatch_workgroups(DISPATCH_SIZE.0, DISPATCH_SIZE.1, 1);
         }
+
+        self.queue.submit(std::iter::once(encoder.finish()));
+
+        // Copy the advected velocity buffers to the velocity buffers
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Desisty Compute Encoder"),
+            });
+
+        encoder.copy_buffer_to_buffer(
+            &self.advected_horizontal_velocity_buffer,
+            0,
+            &self.horizontal_velocity_buffer,
+            0,
+            self.advected_horizontal_velocity_buffer.size(),
+        );
+
+        encoder.copy_buffer_to_buffer(
+            &self.advected_vertical_velocity_buffer,
+            0,
+            &self.vertical_velocity_buffer,
+            0,
+            self.advected_vertical_velocity_buffer.size(),
+        );
 
         self.queue.submit(std::iter::once(encoder.finish()));
 

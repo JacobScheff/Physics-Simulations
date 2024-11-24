@@ -13,6 +13,7 @@ const WORKGROUP_SIZE: u32 = 16;
 
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
 const SIM_SIZE: vec2<f32> = vec2<f32>(500.0, 250.0);
+const GRID_SPACING: vec2<f32> = vec2<f32>(SCREEN_SIZE.x / SIM_SIZE.x, SCREEN_SIZE.y / SIM_SIZE.y);
 
 const GRAVITY: f32 = 0.1;
 const OVER_RELAXATION: f32 = 1.9;
@@ -134,4 +135,37 @@ fn main_velocity(@builtin(global_invocation_id) global_id: vec3<u32>) {
 @compute @workgroup_size(WORKGROUP_SIZE, WORKGROUP_SIZE, 1)
 fn main_advection(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let index = global_id.xy;
+
+    // Horizontal velocities
+    let u = horizontal_velocities[index.y][index.x];
+    var v_avg = 0.0;
+    var v_div = 0;
+    if(index.y > 0) {
+        v_avg += vertical_velocities[index.y - 1][index.x];
+        v_div += 1;
+    }
+    if(index.y < u32(SIM_SIZE.y) - 1) {
+        v_avg += vertical_velocities[index.y][index.x];
+        v_div += 1;
+    }
+    if (index.y > 0) {
+        v_avg += vertical_velocities[index.y - 1][index.x];
+        v_div += 1;
+    }
+    if (index.y < u32(SIM_SIZE.y) - 1) {
+        v_avg += vertical_velocities[index.y][index.x];
+        v_div += 1;
+    }
+    v_avg /= f32(v_div);
+
+    let vel = vec2<f32>(u, v_avg);
+    let pos = vec2<f32>(f32(index.x) + 0.5 * GRID_SPACING.x, f32(index.y) + 0.5 * GRID_SPACING.y);
+
+    let prev_pos = pos - dt * vel;
+
+    // Calculate the old velocity using weighted average
+    let prev_vel = vec2<f32>(0.0, 0.0); // Temp
+
+    // Update the velocity
+    advected_horizontal_velocities[index.y][index.x] = prev_vel.x;
 }

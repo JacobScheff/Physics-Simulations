@@ -3,11 +3,12 @@ struct VertexOutput {
 };
 
 struct Cell {
-    density: f32, // 4 bytes
-    divergence: f32, // 4 bytes
-    pressure: f32, // 4 bytes
+    density: f32,
+    divergence: f32,
+    pressure: f32,
     s: i32,
     new_s: i32,
+    wall: i32,
 }
 
 const WORKGROUP_SIZE: u32 = 16;
@@ -110,6 +111,10 @@ fn main_velocity(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
     if (index.y < u32(SIM_SIZE.y) - 1) { // Top neighbor
         new_s += cells[index.y + 1][index.x].s;
+    }
+
+    if (me.wall == 1) {
+        new_s = 0;
     }
 
     cells[index.y][index.x].new_s = new_s;

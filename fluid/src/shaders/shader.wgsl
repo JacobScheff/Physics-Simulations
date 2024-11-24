@@ -12,10 +12,10 @@ struct Cell {
 const WORKGROUP_SIZE: u32 = 16;
 
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
-const SIM_SIZE: vec2<f32> = vec2<f32>(500.0, 250.0);
+const SIM_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0);
 
 const GRAVITY: f32 = 0.1;
-const OVER_RELAXATION: f32 = 1.9;
+const OVER_RELAXATION: f32 = 1.0;
 const dt: f32 = 1.0 / 8.0; // Time step
 
 // NOTE: For the staggered grid, consider cell (i, j). The horizontal velocity at (i, j) is the right edge of the cell.

@@ -19,7 +19,7 @@ use winit::{
 
 const SCREEN_SIZE: (u32, u32) = (1200, 600);
 const TIME_BETWEEN_FRAMES: u64 = 2;
-const SIM_SIZE: (i32, i32) = (500, 250); // How many grid cells to divide the screen into
+const SIM_SIZE: (i32, i32) = (1200, 600); // How many grid cells to divide the screen into
 // const PADDING: f32 = 50.0; // The padding around the screen
 
 const WORKGROUP_SIZE: u32 = 16;

@@ -4,4 +4,6 @@ This repository contains two different projects. **rust-collisions** simulates m
 
 ## Collisions
 ![Collision Simulation](https://github.com/Snowplou/Physics-Simulations/blob/main/public/CollisionReadMe.png?raw=true)
+
+## Fluid
 ![Fluid Simulation](https://github.com/Snowplou/Physics-Simulations/blob/main/public/FluidReadMe.png?raw=true)

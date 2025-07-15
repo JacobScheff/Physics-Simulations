@@ -21,8 +21,8 @@ const IPS_WORKGROUP_SIZE: u32 = 16;
 const SCREEN_SIZE: vec2<f32> = vec2<f32>(1200.0, 600.0); // Size of the screen
 const GRID_SIZE: vec2<f32> = vec2<f32>(80.0, 40.0);
 
-const PARTICLE_AMOUNT_X: u32 = 192 * 2; // The number of particles in the x direction
-const PARTICLE_AMOUNT_Y: u32 = 96 * 2; // The number of particles in the y direction
+const PARTICLE_AMOUNT_X: u32 = 192 * 4; // The number of particles in the x direction
+const PARTICLE_AMOUNT_Y: u32 = 96 * 4; // The number of particles in the y direction
 const TOTAL_PARTICLES: i32 = i32(PARTICLE_AMOUNT_X * PARTICLE_AMOUNT_Y); // The total number of particles
 const RADIUS_OF_INFLUENCE: f32 = 75.0 / 4.0; // The radius of the sphere of influence. Also the radius to search for particles to calculate the density
 const TARGET_DENSITY: f32 = 0.2; // The target density of the fluid
